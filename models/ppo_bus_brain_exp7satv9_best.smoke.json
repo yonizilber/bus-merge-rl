@@ -1,0 +1,14 @@
+{
+  "checkpoint": "ppo_bus_brain_exp7satv9_best.pth",
+  "passed": true,
+  "success_rate": 1.0,
+  "successes": 10,
+  "total": 10,
+  "crashes": 0,
+  "timeouts": 0,
+  "avg_merge_s": 5.240000000000075,
+  "max_wait_s": 40.2000000000003,
+  "n_seeds": 10,
+  "scenario": "B",
+  "tested_at": "2026-10-04T13:40:21.269790+00:00"
+}

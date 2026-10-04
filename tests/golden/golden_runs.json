@@ -1,0 +1,32 @@
+{
+ "A-0": {
+  "bus_final_x": 1000.215759,
+  "fingerprint": "e5d090f3bdf41f91",
+  "rows": 18874,
+  "steps": 1500
+ },
+ "A-1": {
+  "bus_final_x": 1000.68061,
+  "fingerprint": "afce138f9f1ae7a5",
+  "rows": 19492,
+  "steps": 1500
+ },
+ "B-0": {
+  "bus_final_x": 1000.547028,
+  "fingerprint": "77525cdd188e63d4",
+  "rows": 15923,
+  "steps": 1500
+ },
+ "B-1": {
+  "bus_final_x": 1000.756355,
+  "fingerprint": "bd65bccd74d010b8",
+  "rows": 17873,
+  "steps": 1500
+ },
+ "B-2": {
+  "bus_final_x": 1001.113118,
+  "fingerprint": "eb567bebe3eb6154",
+  "rows": 16023,
+  "steps": 1500
+ }
+}
