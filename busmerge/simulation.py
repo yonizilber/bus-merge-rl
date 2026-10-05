@@ -17,10 +17,16 @@ from busmerge.rl.merge_constants import (
 
 class SimulationEngine:
     def __init__(self, scenario="B", config: SimConfig = None, brain_path: str = None,
-                 governor_disabled: bool = False):
+                 governor_disabled: bool = False, load_brain: bool = True):
         self.scenario = scenario
         self.cfg = config if config else SimConfig()
         self.governor_disabled = governor_disabled
+        # Training hooks (unused by the app): an externally supplied (steer, gas) replaces the
+        # brain's decision, `last_decision` reports what the governor/shield did with it, and
+        # frame recording can be switched off for speed.
+        self.external_action = None
+        self.last_decision = None
+        self.record_frames = True
         self.road_length = self.cfg.road_length
         self.dt = 0.1
         self.time = 0.0
@@ -42,13 +48,18 @@ class SimulationEngine:
         
         # --- LOAD THE TRAINED PYTORCH BRAIN ---
         # brain_path overrides the default checkpoint; a missing file is an error.
-        _ckpt = str(brain_path) if brain_path else str(DEFAULT_BRAIN)
-        if not os.path.exists(_ckpt):
-            raise FileNotFoundError(f"Brain checkpoint not found: {_ckpt}")
-        self.active_brain_path = _ckpt
-        self.feature_dim = infer_state_dim_from_checkpoint(_ckpt)
-        self.brain = PPOAgent(state_dim=self.feature_dim, filename=_ckpt)
-        self.brain.load(strict=True)
+        if load_brain:
+            _ckpt = str(brain_path) if brain_path else str(DEFAULT_BRAIN)
+            if not os.path.exists(_ckpt):
+                raise FileNotFoundError(f"Brain checkpoint not found: {_ckpt}")
+            self.active_brain_path = _ckpt
+            self.feature_dim = infer_state_dim_from_checkpoint(_ckpt)
+            self.brain = PPOAgent(state_dim=self.feature_dim, filename=_ckpt)
+            self.brain.load(strict=True)
+        else:
+            self.active_brain_path = None
+            self.feature_dim = 7
+            self.brain = None
         self._prev_bus_vel = 0.0  # for rel_accel computation in brain state
         self._bus_heading_prev = 0.0
         self.heading_anomaly = False   # set True on first heading snap; also initialised in init_scenario
@@ -279,8 +290,9 @@ class SimulationEngine:
                     veh.velocity     = max(veh.velocity,     1.5)
                     veh.acceleration = max(veh.acceleration, 0.0)
 
-        self._record_bus_follower_trace(the_bus)
-        self._record_frame()
+        if self.record_frames:
+            self._record_bus_follower_trace(the_bus)
+            self._record_frame()
         self._remove_finished_cars()
 
     def _handle_bus_logic(self, bus: Bus):
@@ -436,12 +448,15 @@ class SimulationEngine:
                 noise_sigma=self.noise_sigma, car_id=_car_id)
             state_tensor = torch.FloatTensor(state_array).unsqueeze(0)
 
-            with torch.no_grad():
-                action_mean, _, _ = self.brain.policy(state_tensor)
-            # 2D action: (steer_intent, gas_intent) in [-1, 1]
-            # Defensive: if checkpoint loaded with action_dim=1, gas defaults to 0
-            raw_steer = float(action_mean[0, 0].item())
-            raw_gas   = float(action_mean[0, 1].item()) if action_mean.shape[1] > 1 else 0.0
+            if self.external_action is not None:
+                raw_steer, raw_gas = (float(self.external_action[0]), float(self.external_action[1]))
+            else:
+                with torch.no_grad():
+                    action_mean, _, _ = self.brain.policy(state_tensor)
+                # 2D action: (steer_intent, gas_intent) in [-1, 1]
+                # Defensive: if checkpoint loaded with action_dim=1, gas defaults to 0
+                raw_steer = float(action_mean[0, 0].item())
+                raw_gas   = float(action_mean[0, 1].item()) if action_mean.shape[1] > 1 else 0.0
 
             # Predictive governor — must match how the checkpoint was trained.
             # exp7sat v7: trained with --disable-governor; safety shield still runs.
@@ -454,6 +469,7 @@ class SimulationEngine:
                 disabled=self.governor_disabled,
             )
             _nw = nearest_car.params.width if nearest_car is not None else 1.85
+            _steer_after_governor = steer_intent
             steer_intent, gas_intent, _shield_cond = apply_safety_shield(
                 steer_intent, gas_intent, merge_progress, gap, rel_speed,
                 nearest_speed, nearest_car, _nw, governor_reason=governor_reason, dt=self.dt,
@@ -463,6 +479,12 @@ class SimulationEngine:
             # governor_reason/_shield_cond are otherwise local and thrown away.
             bus.last_governor_reason = governor_reason
             bus.last_shield_condition = _shield_cond
+            self.last_decision = {
+                "governor_ok": _gov_ok, "governor_reason": governor_reason,
+                "shield": _shield_cond,
+                "steer_after_governor": _steer_after_governor, "steer": steer_intent, "gas": gas_intent,
+                "raw_steer": raw_steer, "raw_gas": raw_gas,
+            }
 
             # ── APPLY TARGETS — bicycle model does all movement ──
             BAY_DEPTH   = _MC_BAY_DEPTH

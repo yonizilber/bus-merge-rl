@@ -8,6 +8,13 @@ import shutil
 import time
 from busmerge.paths import MODELS_DIR, REPO_ROOT
 from busmerge.rl.env import BusMergeEnv
+
+# Environment class used for training and for the in-training evaluations (see scripts/train.py --engine-env).
+ENV_CLASS = BusMergeEnv
+
+# Reward/crash-rule flags of the current run. train() sets them from the run tag so that the
+# in-training evaluations judge episodes with exactly the rules the policy is trained under.
+ENV_FLAGS = {"sat_penalty_enabled": False, "spongy_danger_zone_enabled": False}
 from busmerge.rl.ppo_agent import PPOAgent
 
 
@@ -26,6 +33,8 @@ def _configure_env_features(env, agent):
     dim = _agent_state_dim(agent)
     env.feature_dim = dim
     env.state_size = dim
+    for flag, value in ENV_FLAGS.items():
+        setattr(env, flag, value)
 
 
 def evaluate_policy(agent, episodes=40, seed=123, verbose_shield=False, governor_disabled=False,
@@ -36,7 +45,7 @@ def evaluate_policy(agent, episodes=40, seed=123, verbose_shield=False, governor
     Used for the 5 dense-stream fixed seeds so Gap@OK is meaningful: a brain that only waits
     for a 999 m clear road will score 0 % on these seeds and will not be promoted.
     """
-    env = BusMergeEnv(eval_mode=True, governor_disabled=governor_disabled)
+    env = ENV_CLASS(eval_mode=True, governor_disabled=governor_disabled)
     _configure_env_features(env, agent)
     # _eval_scenario_seed is set fresh per episode inside the loop below.
     # Setting it once here caused all episodes to use the same traffic scenario
@@ -265,7 +274,9 @@ def evaluate_policy_multi_seed(agent, episodes=40, seeds=(123, 456, 777), verbos
     }
 
 
-def _load_policy_weights(agent, path):
+def _load_policy_weights(agent, path, strict=False):
+    """Load weights into ``agent``; returns False if absent. With ``strict`` an architecture
+    mismatch raises instead of silently starting from random weights."""
     if not os.path.exists(path):
         return False
     try:
@@ -275,6 +286,10 @@ def _load_policy_weights(agent, path):
     try:
         agent.policy.load_state_dict(state_dict)
     except RuntimeError as e:
+        if strict:
+            raise ValueError(
+                f"{path} does not fit a {_agent_state_dim(agent)}-feature policy "
+                f"(check --feature-dim): {e}") from e
         print(f"  [bootstrap] Checkpoint architecture mismatch — starting fresh: {e}")
         return False
     return True
@@ -309,12 +324,14 @@ def train(
     feature_dim=11,
     traffic_first=False,
 ):
-    env = BusMergeEnv(governor_disabled=governor_disabled)
+    env = ENV_CLASS(governor_disabled=governor_disabled)
     env.feature_dim = feature_dim
     env.state_size = feature_dim
     # SAT ground-truth penalty: enabled only for the exp7sat run-tag
     env.sat_penalty_enabled = str(run_tag).startswith("exp7sat")
     env.spongy_danger_zone_enabled = str(run_tag).startswith("exp7satv10")
+    ENV_FLAGS.update(sat_penalty_enabled=env.sat_penalty_enabled,
+                     spongy_danger_zone_enabled=env.spongy_danger_zone_enabled)
     if env.sat_penalty_enabled:
         print("SAT ground-truth penalty ENABLED (exp7sat mode).")
     if env.spongy_danger_zone_enabled:
@@ -330,7 +347,7 @@ def train(
     # Bootstrap from tagged best, then generic best (11-dim only), then runtime.
     if no_bootstrap:
         print("Random policy init (--no-bootstrap); not loading prior checkpoints.")
-    elif _load_policy_weights(agent, best_path):
+    elif _load_policy_weights(agent, best_path, strict=True):
         print(f"Loaded best-eval policy: {best_path}")
     elif (str(run_tag).startswith("exp7satv10")
           and _load_policy_weights(agent, _v9_bootstrap)):

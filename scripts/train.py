@@ -38,6 +38,10 @@ if __name__ == "__main__":
         "--no-bootstrap", action="store_true", default=False,
         help="Random init; default loads existing run-tag checkpoint if present.",
     )
+    parser.add_argument("--disable-governor", action="store_true", default=False,
+                        help="Bypass the predictive governor (the app default; used by the exp7sat/v9/v10 checkpoints).")
+    parser.add_argument("--engine-env", action="store_true", default=False,
+                        help="EXPERIMENTAL: train and evaluate on the production SimulationEngine physics.")
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--skip-baseline-eval", action="store_true", default=False)
     parser.add_argument("--batch-size", type=int, default=2000)
@@ -73,6 +77,12 @@ if __name__ == "__main__":
         _p2 = min(150, args.epochs)
         _traffic = False
 
+    if args.engine_env:
+        import busmerge.rl.train as _train_module
+        from busmerge.rl.engine_env import EngineEnv
+        _train_module.ENV_CLASS = EngineEnv
+        print("Training on EngineEnv (production SimulationEngine physics).")
+
     train(
         epochs=args.epochs,
         batch_size=args.batch_size,
@@ -86,4 +96,5 @@ if __name__ == "__main__":
         feature_dim=args.feature_dim,
         traffic_first=_traffic,
         dense_seeds=dense_seeds,
+        governor_disabled=args.disable_governor,
     )

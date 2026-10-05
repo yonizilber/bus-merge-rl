@@ -100,7 +100,7 @@ def _gym_record_frame(env, time_s: float) -> list:
     return rows
 
 
-def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool):
+def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool, env_cls=None):
     """Training env configured the way the checkpoint was trained.
 
     The reward/crash rules depend on the run tag (see rl/train.py): ``exp7sat*`` runs use the
@@ -110,7 +110,7 @@ def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool):
     from busmerge.rl.env import BusMergeEnv
 
     name = Path(ckpt_path).name
-    env = BusMergeEnv(eval_mode=True, governor_disabled=governor_disabled)
+    env = (env_cls or BusMergeEnv)(eval_mode=True, governor_disabled=governor_disabled)
     env.feature_dim = feature_dim
     env.state_size = feature_dim
     env.sat_penalty_enabled = "exp7sat" in name

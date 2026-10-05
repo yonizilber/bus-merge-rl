@@ -885,7 +885,7 @@ class BusMergeEnv:
         _lon_dist = float(gap)
 
         # Term 4: terminal success (+5000)
-        if progress >= 1.0:
+        if self._merge_complete():
             reward += 5000.0
             self._gap_at_success = gap
             done = True
@@ -980,6 +980,10 @@ class BusMergeEnv:
             _vs = max(1, self._total_steps)
             info['governor_veto_rate'] = self.episode_governor_vetos / _vs
         return state, reward, done, info
+
+    def _merge_complete(self) -> bool:
+        """Terminal success test; the training world requires the bus to be fully in the lane."""
+        return self._merge_progress() >= 1.0
 
     def _get_state(self):
         gap, nearest_speed, nearest_accel, nearest_width, relative_speed, nearest_car = self._scan_nearest_car()

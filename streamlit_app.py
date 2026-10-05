@@ -3,10 +3,12 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import numpy as np
+import re
 import time
 import json
 import os as _os
 from busmerge.paths import MODELS_DIR
+from busmerge.rl.feature_encoding import FEATURE_NAMES, infer_state_dim_from_checkpoint
 from busmerge.config import SimConfig
 from busmerge.evaluation import TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
 from busmerge.simulation import AnalyticsEngine
@@ -128,7 +130,7 @@ _DEFAULT_BRAIN_BASENAME = "ppo_bus_brain_exp7satv9_best.pth"
 _BRAIN_OPTIONS = [
     {
         "path": str(MODELS_DIR / "ppo_bus_brain_exp7satv9_best.pth"),
-        "label": "7-feat exp7sat v9 ★ default (default)",
+        "label": "7-feat exp7sat v9 ★ default",
         "features": "progress, heading, gap, lat, car_speed, width, rel_speed",
     },
     {
@@ -168,6 +170,11 @@ _BRAIN_OPTIONS = [
     },
 ]
 _available_brains = [b for b in _BRAIN_OPTIONS if _os.path.isfile(b["path"])]
+# The feature count and names come from the checkpoint itself, never from a hand-written label.
+for _b in _available_brains:
+    _dim = infer_state_dim_from_checkpoint(_b["path"])
+    _b["label"] = f"{_dim}-feat " + re.sub(r"^\d+-feat ", "", _b["label"])
+    _b["features"] = ", ".join(FEATURE_NAMES[_dim])
 # Newest checkpoint mtime first; keep default brain pinned at index 0.
 _available_brains.sort(key=lambda b: _os.path.getmtime(b["path"]), reverse=True)
 _default_ix = next(

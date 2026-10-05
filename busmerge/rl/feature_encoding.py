@@ -276,6 +276,14 @@ def encode_features(
     )
 
 
+FEATURE_NAMES = {
+    4: ("progress", "bus heading", "gap", "relative speed"),
+    7: ("progress", "bus heading", "gap", "lateral clearance", "car speed", "car width", "relative speed"),
+    11: ("progress", "bus heading", "gap", "lateral clearance", "car speed", "car acceleration",
+         "car width", "car length", "relative speed", "relative acceleration", "car heading"),
+}
+
+
 def infer_state_dim_from_checkpoint(path: str) -> int:
     """Read actor_trunk input size from a .pth file (11feat/7feat/4feat trunk arch)."""
     try:
