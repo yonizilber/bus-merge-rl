@@ -7,7 +7,8 @@ import json
 import os as _os
 from busmerge.paths import MODELS_DIR
 from busmerge.config import SimConfig
-from busmerge.simulation import SimulationEngine, AnalyticsEngine
+from busmerge.evaluation import TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
+from busmerge.simulation import AnalyticsEngine
 from busmerge.rl.queue_analytics import summarize_queue_anomalies, event_window
 from busmerge.graphics.renderer import SimulationRenderer
 
@@ -25,37 +26,6 @@ def _read_smoke_sidecar(pth_path: str):
             return json.load(f)
     except (json.JSONDecodeError, OSError):
         return None
-
-
-def _merge_outcome_from_df(df: pd.DataFrame):
-    """Merge complete when progress >= 1.0 (same as training terminal success)."""
-    bus = df[df["type"] == "Bus"].sort_values("time") if not df.empty else df
-    if bus.empty:
-        return "no_bus", {}
-    if "physical_collision" in bus.columns and bus["physical_collision"].any():
-        return "collision", {}
-    states = bus["state"].astype(str)
-    if not (states == "WAITING_TO_MERGE").any():
-        return "never_waited", {}
-    wait_t = float(bus.loc[states == "WAITING_TO_MERGE", "time"].min())
-    if "merge_progress" in bus.columns:
-        complete = bus[bus["merge_progress"] >= 1.0]
-        if not complete.empty:
-            done_t = float(complete["time"].min())
-            return "merged", {
-                "merge_s": done_t - wait_t,
-                "wait_before_merge_s": wait_t,
-            }
-        last_p = float(bus["merge_progress"].max())
-        return "stuck_waiting", {"wait_s": float(bus["time"].max()) - wait_t, "max_progress": last_p}
-    # Legacy fallback if old sim logs lack merge_progress
-    moving = bus.loc[states == "MOVING"]
-    if moving.empty:
-        return "stuck_waiting", {"wait_s": float(bus["time"].max()) - wait_t}
-    move_t = float(moving["time"].min())
-    if move_t <= wait_t:
-        return "no_merge", {}
-    return "merged", {"merge_s": move_t - wait_t, "wait_before_merge_s": wait_t}
 
 
 def _follower_merge_phase(ft: pd.DataFrame) -> pd.DataFrame:
@@ -154,12 +124,18 @@ if noise_enabled:
 else:
     noise_sigma = 0.0
 
+use_fixed_seed = st.sidebar.checkbox(
+    "Fixed random seed", value=False,
+    help="Reproducible run: same seed + same settings = identical result. Off = a different run each time.",
+)
+run_seed = st.sidebar.number_input("Seed", 0, 1_000_000, 0, disabled=not use_fixed_seed)
+
 # --- Brain picker (newest first; default = exp7sat v9 best) ---
 _DEFAULT_BRAIN_BASENAME = "ppo_bus_brain_exp7satv9_best.pth"
 _BRAIN_OPTIONS = [
     {
         "path": str(MODELS_DIR / "ppo_bus_brain_exp7satv9_best.pth"),
-        "label": "7-feat exp7sat v9 ★ default (wait-reward, 9/30 val)",
+        "label": "7-feat exp7sat v9 ★ default (default)",
         "features": "progress, heading, gap, lat, car_speed, width, rel_speed",
     },
     {
@@ -169,7 +145,7 @@ _BRAIN_OPTIONS = [
     },
     {
         "path": str(MODELS_DIR / "ppo_bus_brain_exp7satv10_best.pth"),
-        "label": "11-feat exp7sat v10 — spongy-trained best (10/10 smoke)",
+        "label": "11-feat exp7sat v10 — spongy-trained best",
         "features": "progress, heading, gap, lat, car_speed, width, rel_speed, rel_accel, pressure, presence, ttc",
     },
     {
@@ -179,7 +155,7 @@ _BRAIN_OPTIONS = [
     },
     {
         "path": str(MODELS_DIR / "ppo_bus_brain_exp7sat_best.pth"),
-        "label": "7-feat exp7sat v8 — prod-bridge baseline (9/30 val)",
+        "label": "7-feat exp7sat v8 — prod-bridge baseline",
         "features": "progress, heading, gap, lat, car_speed, width, rel_speed",
     },
     {
@@ -231,26 +207,21 @@ if _available_brains:
     )
     if "exp7satv10" in _os.path.basename(selected_brain_path):
         st.sidebar.info(
-            "v10 brain: trained with **spongy danger zone** in the gym only. "
-            "This UI still uses **production (v9) crash rules** — expect behavior "
-            "very close to v9 best."
+            "v10 brain: trained with the **spongy danger zone** (graded overlap penalty) "
+            "in the gym. This UI judges collisions by the same polygon overlap as v9."
         )
 
-    with st.sidebar.expander("v8 vs v9 comparison (production sim)"):
+    with st.sidebar.expander("Brain comparison (measured)"):
         st.markdown(
-            "**Setup:** Scenario B, traffic rate **0.4**, governor **OFF**, "
-            "10 seeds, `SimulationEngine` (same stack as this UI).\n\n"
-            "| Brain | Success | Avg merge |\n"
-            "|---|---:|---:|\n"
-            "| **v8 best** | 10/10 | 54.3 s |\n"
-            "| **v9 best** | 10/10 | **45.3 s** |\n\n"
-            "**Training val (held-out seeds):** both **9/30** — spawn overlaps still hurt.\n\n"
-            "| | v8 | v9 |\n"
-            "|---|---|---|\n"
-            "| Spawn model | Static scenarios | + prod-queue bridge |\n"
-            "| Wait reward | No | Yes (+0.5 when blocked) |\n"
-            "| Epochs | 600 | ~900 (639+270 resume) |\n"
-            "| Streamlit @ 0.4 | Good | **~9 s faster merge** |"
+            "**Setup:** Scenario B, 0.4 cars/s, 50 cars, governor off, no noise, 30 fixed seeds, "
+            "measured by `scripts/evaluate_brains.py` with the same code as the Run button. "
+            "Time = seconds from end of boarding to fully merged.\n\n"
+            "| Brain | Merged | Mean | p95 |\n"
+            "|---|---:|---:|---:|\n"
+            "| v8 best | 30/30 | 15.4 s | 17.7 s |\n"
+            "| v9 best | 30/30 | 5.4 s | 5.9 s |\n"
+            "| v10 best | 30/30 | 5.3 s | 5.9 s |\n\n"
+            "Regenerate with `python scripts/evaluate_brains.py`."
         )
 
     _smoke = _read_smoke_sidecar(selected_brain_path)
@@ -265,7 +236,7 @@ if _available_brains:
             f"Smoke passed ({_smoke.get('success_rate', 0) * 100:.0f}% success, σ=0)."
         )
 
-    if st.sidebar.button("Validate brain (smoke test)", help="10 seeds, Scenario B, dense traffic, no noise."):
+    if st.sidebar.button("Validate brain (smoke test)", help="10 seeds, Scenario B, using the traffic settings above, no noise."):
         with st.spinner("Running production smoke test…"):
             from busmerge.rl.smoke_test_production import run_smoke_test
             _ok = run_smoke_test(
@@ -278,6 +249,8 @@ if _available_brains:
                 scenario="B",
                 write_sidecar=True,
                 governor_disabled=not enable_governor,
+                traffic_rate=traffic_density,
+                total_cars=batch_size,
             )
         st.sidebar.success("Smoke PASSED") if _ok else st.sidebar.error("Smoke FAILED — see terminal")
         st.rerun()
@@ -457,7 +430,7 @@ if _walk and selected_brain_path:
             st.caption(f"merge {_st_row.get('merge_s', '—')} s · {_st_row.get('traffic_note', '')}")
         with _c3:
             if _to != _so:
-                st.warning("**Disagree** — typical 9/30 pattern")
+                st.warning("**Disagree** — the two engines judged this episode differently")
             else:
                 st.success("Both agree")
 
@@ -530,7 +503,7 @@ if st.session_state.val_demo_df is not None and st.session_state.get("val_demo_w
     st.divider()
     st.subheader("🔬 Training validation demo — 10 secret seeds × 3 episodes")
     st.markdown(
-        "This is the **same test** printed at the end of PPO training (`9/30` for v8/v9). "
+        "This is the **same test** printed at the end of PPO training. "
         "Left column = **training gym** (`BusMergeEnv`, static queue at reset). "
         "Right = **Streamlit engine** (continuous traffic — what you use in the UI)."
     )
@@ -594,7 +567,7 @@ if st.session_state.val_demo_df is not None and st.session_state.get("val_demo_w
     if not _crash_train.empty:
         st.caption(
             f"Training crashes at low progress (&lt;15%): **{len(_crash_train)}** episodes — "
-            "typical spawn-overlap at merge start (explains 9/30)."
+            "typically a spawn overlap at merge start."
         )
     if st.button("Clear validation results", key="val_demo_clear"):
         st.session_state.val_demo_df = None
@@ -603,27 +576,16 @@ if st.session_state.val_demo_df is not None and st.session_state.get("val_demo_w
 
 if st.button("Run Simulation"):
     with st.spinner(f"Simulating {batch_size} cars..."):
-        sim = SimulationEngine(
-            scenario=scenario_code,
-            config=config,
-            brain_path=selected_brain_path,
-            governor_disabled=not enable_governor,
-        )
-        sim.noise_sigma = noise_sigma
-        sim.init_scenario()
-        
-        # --- BATCH LOOP ---
-        frame_count = 0
-        max_sim_time = 300 
         progress_bar = st.progress(0)
-        
-        while not sim.all_vehicles_finished():
-            sim.step()
-            frame_count += 1
-            if frame_count * sim.dt >= max_sim_time: break
-            if frame_count % 10 == 0:
-                 progress_bar.progress(min(sim.cars_finished_count / (batch_size + 1), 1.0))
-                 
+        sim = run_episode(
+            scenario_code,
+            config,
+            selected_brain_path,
+            governor_disabled=not enable_governor,
+            noise_sigma=noise_sigma,
+            seed=int(run_seed) if use_fixed_seed else None,
+            on_progress=lambda s: progress_bar.progress(min(s.cars_finished_count / (batch_size + 1), 1.0)),
+        )
         progress_bar.empty()
         
         # Remember which brain was used
@@ -641,10 +603,18 @@ if st.session_state.sim_complete:
     _fd = st.session_state.get("feature_dim", 4)
     st.info(f"🧠 Active brain: **{_brain_name}** ({_fd}-feature)")
 
-    _outcome, _meta = _merge_outcome_from_df(df)
+    _outcome, _meta = classify_outcome(df)
     if _outcome == "merged":
         _sc = st.session_state.get("run_scenario", "?")
-        st.success(f"Bus merged in **{_meta['merge_s']:.1f}s** after waiting (Scenario {_sc}).")
+        st.success(f"Bus merged in **{_meta['merge_s']:.1f}s** after boarding ended (Scenario {_sc}).")
+        _tl = merge_timeline(df)
+        if _tl:
+            st.caption("Where the time went, from the end of boarding to fully merged:")
+            st.table(pd.DataFrame(
+                [{"Phase": label, "Seconds": _tl[key]} for key, label in TIMELINE_PHASES]
+                + [{"Phase": "**Total** (fully centred in lane)", "Seconds": _tl["total_s"]},
+                   {"Phase": "of which standing still", "Seconds": _tl["standstill_s"]}]
+            ).set_index("Phase"))
         _fb = _summarize_follower_brakes(st.session_state.get("follower_df"))
         if _fb:
             if _fb["hard_events"] > 0:

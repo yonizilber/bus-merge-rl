@@ -20,20 +20,14 @@ import argparse
 import json
 import os
 import sys
-import random
 from datetime import datetime, timezone
 import numpy as np
-import torch
 
 # Allow running from repo root
 
 from busmerge.paths import DEFAULT_BRAIN
-from busmerge.simulation import SimulationEngine
-from busmerge.vehicle import BusState
+from busmerge.evaluation import classify_outcome, run_episode
 from busmerge.config import SimConfig
-from busmerge.rl.merge_success import (
-    is_production_merge_complete,
-)
 
 
 def smoke_sidecar_path(ckpt_path: str) -> str:
@@ -51,8 +45,8 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
                    max_wait_s: float, scenario: str = "B",
                    write_sidecar: bool = True,
                    governor_disabled: bool = False,
-                   traffic_rate: float = 3.0,
-                   total_cars: int = 30) -> bool:
+                   traffic_rate: float = 0.4,
+                   total_cars: int = 50) -> bool:
     print("=" * 60)
     print("PRODUCTION SMOKE TEST")
     print(f"  Checkpoint : {ckpt_path}")
@@ -71,82 +65,32 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
     wait_times  = []
 
     for seed in range(n_seeds):
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-
-        # Traffic config — default dense stress test; use --traffic-rate 0.4 for Streamlit parity.
-        cfg = SimConfig()
-        cfg.total_cars_to_spawn = total_cars
-        cfg.traffic_rate        = traffic_rate
-
+        # Defaults equal the Streamlit sidebar defaults (0.4 cars/s, 50 cars).
+        cfg = SimConfig(total_cars_to_spawn=total_cars, traffic_rate=traffic_rate)
         try:
-            engine = SimulationEngine(scenario=scenario, config=cfg,
-                                      brain_path=ckpt_path,
-                                      governor_disabled=governor_disabled)
+            engine = run_episode(
+                scenario, cfg, ckpt_path,
+                governor_disabled=governor_disabled,
+                seed=seed,
+                max_sim_time=max_steps * 0.1,  # engine dt is 0.1 s
+            )
         except Exception as e:
             print(f"  [seed {seed}] SKIP — engine init failed: {e}")
             continue
 
-        engine.init_scenario()
-        bus = next((v for v in engine.vehicles if hasattr(v, 'state')), None)
-        if bus is None:
-            print(f"  [seed {seed}] SKIP — no bus found")
-            continue
-
-        outcome   = "timeout"
-        step      = 0
-        merge_t   = None
-        wait_t    = 0.0
-        complete_t = None
-        saw_wait  = False
-
-        for step in range(max_steps):
-            engine.step()
-            bus = next((v for v in engine.vehicles if hasattr(v, 'state')), None)
-            if bus is None:
-                break
-
-            if bus.state == BusState.WAITING_TO_MERGE:
-                saw_wait = True
-                if wait_t <= 0.0:
-                    wait_t = engine.time
-
-            if is_production_merge_complete(
-                float(bus.lateral_offset), bus.state, saw_waiting_to_merge=saw_wait
-            ):
-                complete_t = engine.time
-                if wait_t > 0:
-                    merge_t = complete_t - wait_t
-                    outcome = "success"
-                break
-
-            if bus.state not in (BusState.MOVING, BusState.DECELERATING,
-                                  BusState.IN_BAY, BusState.WAITING_TO_MERGE,
-                                  BusState.STOPPED_IN_LANE):
-                outcome = "crash"
-                break
-
-        # Detect collision from frame_history
-        df = engine.get_results()
-        if not df.empty:
-            crash_rows = df[df.get('physical_collision', False) == True] if 'physical_collision' in df.columns else df.iloc[0:0]
-            if len(crash_rows) > 0:
-                outcome = "crash"
-
-        if outcome == "success":
+        outcome, meta = classify_outcome(engine.get_results())
+        if outcome == "merged":
             successes += 1
-            total_merge_s = merge_t if merge_t is not None else (complete_t - wait_t)
-            merge_times.append(total_merge_s)
-            wait_times.append(wait_t)
-            print(f"  [seed {seed:3d}] SUCCESS  merge={total_merge_s:.1f}s  "
-                  f"wait_start={wait_t:.1f}s")
-        elif outcome == "crash":
+            merge_times.append(meta["merge_s"])
+            wait_times.append(meta["wait_before_merge_s"])
+            print(f"  [seed {seed:3d}] SUCCESS  merge={meta['merge_s']:.1f}s  "
+                  f"wait_start={meta['wait_before_merge_s']:.1f}s")
+        elif outcome == "collision":
             crashes += 1
             print(f"  [seed {seed:3d}] CRASH")
         else:
             timeouts += 1
-            print(f"  [seed {seed:3d}] TIMEOUT  (>{max_steps} steps)")
+            print(f"  [seed {seed:3d}] {outcome.upper()}  (>{max_steps} steps)")
 
     total = successes + timeouts + crashes
     if total == 0:
@@ -215,10 +159,10 @@ if __name__ == "__main__":
                         help="Scenario letter (default B = bay merge).")
     parser.add_argument("--disable-governor", action="store_true", default=False,
                         help="Match exp7sat training: bypass predictive governor.")
-    parser.add_argument("--traffic-rate", type=float, default=3.0,
-                        help="Poisson spawn rate cars/s (default 3.0 dense; use 0.4 for Streamlit).")
-    parser.add_argument("--total-cars", type=int, default=30,
-                        help="Max cars to spawn per episode (default 30; Streamlit often 50).")
+    parser.add_argument("--traffic-rate", type=float, default=0.4,
+                        help="Poisson spawn rate cars/s (default 0.4 = Streamlit default).")
+    parser.add_argument("--total-cars", type=int, default=50,
+                        help="Max cars to spawn per episode (default 50 = Streamlit default).")
     args = parser.parse_args()
 
     # Resolve checkpoint

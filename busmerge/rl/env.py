@@ -901,9 +901,12 @@ class BusMergeEnv:
             # branch's per-m^2 magnitude above without touching that branch's own code path.
             reward -= 50.0 * _sat_area
 
-        elif (not _spongy
-              and not (_sat_enabled and _sat_area > 0.0)
+        elif (not _sat_enabled
               and gap <= 0.0 and gap > -15.0):
+            # Legacy 1-D rule, only for runs without SAT. With SAT enabled the polygon
+            # overlap above is the sole crash judge: this rule reads presence_factor, whose
+            # WAITING_TO_MERGE floor makes a bus parked in its bay count as "in lane", so a
+            # car merely passing alongside the bay was scored as a collision.
             _bus_lat_edge = self.bus.lateral_offset + BUS_WIDTH / 2.0
             _bus_in_lane  = (_pf > 0.05
                              or _bus_lat_edge > 0.0

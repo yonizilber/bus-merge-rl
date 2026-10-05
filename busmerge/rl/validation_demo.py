@@ -7,6 +7,7 @@ then repeats with SimulationEngine so you can see why scores differ.
 from __future__ import annotations
 
 import random
+from pathlib import Path
 from typing import Callable, List, Optional
 
 import numpy as np
@@ -14,9 +15,7 @@ import pandas as pd
 import torch
 
 from busmerge.config import SimConfig
-from busmerge.simulation import SimulationEngine
-from busmerge.vehicle import BusState
-from busmerge.rl.merge_success import is_production_merge_complete
+from busmerge.evaluation import classify_outcome, run_episode
 from busmerge.rl.validation_constants import (
     TRAINING_VALIDATION_SEEDS,
     DEFAULT_EPISODES_PER_SEED,
@@ -99,6 +98,24 @@ def _gym_record_frame(env, time_s: float) -> list:
             "collision_frame": phys,
         })
     return rows
+
+
+def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool):
+    """Training env configured the way the checkpoint was trained.
+
+    The reward/crash rules depend on the run tag (see rl/train.py): ``exp7sat*`` runs use the
+    SAT polygon-overlap crash test, ``exp7satv10*`` additionally the spongy danger zone. An env
+    built without these flags judges crashes with the legacy 1-D gap rule and fails every merge.
+    """
+    from busmerge.rl.env import BusMergeEnv
+
+    name = Path(ckpt_path).name
+    env = BusMergeEnv(eval_mode=True, governor_disabled=governor_disabled)
+    env.feature_dim = feature_dim
+    env.state_size = feature_dim
+    env.sat_penalty_enabled = "exp7sat" in name
+    env.spongy_danger_zone_enabled = "exp7satv10" in name
+    return env
 
 
 def run_training_episode(
@@ -189,60 +206,20 @@ def run_streamlit_episode(
     governor_disabled: bool = True,
     max_steps: int = 3000,
 ) -> dict:
-    """One SimulationEngine episode — same RNG as training (seed + ep)."""
-    random.seed(seed + ep)
-    np.random.seed(seed + ep)
-    torch.manual_seed(seed + ep)
-
-    engine = SimulationEngine(
-        scenario="B",
-        config=config,
-        brain_path=ckpt_path,
+    """One SimulationEngine episode, run and judged exactly like the Streamlit app's run button."""
+    engine = run_episode(
+        "B", config, ckpt_path,
         governor_disabled=governor_disabled,
+        seed=seed + ep,  # same RNG seeding as the training-env episode
+        max_sim_time=max_steps * 0.1,  # engine dt is 0.1 s
     )
-    engine.noise_sigma = 0.0
-    engine.init_scenario()
-
-    outcome = "timeout"
-    wait_t = 0.0
-    merge_t = None
-    saw_wait = False
-    max_progress = 0.0
-
-    for _ in range(max_steps):
-        engine.step()
-        bus = next((v for v in engine.vehicles if hasattr(v, "state")), None)
-        if bus is None:
-            outcome = "crash"
-            break
-
-        if hasattr(bus, "lateral_offset"):
-            from busmerge.rl.merge_success import merge_progress_from_lateral
-            max_progress = max(max_progress, merge_progress_from_lateral(float(bus.lateral_offset)))
-
-        if bus.state == BusState.WAITING_TO_MERGE:
-            saw_wait = True
-            if wait_t <= 0.0:
-                wait_t = engine.time
-
-        if is_production_merge_complete(
-            float(bus.lateral_offset), bus.state, saw_waiting_to_merge=saw_wait
-        ):
-            if wait_t > 0:
-                merge_t = engine.time - wait_t
-                outcome = "success"
-            break
-
-        if bus.state not in (
-            BusState.MOVING, BusState.DECELERATING,
-            BusState.IN_BAY, BusState.WAITING_TO_MERGE, BusState.STOPPED_IN_LANE,
-        ):
-            outcome = "crash"
-            break
-
     df = engine.get_results()
-    if not df.empty and "physical_collision" in df.columns and df["physical_collision"].any():
-        outcome = "crash"
+    result, meta = classify_outcome(df)
+    outcome = {"merged": "success", "collision": "crash"}.get(result, "timeout")
+    if result == "merged":
+        max_progress = 1.0
+    else:
+        max_progress = float(meta.get("max_progress", 0.0))
 
     return {
         "engine": "streamlit (SimulationEngine)",
@@ -251,7 +228,7 @@ def run_streamlit_episode(
         "outcome": outcome,
         "merge_progress": max_progress,
         "steps": int(engine.time / engine.dt),
-        "merge_s": round(merge_t, 2) if merge_t is not None else None,
+        "merge_s": round(meta["merge_s"], 2) if result == "merged" else None,
         "traffic_note": f"Continuous spawn @ {config.traffic_rate}/s, max {config.total_cars_to_spawn} cars",
     }, df
 
@@ -267,7 +244,6 @@ def run_episode_pair(
     env=None,
 ):
     """Run one validation seed×episode in training gym + Streamlit; returns rows and GIF df."""
-    from busmerge.rl.env import BusMergeEnv
     from busmerge.rl.ppo_agent import PPOAgent
     from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
 
@@ -275,9 +251,7 @@ def run_episode_pair(
         dim = infer_state_dim_from_checkpoint(ckpt_path)
         agent = PPOAgent(state_dim=dim, filename=ckpt_path)
         agent.load()
-        env = BusMergeEnv(eval_mode=True, governor_disabled=governor_disabled)
-        env.feature_dim = dim
-        env.state_size = dim
+        env = make_eval_env(ckpt_path, dim, governor_disabled)
 
     scenario_seeds = _episode_scenario_seeds(seed, episodes_per_seed)
     train_row, gym_df = run_training_episode(
@@ -303,16 +277,13 @@ def run_validation_comparison(
     """
     Run full validation matrix. Returns long-form DataFrame (one row per episode).
     """
-    from busmerge.rl.env import BusMergeEnv
     from busmerge.rl.ppo_agent import PPOAgent
     from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
 
     dim = infer_state_dim_from_checkpoint(ckpt_path)
     agent = PPOAgent(state_dim=dim, filename=ckpt_path)
     agent.load()
-    env = BusMergeEnv(eval_mode=True, governor_disabled=governor_disabled)
-    env.feature_dim = dim
-    env.state_size = dim
+    env = make_eval_env(ckpt_path, dim, governor_disabled)
 
     if streamlit_config is None:
         streamlit_config = SimConfig(
