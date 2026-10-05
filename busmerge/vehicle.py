@@ -548,30 +548,6 @@ class Vehicle:
                 self._apply_squeeze_hysteresis(squeeze_urgency)
                 if not self.is_squeezing:
                     presence = 1.0
-                
-                # # If the space left is less than what the car needs, the lane is blocked!
-                # if space_left < space_needed:
-                #     if req_brake > 6.0:
-                #         self.is_squeezing = True
-                #         presence = 1.0 # The car is still physically there
-                #         return -9.0    # Emergency brake to survive
-                #     else:
-                #         self.is_squeezing = False
-                #         presence = 1.0
-                
-                # # BUS IS CREEPING (< 0.85)
-                # else:
-                #     panic_squeeze = (req_brake > 4.0)
-                #     opportunistic_squeeze = (gap < 20.0 and presence < 0.5)
-                #     keep_squeezing = self.is_squeezing
-
-                #     if panic_squeeze or opportunistic_squeeze or keep_squeezing:
-                #         self.is_squeezing = True 
-                #         target_speed = p.max_speed * 1.3 
-                #         presence = 0.0 
-                #     else:
-                #         self.is_squeezing = False
-                #         presence = 1.0 
         elif leader is not None:
             presence = leader.get('presence', 1.0)
             gap = leader['position'] - leader['length'] - self.position

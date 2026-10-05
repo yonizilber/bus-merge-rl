@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 import random
 import numpy as np
 import torch
@@ -40,16 +41,14 @@ class SimulationEngine:
         self.cars_spawned_count = 0
         
         # --- LOAD THE TRAINED PYTORCH BRAIN ---
-        # brain_path overrides default; falls back to known locations.
-        import os as _os
-        if brain_path and _os.path.exists(brain_path):
-            _ckpt = brain_path
-        else:
-            _ckpt = str(DEFAULT_BRAIN)
+        # brain_path overrides the default checkpoint; a missing file is an error.
+        _ckpt = str(brain_path) if brain_path else str(DEFAULT_BRAIN)
+        if not os.path.exists(_ckpt):
+            raise FileNotFoundError(f"Brain checkpoint not found: {_ckpt}")
         self.active_brain_path = _ckpt
-        self.feature_dim = infer_state_dim_from_checkpoint(_ckpt) if _os.path.exists(_ckpt) else 4
+        self.feature_dim = infer_state_dim_from_checkpoint(_ckpt)
         self.brain = PPOAgent(state_dim=self.feature_dim, filename=_ckpt)
-        self.brain.load()
+        self.brain.load(strict=True)
         self._prev_bus_vel = 0.0  # for rel_accel computation in brain state
         self._bus_heading_prev = 0.0
         self.heading_anomaly = False   # set True on first heading snap; also initialised in init_scenario

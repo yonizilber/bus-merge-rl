@@ -741,10 +741,10 @@ def train(
             window_succ_sum = window_crash_sum = window_to_sum = 0
 
     # --- FINAL VALIDATION RUN ---
-    # Uses a "secret" seed set never seen during training or eval.
+    # Uses a "held-out" seed set never seen during training or eval.
     from busmerge.rl.validation_constants import TRAINING_VALIDATION_SEEDS
     VALIDATION_SEEDS = TRAINING_VALIDATION_SEEDS
-    print("\n--- Final Validation Run (secret seeds, never optimised against) ---")
+    print("\n--- Final Validation Run (held-out seeds, never optimised against) ---")
     if os.path.exists(best_path):
         _load_policy_weights(agent, best_path)
     val_stats = evaluate_policy_multi_seed(

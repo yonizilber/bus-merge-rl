@@ -122,7 +122,15 @@ class PPOAgent:
         # Save the exact neural weights to the hard drive
         torch.save(self.policy.state_dict(), self.filename)
 
-    def load(self):
+    def load(self, strict: bool = False):
+        """Load weights from ``self.filename``.
+
+        ``strict=False`` (training): a missing file or a shape mismatch leaves fresh weights.
+        ``strict=True`` (evaluation, app): either case raises, so a random policy can never
+        be mistaken for a trained one.
+        """
+        if strict and not os.path.exists(self.filename):
+            raise FileNotFoundError(f"Checkpoint not found: {self.filename}")
         if os.path.exists(self.filename):
             # Load the neural weights back into the network
             try:
@@ -133,4 +141,6 @@ class PPOAgent:
                 self.policy.load_state_dict(state_dict)
                 print("Successfully loaded pre-trained PPO brain!")
             except RuntimeError as e:
+                if strict:
+                    raise
                 print(f"Checkpoint shape mismatch, starting with fresh weights: {e}")

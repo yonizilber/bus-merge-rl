@@ -1,3 +1,4 @@
+import tempfile
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -82,14 +83,6 @@ if 'val_demo_batch_pending' not in st.session_state:
 # --- Sidebar Controls ---
 st.sidebar.header("🧪 Experiment Settings")
 
-if st.sidebar.button("Apply merge-test preset", help="Scenario B, moderate traffic, no sensor noise — matches smoke_test defaults."):
-    st.session_state.merge_preset = True
-    st.rerun()
-
-_preset = st.session_state.get("merge_preset", False)
-if _preset:
-    st.sidebar.success("Merge-test preset active (B, inflow 0.4, 50 cars, noise off)")
-
 # 1. Logic & Scenario
 st.sidebar.subheader("Scenario")
 _scenario_options = ["A: Bus Stops in Lane", "B: Bus Bay (Layby)"]
@@ -104,8 +97,8 @@ if scenario_code == "A":
 
 # 2. Traffic Settings
 st.sidebar.subheader("Traffic Conditions")
-traffic_density = st.sidebar.slider("Inflow (cars/sec)", 0.1, 1.0, 0.4 if _preset else 0.4)
-batch_size = st.sidebar.slider("Total Cars to Sim", 20, 100, 50 if _preset else 50)
+traffic_density = st.sidebar.slider("Inflow (cars/sec)", 0.1, 1.0, 0.4)
+batch_size = st.sidebar.slider("Total Cars to Sim", 20, 100, 50)
 
 # 3. Bus Settings
 st.sidebar.subheader("Bus Parameters")
@@ -115,7 +108,7 @@ pax_bus = st.sidebar.number_input("Pax per Bus", 10.0, 100.0, 50.0)
 
 st.sidebar.subheader("Sensor Noise (Robustness Test)")
 noise_enabled = st.sidebar.checkbox(
-    "Enable Live Sensor Noise", value=False if _preset else False,
+    "Enable Live Sensor Noise", value=False,
     help="Off for first merge test (matches deterministic eval). Enable only for robustness sweeps.",
 )
 if noise_enabled:
@@ -252,13 +245,18 @@ if _available_brains:
                 traffic_rate=traffic_density,
                 total_cars=batch_size,
             )
-        st.sidebar.success("Smoke PASSED") if _ok else st.sidebar.error("Smoke FAILED — see terminal")
+        st.session_state.smoke_result = _ok
         st.rerun()
+
+    _smoke_result = st.session_state.pop("smoke_result", None)
+    if _smoke_result is not None:
+        (st.sidebar.success if _smoke_result else st.sidebar.error)(
+            "Smoke test passed" if _smoke_result else "Smoke test failed — see terminal")
 
     with st.sidebar.expander("Training validation demo (10×3)", expanded=False):
         from busmerge.rl.validation_constants import TRAINING_VALIDATION_SEEDS
         st.caption(
-            "Runs the **same 10 secret seeds × 3 episodes** as end-of-training validation "
+            "Runs the **same 10 held-out seeds × 3 episodes** as end-of-training validation "
             f"({', '.join(str(s) for s in TRAINING_VALIDATION_SEEDS)}). "
             "**Visual walkthrough** shows **gym exact** + **Streamlit** GIFs side by side; "
             "**Table only** runs all 60 episodes in ~30 s."
@@ -348,7 +346,7 @@ config = SimConfig(
     physics_mode=_physics_mode_enum,
 )
 
-# --- Training validation demo (10 secret seeds × N episodes) ---
+# --- Training validation demo (10 held-out seeds × N episodes) ---
 if st.session_state.get("val_demo_batch_pending") and selected_brain_path:
     from busmerge.rl.validation_demo import run_validation_comparison, summarize_comparison
     from busmerge.rl.validation_constants import TRAINING_VALIDATION_SEEDS
@@ -445,7 +443,7 @@ if _walk and selected_brain_path:
             )
             _gym_gif = build_merge_gif(_gdf_ep, config, fps=2, max_frames=60)
             if _gym_gif:
-                st.image(_gym_gif, use_container_width=True)
+                st.image(_gym_gif, width="stretch")
             _t0 = _gdf_ep[_gdf_ep["time"] == 0.0]
             if not _t0.empty:
                 _bus = _t0[_t0["type"] == "Bus"]
@@ -469,7 +467,7 @@ if _walk and selected_brain_path:
             )
             _gif = build_merge_gif(_df_ep, config, fps=5)
             if _gif:
-                st.image(_gif, use_container_width=True)
+                st.image(_gif, width="stretch")
             else:
                 st.info("No merge-zone frames to animate for this episode.")
         else:
@@ -501,7 +499,7 @@ if _walk and selected_brain_path:
 if st.session_state.val_demo_df is not None and st.session_state.get("val_demo_walk") is None:
     _vsum = st.session_state.val_demo_summary or {}
     st.divider()
-    st.subheader("🔬 Training validation demo — 10 secret seeds × 3 episodes")
+    st.subheader("🔬 Training validation demo — 10 held-out seeds × 3 episodes")
     st.markdown(
         "This is the **same test** printed at the end of PPO training. "
         "Left column = **training gym** (`BusMergeEnv`, static queue at reset). "
@@ -553,11 +551,11 @@ if st.session_state.val_demo_df is not None and st.session_state.get("val_demo_w
             "merge_s": "Merge (s)",
             "traffic_note": "Traffic model",
         }),
-        use_container_width=True,
+        width="stretch",
         height=420,
     )
     with st.expander("Pivot: training vs Streamlit per seed×episode"):
-        st.dataframe(_pivot, use_container_width=True)
+        st.dataframe(_pivot, width="stretch")
 
     _crash_train = _vdf[
         (_vdf["engine"].str.contains("training"))
@@ -595,9 +593,14 @@ if st.button("Run Simulation"):
         st.session_state.df = sim.get_results()
         st.session_state.follower_df = sim.get_follower_trace()
         st.session_state.sim_complete = True
+        st.session_state.run_config = config
+        st.session_state.run_id = st.session_state.get("run_id", 0) + 1
 
 # --- DASHBOARD & ANIMATION (Runs outside the Run button) ---
 if st.session_state.sim_complete:
+    # Show the settings the run was made with, not whatever the sidebar says now.
+    config = st.session_state.get("run_config", config)
+    scenario_code = st.session_state.get("run_scenario", scenario_code)
     df = st.session_state.df
     _brain_name = _os.path.basename(st.session_state.get("active_brain", "unknown"))
     _fd = st.session_state.get("feature_dim", 4)
@@ -653,7 +656,7 @@ if st.session_state.sim_complete:
                     "(dual-path physics detected)"
                 )
 
-    elif _outcome == "stuck_waiting":
+    if _outcome == "stuck_waiting":
         _mp = _meta.get("max_progress")
         _extra = f" (max progress { _mp:.0%})" if _mp is not None else ""
         st.error(
@@ -781,7 +784,7 @@ if st.session_state.sim_complete:
         title=f"Scenario {scenario_code}: Trajectories (Hover = Thicker, Shift+Click = Isolate)"
     ).interactive()
 
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch")
 
     # --- Queue / bypass anomaly detector (optional — skips O(n²) scan when off) ---
     if show_queue_anomalies:
@@ -820,7 +823,7 @@ if st.session_state.sim_complete:
                     "passed_v": "Passed v (m/s)",
                     "delta_x_before_m": "Was behind by (m)",
                 })
-                st.dataframe(_show, use_container_width=True, hide_index=True)
+                st.dataframe(_show, width="stretch", hide_index=True)
 
                 if not _post_ot.empty:
                     _opts = [
@@ -852,7 +855,7 @@ if st.session_state.sim_complete:
                             "total_lat": "{:.3f}",
                             "yield_eff": "{:.3f}",
                         }, na_rep="—"),
-                        use_container_width=True,
+                        width="stretch",
                         height=320,
                     )
                     _mini = df[(df["id"].isin(_ids)) & (df["time"] >= _t0 - 5) & (df["time"] <= _t0 + 5)]
@@ -863,15 +866,15 @@ if st.session_state.sim_complete:
                             color=alt.Color("id:N", title="ID"),
                             tooltip=["time", "id", "type", "x", "dx", "v", "leader_info", "front_gap", "queue_rank"],
                         ).properties(title="Full-rate trajectories ±5 s (no subsampling)", height=280)
-                        st.altair_chart(_cross, use_container_width=True)
+                        st.altair_chart(_cross, width="stretch")
 
             if not _qa["negative_gaps"].empty:
                 st.warning("Negative front-gap frames (longitudinal overlap recorded in telemetry)")
-                st.dataframe(_qa["negative_gaps"].head(30), use_container_width=True)
+                st.dataframe(_qa["negative_gaps"].head(30), width="stretch")
 
             if not _qa["position_jumps"].empty:
                 st.warning("Large single-frame Δx (physics teleport candidates)")
-                st.dataframe(_qa["position_jumps"].head(20), use_container_width=True)
+                st.dataframe(_qa["position_jumps"].head(20), width="stretch")
 
             _art = _qa.get("chart_artifact_crossings", pd.DataFrame())
             if not _art.empty:
@@ -887,7 +890,7 @@ if st.session_state.sim_complete:
                         "passed_id": "Passed ID",
                         "x_cross": "Apparent cross x (m)",
                     }),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
@@ -1020,7 +1023,7 @@ if st.session_state.sim_complete:
                         "Leader presence": "{:.3f}",
                         "Bus merge P": "{:.3f}",
                     }, na_rep="—").apply(_highlight_brake_rows, axis=1),
-                    use_container_width=True,
+                    width="stretch",
                     height=450,
                 )
                 _plot = ft[ft["Car ID"].notna()].copy()
@@ -1064,7 +1067,7 @@ if st.session_state.sim_complete:
                                f"{len(_bus_rows[_bus_rows['state'] == 'WAITING_TO_MERGE'])} WAITING_TO_MERGE frames.")
                     st.dataframe(
                         _log.style.format({"Time (s)": "{:.2f}", "Merge P": "{:.3f}", "Bus vel (m/s)": "{:.3f}"}),
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True,
                     )
 
@@ -1287,7 +1290,7 @@ if st.session_state.sim_complete:
                 all_times = all_times_full
 
             # Cache rendered frames in session state keyed by run hash
-            run_hash = str(hash(str(df['time'].max()) + str(len(df))))
+            run_hash = str(st.session_state.get("run_id", 0))
             cache_key = f"merge_frames_{run_hash}"
             if cache_key not in st.session_state:
                 with st.spinner(f"Pre-rendering {len(all_times)} merge frames…"):
@@ -1319,7 +1322,7 @@ if st.session_state.sim_complete:
                     )
                     st.session_state[gif_key] = gif_buf.getvalue()
 
-            st.image(st.session_state[gif_key], use_container_width=True)
+            st.image(st.session_state[gif_key], width="stretch")
             st.caption(
                 f"Window: t = {all_times[0]:.1f} s → {all_times[-1]:.1f} s  |  "
                 f"{len(all_times)} frames  |  1 frame = {df['time'].diff().median():.2g} s simulation time"
@@ -1352,7 +1355,7 @@ if st.session_state.sim_complete:
                     with c4:
                         st.select_slider("Time (s)", options=all_times,
                                          format_func=lambda t: f"{t:.1f} s", key=slider_key)
-                    st.image(frame_images[st.session_state[slider_key]], use_container_width=True)
+                    st.image(frame_images[st.session_state[slider_key]], width="stretch")
 
             # ── SAT collision debug (optional) ────────────────────────────────────
             if show_sat_validation:
@@ -1395,7 +1398,7 @@ if st.session_state.sim_complete:
                     ax_d.set_aspect('equal')
                     ax_d.set_title(f"Corner verification  t = {debug_t:.1f} s  |  "
                                    f"{'⚠️ SAT: COLLISION' if debug_t in collision_times else '✅ SAT: clear'}")
-                    st.pyplot(fig_d, use_container_width=True)
+                    st.pyplot(fig_d, width="stretch")
                     plt.close(fig_d)
 
             # ── Bus Merge Telemetry table ─────────────────────────────────────────
@@ -1454,7 +1457,7 @@ if st.session_state.sim_complete:
                             'Steer (°)':    '{:.2f}',
                             'Progress':     '{:.3f}',
                         }).background_gradient(subset=['Accel (m/s²)'], cmap='RdYlGn', vmin=-3, vmax=3),
-                        use_container_width=True,
+                        width="stretch",
                         height=420,
                     )
 
@@ -1491,7 +1494,7 @@ if st.session_state.sim_complete:
                                 'Heading (°)': '{:.4f}',
                                 'Steer (°)':   '{:.4f}',
                             }),
-                            use_container_width=True,
+                            width="stretch",
                             height=400,
                         )
 
@@ -1531,219 +1534,17 @@ if st.session_state.sim_complete:
             anim = animation.FuncAnimation(fig, update, frames=time_steps, blit=False)
             
             # SLOWED DOWN: fps changed from 10 to 5 for half-speed playback
-            anim.save("animation.gif", writer='pillow', fps=5)
+            with tempfile.TemporaryDirectory() as _tmp:
+                _gif_path = _os.path.join(_tmp, "animation.gif")
+                anim.save(_gif_path, writer='pillow', fps=5)
+                with open(_gif_path, "rb") as _f:
+                    _gif_bytes = _f.read()
             plt.close(fig)
-            
-            st.image("animation.gif", use_container_width=True)
-            
-            # THE NEW DOWNLOAD BUTTON
-            with open("animation.gif", "rb") as file:
-                btn_col2.download_button(
-                    label="💾 Download GIF",
-                    data=file,
-                    file_name="bus_simulation.gif",
-                    mime="image/gif"
-                )
 
-                
-# import streamlit as st
-# import pandas as pd
-# import altair as alt
-# import numpy as np
-# from config import SimConfig
-# from simulation import SimulationEngine, AnalyticsEngine
-# import time # Needed to control the frame rate
-# from graphics.renderer import SimulationRenderer # NEW
-
-# # --- Page Config ---
-# st.set_page_config(page_title="Bus Traffic Sim", layout="wide")
-# st.title("🚌 Traffic Simulation: Behavioral Analysis")
-
-# # --- Sidebar Controls ---
-# st.sidebar.header("🧪 Experiment Settings")
-
-# # 1. Logic & Scenario
-# st.sidebar.subheader("Scenario")
-# scenario_type = st.sidebar.radio("Bus Behavior", ["A: Bus Stops in Lane", "B: Bus Bay (Layby)"])
-# scenario_code = "A" if "A:" in scenario_type else "B"
-
-# # 2. Traffic Settings
-# st.sidebar.subheader("Traffic Conditions")
-# traffic_density = st.sidebar.slider("Inflow (cars/sec)", 0.1, 1.0, 0.4)
-# batch_size = st.sidebar.slider("Total Cars to Sim", 20, 100, 50)
-
-# # 3. Bus Settings
-# st.sidebar.subheader("Bus Parameters")
-# bus_stop_duration = st.sidebar.slider("Stop Duration (s)", 5, 30, 15)
-# pax_car = st.sidebar.number_input("Pax per Car", 1.0, 5.0, 1.2)
-# pax_bus = st.sidebar.number_input("Pax per Bus", 10.0, 100.0, 50.0)
-
-# # --- Simulation Execution ---
-# config = SimConfig(
-#     total_cars_to_spawn=batch_size, 
-#     traffic_rate=traffic_density,
-#     pax_per_car=pax_car,
-#     pax_per_bus=pax_bus,
-#     bus_dwell_time=bus_stop_duration
-# )
-
-# if st.button("Run Simulation"):
-#     with st.spinner(f"Simulating {batch_size} cars..."):
-#         sim = SimulationEngine(scenario=scenario_code, config=config)
-#         sim.init_scenario()
-        
-#         # --- BATCH LOOP ---
-#         frame_count = 0
-#         max_sim_time = 300 
-#         progress_bar = st.progress(0)
-        
-#         while not sim.all_vehicles_finished():
-#             sim.step()
-#             frame_count += 1
-#             if frame_count * sim.dt >= max_sim_time: break
-#             if frame_count % 10 == 0:
-#                  progress_bar.progress(min(sim.cars_finished_count / (batch_size + 1), 1.0))
-                 
-#         progress_bar.empty()
-#         df = sim.get_results()       
-        
-#         # --- Analytics ---
-#         analytics = AnalyticsEngine(df, config)
-#         kpis = analytics.compute_kpis()
-        
-#         # --- 1. DATA PREPARATION (Smart Sampling) ---
-#         st.subheader("Traffic Visualization")
-
-#         # A. Strict Sorting
-#         df = df.sort_values(by=['id', 'time'])
-
-#         # B. SMART SAMPLING (The Fix)
-#         # We want to reduce data size BUT keep every "State Change" event.
-        
-#         # 1. Identify rows where state changes compared to previous row for same car
-#         df['prev_state'] = df.groupby('id')['state'].shift(1)
-#         df['state_change'] = df['state'] != df['prev_state']
-        
-#         # 2. Identify "Boring" rows (State is same as before)
-#         # We will keep only 20% of these to save space
-#         np.random.seed(42)
-#         df['keep_random'] = np.random.rand(len(df)) < 0.2
-        
-#         # 3. Combine: Keep if State Changed OR Random Sample OR It's the Bus
-#         # We always keep the Bus data to ensure its line is perfect.
-#         keep_mask = (df['state_change']) | (df['keep_random']) | (df['type'] == 'Bus')
-#         chart_data = df[keep_mask].copy()
-
-#         # C. COLOR LOGIC (Refined)
-#         def get_inner_color(row):
-#             state_str = str(row['state'])
-
-#             # BUS LOGIC
-#             if row['type'] == 'Bus':
-#                 if "SHOCKED" in state_str: return 'black'   # Panic
-#                 if state_str == 'IN_BAY': return '#333333'  # Dark Charcoal
-#                 # New Dynamic Merge Colors
-#                 if state_str == 'WAITING_TO_MERGE': 
-#                     presence = float(row['presence'])
-#                     if presence <= 0.85:
-#                         return '#FFD700' # Gold (Creeping - Cars can still squeeze)
-#                     else:
-#                         return '#FF0000' # Red (Dominance - Cars MUST yield)                return 'white'       # Moving
-            
-#             # CAR LOGIC
-#             else:
-#                 if state_str == 'Squeezing!': return 'purple' 
-#                 if "Reacting" in state_str: return '#FF69B4' # Hot Pink
-#                 return '#aec7e8'     # Light Blue
-
-#         chart_data['inner_color'] = chart_data.apply(get_inner_color, axis=1)
-
-#         # --- 2. VISUALIZATION (Clean & Direct) ---
-        
-#         # Define Selections
-#         # empty=False: Nothing is thick unless hovered
-#         hover = alt.selection_point(on='mouseover', fields=['id'], empty=False)
-#         # toggle=True: Hold shift to select multiple. (Default empty=True means all are visible initially)
-#         click = alt.selection_point(fields=['id'], toggle=True)
-
-#         # Base Chart
-#         base = alt.Chart(chart_data).encode(
-#             x=alt.X('time', title='Time (s)'),
-#             y=alt.Y('x', title='Position (m)'),
-#             detail='id',
-#             tooltip=[
-#                 alt.Tooltip('id', title='Vehicle ID'),
-#                 alt.Tooltip('type', title='Type'),
-#                 alt.Tooltip('x', format='.1f', title='Absolute Pos (m)'),
-#                 alt.Tooltip('v', format='.1f', title='Speed (m/s)'),
-#                 alt.Tooltip('state', title='Status'),
-#                 alt.Tooltip('presence', format='.2f', title='Own Solidity'),
-#                 alt.Tooltip('leader_info', title='Following'),
-#                 alt.Tooltip('bus_visibility', title='Perceives Bus As')
-#             ]
-#         )
-
-#         # LAYER 1: The "Outer" Line (Vehicle Color)
-#         outer_line = base.mark_line().encode(
-#             color=alt.Color('type', scale=alt.Scale(domain=['Car', 'Bus'], range=['#1f77b4', '#d62728']), legend=None),
-#             # Click controls visibility (Focus Mode)
-#             opacity=alt.condition(click, alt.value(0.8), alt.value(0.1)),
-#             # Hover controls thickness
-#             strokeWidth=alt.condition(hover, alt.value(7), alt.value(4))
-#         ).add_params(hover, click)
-
-#         # LAYER 2: The "Inner" Line (State Color)
-#         inner_line = base.mark_line().encode(
-#             color=alt.Color('inner_color', scale=None, legend=None),
-#             opacity=alt.condition(click, alt.value(1.0), alt.value(0.1)),
-#             strokeWidth=alt.condition(hover, alt.value(3), alt.value(2))
-#         )
-
-#         # Combine
-#         chart = (outer_line + inner_line).properties(
-#             width=800, height=500,
-#             title=f"Scenario {scenario_code}: Trajectories (Hover = Thicker, Shift+Click = Isolate)"
-#         ).interactive()
-
-#         st.altair_chart(chart, use_container_width=True)
-        
-#         # --- 3. Results ---
-#         st.divider()
-#         c1, c2, c3 = st.columns(3)
-#         c1.metric("Total Time", f"{df['time'].max():.1f} s")
-#         c2.metric("Avg Speed", f"{kpis['avg_person_speed']:.1f} km/h")
-#         c3.metric("Throughput", f"{kpis['throughput_people']} pax")
-
-
-#         # --- 4. 2D ANIMATION VISUALIZER ---
-#         st.divider()
-#         st.subheader("🎬 Live 2D Playback")
-        
-#         # We only want to run the animation if the user clicks "Play" 
-#         # because rendering hundreds of images takes a few seconds.
-#         if st.button("Play Animation"):
-#             # Create a placeholder on the screen where the images will flash
-#             animation_placeholder = st.empty()
-            
-#             # Initialize the Renderer
-#             renderer = SimulationRenderer(df, config)
-            
-#             # Get a sorted list of every unique time step (0.1, 0.2, 0.3...)
-#             time_steps = sorted(df['time'].unique())
-            
-#             # Start the Movie Loop
-#             for t in time_steps:
-#                 # 1. Ask the renderer to draw the frame for this exact millisecond
-#                 fig = renderer.get_frame(t)
-                
-#                 # 2. Display the image in the Streamlit placeholder
-#                 animation_placeholder.pyplot(fig)
-                
-#                 # 3. Close the figure from memory so your computer doesn't crash!
-#                 plt.close(fig)
-                
-#                 # 4. Wait a tiny fraction of a second to control the playback speed (FPS)
-#                 time.sleep(0.01) 
-            
-#             st.success("Playback Complete!")
-
+            st.image(_gif_bytes, width="stretch")
+            btn_col2.download_button(
+                label="💾 Download GIF",
+                data=_gif_bytes,
+                file_name="bus_simulation.gif",
+                mime="image/gif",
+            )

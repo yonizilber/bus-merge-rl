@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--entropy-coef", type=float, default=0.02)
     parser.add_argument("--dense-seeds", type=str, default="1001,1002,1003",
                         help="Scenario-H eval seeds during training (dense bumper traffic).")
-    args, _unknown = parser.parse_known_args()
+    args = parser.parse_args()
 
     run_tag = args.run_tag or {4: "exp4", 7: "exp7", 11: "11feat"}[args.feature_dim]
 

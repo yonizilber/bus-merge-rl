@@ -1,7 +1,7 @@
 """
 Side-by-side demo: training gym validation (9/30) vs Streamlit production engine.
 
-Runs the same 10 secret seeds × N episodes as train.py final validation,
+Runs the same 10 held-out seeds × N episodes as train.py final validation,
 then repeats with SimulationEngine so you can see why scores differ.
 """
 from __future__ import annotations
@@ -250,7 +250,7 @@ def run_episode_pair(
     if agent is None or env is None:
         dim = infer_state_dim_from_checkpoint(ckpt_path)
         agent = PPOAgent(state_dim=dim, filename=ckpt_path)
-        agent.load()
+        agent.load(strict=True)
         env = make_eval_env(ckpt_path, dim, governor_disabled)
 
     scenario_seeds = _episode_scenario_seeds(seed, episodes_per_seed)
@@ -282,7 +282,7 @@ def run_validation_comparison(
 
     dim = infer_state_dim_from_checkpoint(ckpt_path)
     agent = PPOAgent(state_dim=dim, filename=ckpt_path)
-    agent.load()
+    agent.load(strict=True)
     env = make_eval_env(ckpt_path, dim, governor_disabled)
 
     if streamlit_config is None:
