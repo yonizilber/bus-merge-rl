@@ -623,6 +623,12 @@ class BusMergeEnv:
         """
         action_value : np.ndarray shape (2,) or (1,2)  — [steer_intent, gas_intent] in [-1,1]
         """
+        steer, gas = self._parse_action(action_value)
+        cmd = self._control_and_tick(steer, gas)
+        return self._reward_and_terminal(cmd)
+
+    def _parse_action(self, action_value):
+        """Flatten and clip the raw action; update the action-quality telemetry."""
         self.current_step += 1
         self.last_intervened = False
         self.last_shield_condition = ""
@@ -632,8 +638,6 @@ class BusMergeEnv:
         self.last_governor_veto   = False
         self.last_governor_reason = ""
 
-        # ── 1. PARSE 2D ACTION ────────────────────────────────────────────────────
-        # Flatten to 1D regardless of input shape
         action_arr = np.asarray(action_value, dtype=np.float32).flatten()
         _vol = float(np.sum(np.abs(action_arr - self._prev_action)))
         _steer_jerk = float(abs(action_arr[0] - self._prev_action[0]))
@@ -643,20 +647,15 @@ class BusMergeEnv:
         self._prev_action = action_arr.copy()
         steer_intent = float(np.clip(action_arr[0], -1.0, 1.0))  # +1 = steer into lane
         gas_intent   = float(np.clip(action_arr[1], -1.0, 1.0))  # +1 = accelerate
+        return steer_intent, gas_intent
+
+    def _control_and_tick(self, steer_intent, gas_intent):
+        """Governor, shield, autopilot targets and one physics tick.
+
+        Returns the facts the reward needs about what the controller did.
+        """
         _raw_steer_agent = steer_intent   # agent's unmodified intent (for telemetry)
         _raw_gas_agent   = gas_intent
-
-        # Map gas_intent → target speed: symmetric linear mapping.
-        # -1.0 → 0.0 m/s (full stop), 0.0 → half speed, +1.0 → BUS_MAX_SPEED.
-        # Eliminates the dead zone where all [-1,0) mapped to zero speed,
-        # which froze the bicycle model and wasted half the action space.
-        speed_target = (gas_intent + 1.0) / 2.0 * self.BUS_MAX_SPEED
-
-        # Map steer_intent → lateral target offset
-        # steer_intent=+1 → lat_target=0 (traffic lane); steer_intent=-1 → lat_target=BAY_DEPTH
-        lat_target = steer_intent * 0.0 + (1.0 - abs(steer_intent)) * self.bus.lateral_offset
-        # Simpler linear mapping: +1 pushes fully into lane, -1 stays in bay
-        lat_target = np.interp(steer_intent, [-1.0, 1.0], [BAY_DEPTH, 0.0])
 
         self._prev_bus_vel = self.bus.velocity
 
@@ -754,6 +753,23 @@ class BusMergeEnv:
             veh._physics_mode = "training"
             leader, _ = resolve_car_leader(chain, idx, self.bus)
             veh.update_physics(self.dt, leader=leader, bus=self.bus)
+
+        return {
+            "raw_steer_agent": _raw_steer_agent, "raw_gas_agent": _raw_gas_agent,
+            "raw_steer": raw_steer, "intervened": intervened,
+            "intervention_strength": intervention_strength,
+            "steer_intent": steer_intent, "gas_intent": gas_intent,
+        }
+
+    def _reward_and_terminal(self, cmd):
+        """Reward, termination and diagnostics after the physics tick."""
+        _raw_steer_agent = cmd["raw_steer_agent"]
+        _raw_gas_agent = cmd["raw_gas_agent"]
+        raw_steer = cmd["raw_steer"]
+        intervened = cmd["intervened"]
+        intervention_strength = cmd["intervention_strength"]
+        steer_intent = cmd["steer_intent"]
+        gas_intent = cmd["gas_intent"]
 
         # ── 6. COMPUTE REWARDS (simplified 5-term core) ──────────────────────────
         # Phase 4 simplification: removed ~15 overlapping shaping terms that
