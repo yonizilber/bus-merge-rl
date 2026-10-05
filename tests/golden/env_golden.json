@@ -1,0 +1,30 @@
+{
+ "0": {
+  "done": true,
+  "fingerprint": "1e147e20bdbef3b1",
+  "steps": 55,
+  "success": true,
+  "total_reward": 4765.454
+ },
+ "1": {
+  "done": true,
+  "fingerprint": "02aa45a580635853",
+  "steps": 54,
+  "success": true,
+  "total_reward": 4739.014
+ },
+ "2": {
+  "done": true,
+  "fingerprint": "7f532682ff726cce",
+  "steps": 53,
+  "success": true,
+  "total_reward": 4752.902
+ },
+ "3": {
+  "done": true,
+  "fingerprint": "7c69c5b9cd4abc33",
+  "steps": 53,
+  "success": true,
+  "total_reward": 4775.7
+ }
+}
