@@ -42,7 +42,7 @@ def run_env_case(seed: int, env_factory=BusMergeEnv) -> dict:
         state, reward, done, _ = env.step(mean.squeeze(0).numpy())
         h.update(np.round(np.asarray(state, dtype=np.float64), 5).tobytes())
         h.update(np.float64(round(reward, 4)).tobytes())
-        total += reward
+        total += float(reward)
         steps += 1
     return {"steps": steps, "done": bool(done), "success": bool(env.last_success),
             "total_reward": round(total, 3), "fingerprint": h.hexdigest()[:16]}

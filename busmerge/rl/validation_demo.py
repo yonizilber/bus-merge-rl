@@ -54,53 +54,7 @@ def scenario_name_from_roll(roll: float) -> str:
     return "F dense urban"
 
 
-def _gym_record_frame(env, time_s: float) -> list:
-    """Snapshot all vehicles for merge-zone GIF (BusMergeEnv layout)."""
-
-    rows = []
-    bus = env.bus
-    progress = float(env._merge_progress())
-    rows.append({
-        "time": time_s,
-        "id": bus.id,
-        "type": "Bus",
-        "x": float(bus.position),
-        "v": float(bus.velocity),
-        "length": float(bus.params.length),
-        "width": float(bus.params.width),
-        "state": bus.state.name,
-        "lateral_offset": float(bus.lateral_offset),
-        "total_lat": float(getattr(bus, "total_lateral_offset", bus.lateral_offset)),
-        "heading_deg": float(np.degrees(bus.heading_angle)),
-        "merge_progress": progress,
-        "physical_collision": False,
-        "collision_frame": False,
-    })
-    gap, _, _, _, _, nearest = env._scan_nearest_car()
-    for v in env.vehicles:
-        car_lat = float(getattr(v, "total_lateral_offset", 0.0))
-        fg = float(gap) if nearest is not None and v.id == nearest.id else float("nan")
-        phys = bool(nearest is not None and v.id == nearest.id and fg < 0.0)
-        rows.append({
-            "time": time_s,
-            "id": v.id,
-            "type": "Car",
-            "x": float(v.position),
-            "v": float(v.velocity),
-            "length": float(v.params.length),
-            "width": float(v.params.width),
-            "state": "Cruising",
-            "lateral_offset": car_lat,
-            "total_lat": car_lat,
-            "heading_deg": float(np.degrees(getattr(v, "heading_angle", 0.0))),
-            "merge_progress": float("nan"),
-            "physical_collision": phys,
-            "collision_frame": phys,
-        })
-    return rows
-
-
-def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool, env_cls=None):
+def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool):
     """Training env configured the way the checkpoint was trained.
 
     The reward/crash rules depend on the run tag (see rl/train.py): ``exp7sat*`` runs use the
@@ -110,7 +64,7 @@ def make_eval_env(ckpt_path: str, feature_dim: int, governor_disabled: bool, env
     from busmerge.rl.env import BusMergeEnv
 
     name = Path(ckpt_path).name
-    env = (env_cls or BusMergeEnv)(eval_mode=True, governor_disabled=governor_disabled)
+    env = BusMergeEnv(eval_mode=True, governor_disabled=governor_disabled)
     env.feature_dim = feature_dim
     env.state_size = feature_dim
     env.sat_penalty_enabled = "exp7sat" in name
@@ -154,9 +108,8 @@ def run_training_episode(
 
     roll = float(scenario_seeds[ep])
     gap0, _, _, _, _, _ = env._scan_nearest_car()
-    frame_rows: list = []
     if record_frames:
-        frame_rows.extend(_gym_record_frame(env, 0.0))
+        env.engine.record_frames = True  # the engine's own frame log: same format the app plots
 
     done = False
     steps = 0
@@ -168,8 +121,6 @@ def run_training_episode(
             action_value = action_mean.squeeze(0).numpy()
         state, _, done, _ = env.step(action_value)
         steps += 1
-        if record_frames:
-            frame_rows.extend(_gym_record_frame(env, steps * env.dt))
 
     progress = float(env._merge_progress())
     if env.last_success:
@@ -194,7 +145,7 @@ def run_training_episode(
         "initial_gap_m": round(float(gap0), 2),
         "traffic_note": f"Eval {scenario_name_from_roll(roll)} — bus in bay, cars frozen at reset",
     }
-    gym_df = pd.DataFrame(frame_rows) if record_frames and frame_rows else None
+    gym_df = env.engine.get_results() if record_frames else None
     return row, gym_df
 
 

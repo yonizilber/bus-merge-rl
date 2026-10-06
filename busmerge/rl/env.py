@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import random
 from collections import deque
@@ -73,9 +75,11 @@ def compute_sat_overlap_area(bus_corners: np.ndarray,
 
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.rl.observation import build_observation
+from busmerge.rl.merge_success import is_production_merge_complete
+from busmerge.config import PhysicsMode, SimConfig
+from busmerge.simulation import SimulationEngine
 from busmerge.rl.merge_constants import (
     BUS_WIDTH, BUS_LENGTH, BAY_DEPTH,
-    BUS_MAX_SPEED as _MC_BUS_MAX_SPEED, MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
 
 # ---------------------------------------------------------------------------
@@ -94,21 +98,20 @@ class BusMergeEnv:
 
     State vector  : 11 features (see busmerge.rl.feature_encoding.encode_features)
 
-    Physics       : The bicycle model in Vehicle.update_physics() is the ONLY
-                    thing that moves the bus.  No direct writes to
-                    lateral_velocity, position, or velocity.
+    Physics       : None of its own. Every step is executed by SimulationEngine.step()
+                    (the same code the Streamlit app runs); this class only generates the
+                    training scenarios, encodes observations and computes the reward.
 
     Merge progress: Derived from actual lateral_offset, not a stored scalar.
                     merge_progress = clip((offset - BAY_DEPTH) / (-BAY_DEPTH), 0, 1)
                     0 = bus fully in bay, 1 = bus fully back in traffic lane.
     """
 
-    # Physical limits — imported from merge_constants.py (single source of truth)
-    BUS_MAX_SPEED   = _MC_BUS_MAX_SPEED
-    MERGE_ACCEL_MAX = _MC_MERGE_ACCEL_MAX
-
-    def __init__(self, eval_mode=False, governor_disabled=False):
+    def __init__(self, eval_mode=False, governor_disabled=False,
+                 physics_mode: PhysicsMode = PhysicsMode.PRODUCTION):
         self.dt        = 0.1
+        self.physics_mode = physics_mode
+        self.engine: Optional[SimulationEngine] = None
         self.max_steps = 250   # 25 s max — halved so terminal rewards stay visible under discounting
         self.eval_mode = eval_mode
         self.governor_disabled = governor_disabled
@@ -175,15 +178,6 @@ class BusMergeEnv:
         """Merge progress derived from actual lateral_offset of the bus."""
         return float(np.clip(
             (self.bus.lateral_offset - BAY_DEPTH) / (-BAY_DEPTH), 0.0, 1.0))
-
-    def _governor_check(self, steer_intent: float, gas_intent: float):
-        from busmerge.rl.governor_logic import governor_check
-        gap, _, _, _, rel_speed, nearest_car = self._scan_nearest_car()
-        progress = self._merge_progress()
-        return governor_check(
-            steer_intent, gas_intent, progress, gap, rel_speed, nearest_car,
-            disabled=self.governor_disabled,
-        )
 
     def _scan_nearest_car(self):
         """Return nearest relevant car context in physical units (shared with simulation)."""
@@ -488,7 +482,20 @@ class BusMergeEnv:
                 car = Vehicle(v_id=i, position=300.0 - dist, velocity=speed, params=sampled_params)
                 self.vehicles.append(car)
 
+        self._attach_engine()
         return self._get_state()
+
+    def _attach_engine(self):
+        """Put the scenario the generator just built into a SimulationEngine, which then runs it."""
+        cfg = SimConfig(total_cars_to_spawn=0, physics_mode=self.physics_mode)  # no new arrivals
+        engine = SimulationEngine(scenario="B", config=cfg, governor_disabled=self.governor_disabled,
+                                  load_brain=False)
+        assert abs(engine.dt - self.dt) < 1e-9, "engine and env time steps differ"
+        engine.record_frames = False
+        engine.cars_spawned_count = cfg.total_cars_to_spawn
+        engine.vehicles = [self.bus] + list(self.vehicles)
+        engine.noise_sigma = 0.0  # observation noise is applied by this env's encoder
+        self.engine = engine
 
     def _spawn_production_queue(self, traffic_rate: float = 0.4,
                                  dwell_time: float = 15.0,
@@ -542,7 +549,7 @@ class BusMergeEnv:
             self.vehicles.sort(key=lambda v: v.position, reverse=True)
             chain = self.vehicles[:]
             for idx, veh in enumerate(chain):
-                veh._physics_mode = "training"
+                veh._physics_mode = self.physics_mode.value
                 leader, _ = resolve_car_leader(chain, idx, self.bus)
                 veh.update_physics(self.dt, leader=leader, bus=self.bus)
 
@@ -586,116 +593,41 @@ class BusMergeEnv:
         return steer_intent, gas_intent
 
     def _control_and_tick(self, steer_intent, gas_intent):
-        """Governor, shield, autopilot targets and one physics tick.
+        """Hand the agent's action to the engine for one step; report what the controller did.
 
-        Returns the facts the reward needs about what the controller did.
+        The engine runs governor, shield, autopilot, bumper rules, the bicycle model and all cars.
         """
-        _raw_steer_agent = steer_intent   # agent's unmodified intent (for telemetry)
-        _raw_gas_agent   = gas_intent
-
+        eng = self.engine
+        eng.vehicles = [self.bus] + list(self.vehicles)  # env.vehicles is the source of truth between steps
+        eng.external_action = (steer_intent, gas_intent)
+        eng.last_decision = None
         self._prev_bus_vel = self.bus.velocity
-
-        # ── 1b. ACTIVE GOVERNOR (predictive kinematic check) ────────────────────
-        # Store the agent's raw intent BEFORE any override so the reward
-        # penalty is proportional to how dangerous the requested action was.
         self._governor_raw_steer = steer_intent
-        _gov_safe, steer_intent, gas_intent, _gov_reason = \
-            self._governor_check(steer_intent, gas_intent)
-        if not _gov_safe:
-            self.last_governor_veto   = True
-            self.last_governor_reason = _gov_reason
-            self.episode_governor_vetos += 1
+        eng.step()
+        self.vehicles = [v for v in eng.vehicles if v is not self.bus]  # cars that left the road are gone
 
-        # ── 2. SAFETY SHIELD (shared busmerge/rl/governor_logic.py) ───────────────────────
-        from busmerge.rl.governor_logic import apply_safety_shield
-        nearest_gap, nearest_speed, _, nearest_width, rel_speed, nearest_car = self._scan_nearest_car()
-        raw_steer  = steer_intent
-        raw_gas    = gas_intent
-        progress = self._merge_progress()
-        steer_intent, gas_intent, shield_cond = apply_safety_shield(
-            steer_intent, gas_intent, progress, nearest_gap, rel_speed,
-            nearest_speed, nearest_car, nearest_width,
-            governor_reason=self.last_governor_reason, dt=self.dt,
-        )
-        self.last_shield_condition = shield_cond
-        intervened = (
-            shield_cond != ""
-            or abs(raw_steer - steer_intent) > 1e-6
-            or abs(raw_gas - gas_intent) > 1e-6
-        )
+        d = eng.last_decision
+        if d is None:  # the bus left WAITING_TO_MERGE during this step
+            return {"raw_steer_agent": steer_intent, "raw_gas_agent": gas_intent,
+                    "raw_steer": steer_intent, "intervened": False, "intervention_strength": 0.0,
+                    "steer_intent": steer_intent, "gas_intent": gas_intent}
+
+        self.last_governor_reason = d["governor_reason"]
+        if not d["governor_ok"]:
+            self.last_governor_veto = True
+            self.episode_governor_vetos += 1
+        self.last_shield_condition = d["shield"]
+        steer_after_governor = d["steer_after_governor"]
+        intervened = (d["shield"] != "" or abs(steer_after_governor - d["steer"]) > 1e-6
+                      or abs(d["gas"] - d["raw_gas"]) > 1e-6)
         self.last_intervened = intervened
         if intervened:
             self.episode_shields += 1
-        intervention_strength_steer = abs(raw_steer - steer_intent) / max(abs(raw_steer), 1e-8)
-        intervention_strength = float(np.clip(intervention_strength_steer, 0.0, 1.0))
-
-        # ── 3. TRANSLATE SHIELD OUTPUT BACK TO AUTOPILOT TARGETS ─────────────────
-        lat_target   = np.interp(steer_intent, [-1.0, 1.0], [BAY_DEPTH, 0.0])
-        if gas_intent >= 0.0:
-            speed_target = gas_intent * self.BUS_MAX_SPEED
-        else:
-            speed_target = 0.0
-
-        # ── 4. APPLY TARGETS TO BUS (autopilot writes lat_target; bicycle does the rest) ──
-        self.bus.lat_target = lat_target
-
-        # Longitudinal autopilot: simple proportional controller on speed
-        # accel = k*(speed_target - current_velocity), clamped to comfort bounds
-        speed_error = speed_target - self.bus.velocity
-        desired_accel = np.clip(2.0 * speed_error, -3.0, self.MERGE_ACCEL_MAX)
-        # Override IDM during merge: set acceleration directly (bus is out of lane)
-        self.bus.acceleration = desired_accel
-
-        # ── 5. PHYSICS TICK ──────────────────────────────────────────────────────
-        # Update bus physics (bicycle model — uses lat_target set above)
-        from busmerge.rl.bumper_kinematics import limit_bus_to_cars_ahead, finalize_bus_bumper
-        self.bus.velocity = max(0.0, self.bus.velocity + self.bus.acceleration * self.dt)
-        limit_bus_to_cars_ahead(
-            self.bus, self.vehicles, self.dt, allow_retreat=False,
-        )
-        self.bus.position += self.bus.velocity * self.dt
-        finalize_bus_bumper(self.bus, self.vehicles)
-        # Bicycle model for lateral motion
-        max_steer  = np.radians(self.bus.params.max_steer_angle_deg)
-        steer_rate = np.radians(self.bus.params.steer_rate_deg_per_s)
-        lookahead   = max(self.bus.velocity * 1.0, 5.0)
-        lat_error   = self.bus.lat_target - self.bus.lateral_offset
-        delta_target = np.clip(np.arctan2(lat_error, lookahead), -max_steer, max_steer)
-        steer_change = np.clip(delta_target - self.bus.steer_angle, -steer_rate * self.dt, steer_rate * self.dt)
-        self.bus.steer_angle   += steer_change
-        wheelbase = self.bus.params.wheelbase
-        self.bus.heading_angle += (self.bus.velocity * np.tan(self.bus.steer_angle) / max(wheelbase, 0.1)) * self.dt
-        self.bus.heading_angle  = np.clip(self.bus.heading_angle, -np.radians(60.0), np.radians(60.0))
-        self.bus.lateral_velocity = self.bus.velocity * np.sin(self.bus.heading_angle)
-        self.bus.lateral_offset  += self.bus.lateral_velocity * self.dt
-        self.bus.lateral_offset   = np.clip(self.bus.lateral_offset, -4.5, 0.5)
-
-        # O-U lane-keeping noise for bus
-        _ou_rev = 0.4
-        _ou_sig = getattr(self.bus.params, 'lane_keeping_noise', 0.05)
-        self.bus.lane_drift = ((1.0 - _ou_rev * self.dt) * self.bus.lane_drift
-                               + _ou_sig * np.sqrt(self.dt) * np.random.randn())
-        self.bus.lane_drift = np.clip(self.bus.lane_drift, -0.20, 0.20)
-
-        # Keep _merge_progress in sync for backward compat (production state machine, logs)
-        self.bus._merge_progress = self._merge_progress()
-
-        # Cars: same leader rules as simulation (bus in sorted chain + early yield)
-        from busmerge.rl.traffic_leaders import resolve_car_leader
-        chain = sorted(self.vehicles + [self.bus], key=lambda v: v.position, reverse=True)
-        for idx, veh in enumerate(chain):
-            if veh is self.bus:
-                continue
-            veh._physics_mode = "training"
-            leader, _ = resolve_car_leader(chain, idx, self.bus)
-            veh.update_physics(self.dt, leader=leader, bus=self.bus)
-
-        return {
-            "raw_steer_agent": _raw_steer_agent, "raw_gas_agent": _raw_gas_agent,
-            "raw_steer": raw_steer, "intervened": intervened,
-            "intervention_strength": intervention_strength,
-            "steer_intent": steer_intent, "gas_intent": gas_intent,
-        }
+        strength = float(np.clip(
+            abs(steer_after_governor - d["steer"]) / max(abs(steer_after_governor), 1e-8), 0.0, 1.0))
+        return {"raw_steer_agent": steer_intent, "raw_gas_agent": gas_intent,
+                "raw_steer": steer_after_governor, "intervened": intervened,
+                "intervention_strength": strength, "steer_intent": d["steer"], "gas_intent": d["gas"]}
 
     def _reward_and_terminal(self, cmd):
         """Reward, termination and diagnostics after the physics tick."""
@@ -918,8 +850,9 @@ class BusMergeEnv:
         return state, reward, done, info
 
     def _merge_complete(self) -> bool:
-        """Terminal success test; the training world requires the bus to be fully in the lane."""
-        return self._merge_progress() >= 1.0
+        """Terminal success: the same rule the engine and the app use to call the merge done."""
+        return is_production_merge_complete(
+            float(self.bus.lateral_offset), self.bus.state, saw_waiting_to_merge=True)
 
     def _get_state(self):
         """The agent's observation, built by the same function the production engine uses."""
