@@ -7,13 +7,15 @@ same thing in another.
 from __future__ import annotations
 
 import random
+import statistics
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 import torch
 
-from busmerge.config import SimConfig
+from busmerge.config import PhysicsMode, SimConfig
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.simulation import SimulationEngine
 
@@ -163,3 +165,45 @@ def merge_timeline(df: pd.DataFrame) -> Optional[dict]:
     out["standstill_s"] = round(standstill, 3)
     out["boarding_ended_at_s"] = round(t0, 3)
     return out
+
+
+# Streamlit sidebar defaults (streamlit_app.py): scenario B, 0.4 cars/s, 50 cars,
+# 15 s dwell, 1.2 / 50 passengers, PRODUCTION physics, governor off.
+APP_DEFAULTS = dict(
+    total_cars_to_spawn=50, traffic_rate=0.4, bus_dwell_time=15,
+    pax_per_car=1.2, pax_per_bus=50.0, physics_mode=PhysicsMode.PRODUCTION,
+)
+
+
+def _stats(values: list[float]) -> dict:
+    if not values:
+        return {"mean": None, "p95": None, "max": None}
+    ordered = sorted(values)
+    p95 = ordered[min(len(ordered) - 1, int(0.95 * len(ordered)))]
+    return {"mean": round(statistics.mean(values), 2), "p95": round(p95, 2), "max": round(ordered[-1], 2)}
+
+
+def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: float, cars: int,
+                   physics_mode: str = "production", scenario: str = "B") -> dict:
+    """Run ``seeds`` fixed-seed episodes of the app's Run button and summarise them."""
+    outcomes, car_coll = [], 0
+    phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
+    phases.update(total_s=[], standstill_s=[])
+    for seed in range(seeds):
+        cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars, "physics_mode": PhysicsMode(physics_mode)})
+        sim = run_episode(scenario, cfg, str(brain), governor_disabled=True, noise_sigma=noise_sigma, seed=seed)
+        df = sim.get_results()
+        outcome, _ = classify_outcome(df)
+        outcomes.append(outcome)
+        car_coll += count_car_collisions(df)
+        timeline = merge_timeline(df) if outcome == "merged" else None
+        if timeline:
+            for key in phases:
+                phases[key].append(timeline[key])
+    return {
+        "brain": brain.name, "physics_mode": physics_mode, "noise_sigma": noise_sigma, "traffic_rate": traffic_rate, "cars": cars,
+        "seeds": len(outcomes),
+        **{k: outcomes.count(k) for k in ("merged", "collision", "stuck_waiting", "never_waited")},
+        "car_collision_frames": car_coll,
+        "after_boarding": {k: _stats(v) for k, v in phases.items()},
+    }
