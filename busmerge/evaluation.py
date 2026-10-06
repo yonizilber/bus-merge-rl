@@ -184,12 +184,12 @@ def _stats(values: list[float]) -> dict:
 
 
 def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: float, cars: int,
-                   physics_mode: str = "production", scenario: str = "B") -> dict:
+                   physics_mode: str = "production", scenario: str = "B", seed_start: int = 0) -> dict:
     """Run ``seeds`` fixed-seed episodes of the app's Run button and summarise them."""
     outcomes, car_coll = [], 0
     phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
     phases.update(total_s=[], standstill_s=[])
-    for seed in range(seeds):
+    for seed in range(seed_start, seed_start + seeds):
         cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars, "physics_mode": PhysicsMode(physics_mode)})
         sim = run_episode(scenario, cfg, str(brain), governor_disabled=True, noise_sigma=noise_sigma, seed=seed)
         df = sim.get_results()

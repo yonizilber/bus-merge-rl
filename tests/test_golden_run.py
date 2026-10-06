@@ -17,6 +17,7 @@ import torch
 
 from busmerge.config import SimConfig
 from busmerge.simulation import SimulationEngine
+from tests.brains import GOLDEN_BRAIN
 
 GOLDEN_FILE = Path(__file__).parent / "golden" / "golden_runs.json"
 CASES = [("B", 0), ("B", 1), ("B", 2), ("A", 0), ("A", 1)]
@@ -35,7 +36,8 @@ def run_case(scenario: str, seed: int) -> dict:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    sim = SimulationEngine(scenario=scenario, config=SimConfig(total_cars_to_spawn=CARS_PER_RUN))
+    sim = SimulationEngine(scenario=scenario, config=SimConfig(total_cars_to_spawn=CARS_PER_RUN),
+                           brain_path=str(GOLDEN_BRAIN))
     sim.init_scenario()
     steps = 0
     while not sim.all_vehicles_finished() and steps < MAX_STEPS:

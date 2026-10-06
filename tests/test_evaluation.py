@@ -4,7 +4,7 @@ import pytest
 
 from busmerge.config import SimConfig
 from busmerge.evaluation import TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
-from busmerge.paths import DEFAULT_BRAIN
+from tests.brains import GOLDEN_BRAIN
 
 
 def _bus_frames(rows):
@@ -36,7 +36,7 @@ def test_collision_overrides_merge():
 @pytest.fixture(scope="module")
 def episode_df():
     cfg = SimConfig(total_cars_to_spawn=20)
-    return run_episode("B", cfg, str(DEFAULT_BRAIN), governor_disabled=True, seed=0).get_results()
+    return run_episode("B", cfg, str(GOLDEN_BRAIN), governor_disabled=True, seed=0).get_results()
 
 
 def test_timeline_phases_add_up_to_total(episode_df):
@@ -50,7 +50,7 @@ def test_validation_demo_judges_streamlit_episode_like_the_app():
     from busmerge.rl.validation_demo import run_streamlit_episode
 
     cfg = SimConfig(total_cars_to_spawn=20)
-    row, df = run_streamlit_episode(str(DEFAULT_BRAIN), seed=0, ep=0, config=cfg)
+    row, df = run_streamlit_episode(str(GOLDEN_BRAIN), seed=0, ep=0, config=cfg)
     outcome, meta = classify_outcome(df)
     assert outcome == "merged"
     assert row["outcome"] == "success"

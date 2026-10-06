@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 import torch
 
-from busmerge.paths import DEFAULT_BRAIN
 from busmerge.rl.env import BusMergeEnv
+from tests.brains import GOLDEN_BRAIN
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
 from busmerge.rl.ppo_agent import PPOAgent
 
@@ -22,7 +22,7 @@ MAX_STEPS = 600
 
 
 def run_env_case(seed: int, env_factory=BusMergeEnv) -> dict:
-    ckpt = str(DEFAULT_BRAIN)
+    ckpt = str(GOLDEN_BRAIN)
     dim = infer_state_dim_from_checkpoint(ckpt)
     agent = PPOAgent(state_dim=dim, filename=ckpt)
     agent.load(strict=True)

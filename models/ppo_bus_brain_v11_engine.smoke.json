@@ -1,0 +1,14 @@
+{
+  "checkpoint": "ppo_bus_brain_v11_engine.pth",
+  "passed": true,
+  "success_rate": 1.0,
+  "successes": 10,
+  "total": 10,
+  "crashes": 0,
+  "timeouts": 0,
+  "avg_merge_s": 4.5600000000000644,
+  "max_wait_s": 40.1000000000003,
+  "n_seeds": 10,
+  "scenario": "B",
+  "tested_at": "2026-10-06T17:19:27.572921+00:00"
+}

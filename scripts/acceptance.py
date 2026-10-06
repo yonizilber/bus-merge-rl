@@ -43,14 +43,16 @@ def check(result: dict) -> list[tuple[str, bool, str]]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--brain", required=True, type=Path)
+    ap.add_argument("--seed-start", type=int, default=0,
+                    help="first seed; use a range not used while developing/selecting the brain (e.g. 1000)")
     ap.add_argument("--out", type=Path, default=None, help="write the raw results as JSON")
     args = ap.parse_args()
 
     results, passed = [], True
     for sigma in MIN_MERGED:
-        r = evaluate_brain(args.brain, SEEDS, sigma, traffic_rate=0.4, cars=50)
+        r = evaluate_brain(args.brain, SEEDS, sigma, traffic_rate=0.4, cars=50, seed_start=args.seed_start)
         results.append(r)
-        print(f"\n{args.brain.name}  noise sigma={sigma}")
+        print(f"\n{args.brain.name}  noise sigma={sigma}  seeds {args.seed_start}..{args.seed_start + SEEDS - 1}")
         for name, ok, value in check(r):
             print(f"  [{'PASS' if ok else 'FAIL'}] {name:24} measured {value}")
             passed &= ok

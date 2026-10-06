@@ -125,12 +125,17 @@ use_fixed_seed = st.sidebar.checkbox(
 )
 run_seed = st.sidebar.number_input("Seed", 0, 1_000_000, 0, disabled=not use_fixed_seed)
 
-# --- Brain picker (newest first; default = exp7sat v9 best) ---
-_DEFAULT_BRAIN_BASENAME = "ppo_bus_brain_exp7satv9_best.pth"
+# --- Brain picker (default = v11, trained on the same engine this app runs) ---
+_DEFAULT_BRAIN_BASENAME = "ppo_bus_brain_v11_engine.pth"
 _BRAIN_OPTIONS = [
     {
+        "path": str(MODELS_DIR / "ppo_bus_brain_v11_engine.pth"),
+        "label": "11-feat v11 ★ default (trained on the app engine)",
+        "features": "",
+    },
+    {
         "path": str(MODELS_DIR / "ppo_bus_brain_exp7satv9_best.pth"),
-        "label": "7-feat exp7sat v9 ★ default",
+        "label": "7-feat exp7sat v9 (legacy-env trained)",
         "features": "progress, heading, gap, lat, car_speed, width, rel_speed",
     },
     {
@@ -213,15 +218,15 @@ if _available_brains:
 
     with st.sidebar.expander("Brain comparison (measured)"):
         st.markdown(
-            "**Setup:** Scenario B, 0.4 cars/s, 50 cars, governor off, no noise, 30 fixed seeds, "
-            "measured by `scripts/evaluate_brains.py` with the same code as the Run button. "
-            "Time = seconds from end of boarding to fully merged.\n\n"
-            "| Brain | Merged | Mean | p95 |\n"
-            "|---|---:|---:|---:|\n"
-            "| v8 best | 30/30 | 15.4 s | 17.7 s |\n"
-            "| v9 best | 30/30 | 5.4 s | 5.9 s |\n"
-            "| v10 best | 30/30 | 5.3 s | 5.9 s |\n\n"
-            "Regenerate with `python scripts/evaluate_brains.py`."
+            "**Setup:** Scenario B, 0.4 cars/s, 50 cars, governor off, 100 fixed seeds (1000-1099) "
+            "that were not used to select any brain, measured with `scripts/acceptance.py` "
+            "(the same code as the Run button). Time = seconds from end of boarding to fully merged.\n\n"
+            "| Brain | No noise: merged / mean / p95 | Noise 0.15: merged |\n"
+            "|---|---|---:|\n"
+            "| v11 (default) | 100 / 4.6 s / 4.9 s | 100/100 |\n"
+            "| v10 best | 100 / 5.3 s / 5.7 s | 100/100 |\n"
+            "| v9 best | 100 / 5.8 s / 9.4 s | 97/100 |\n\n"
+            "Regenerate with `python scripts/acceptance.py --brain <file> --seed-start 1000`."
         )
 
     _smoke = _read_smoke_sidecar(selected_brain_path)

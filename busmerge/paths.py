@@ -5,4 +5,4 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = REPO_ROOT / "models"
 OUTPUTS_DIR = REPO_ROOT / "outputs"
 
-DEFAULT_BRAIN = MODELS_DIR / "ppo_bus_brain_exp7satv9_best.pth"
+DEFAULT_BRAIN = MODELS_DIR / "ppo_bus_brain_v11_engine.pth"
