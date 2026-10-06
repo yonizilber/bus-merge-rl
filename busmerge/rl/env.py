@@ -72,8 +72,9 @@ def compute_sat_overlap_area(bus_corners: np.ndarray,
     return _polygon_area(clip)
 
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
+from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
-    BUS_WIDTH, BUS_LENGTH, LANE_WIDTH, BAY_DEPTH,
+    BUS_WIDTH, BUS_LENGTH, BAY_DEPTH,
     BUS_MAX_SPEED as _MC_BUS_MAX_SPEED, MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
 
@@ -91,7 +92,7 @@ class BusMergeEnv:
                     action[0] = steer_intent  (+1 = full right / into lane)
                     action[1] = gas_intent    (+1 = full throttle, -1 = brake)
 
-    State vector  : 11 features (see _encode_state docstring)
+    State vector  : 11 features (see busmerge.rl.feature_encoding.encode_features)
 
     Physics       : The bicycle model in Vehicle.update_physics() is the ONLY
                     thing that moves the bus.  No direct writes to
@@ -174,71 +175,6 @@ class BusMergeEnv:
         """Merge progress derived from actual lateral_offset of the bus."""
         return float(np.clip(
             (self.bus.lateral_offset - BAY_DEPTH) / (-BAY_DEPTH), 0.0, 1.0))
-
-    # ------------------------------------------------------------------
-    # State encoding
-    # ------------------------------------------------------------------
-    def _apply_sensor_noise(
-        self,
-        merge_progress: float,
-        bus_heading_rad: float,
-        lon_dist: float,
-        lat_clearance: float,
-        car_speed: float,
-        car_accel: float,
-        car_width: float,
-        car_length: float,
-        rel_speed: float,
-        rel_accel: float,
-        car_heading_rad: float,
-        car_id=None,
-    ):
-        """Human perception noise (OU biases, train only). Governor/shield use truth."""
-        if self.eval_mode or self.noise_sigma <= 0.0:
-            return (
-                merge_progress, bus_heading_rad, lon_dist, lat_clearance,
-                car_speed, car_accel, car_width, car_length,
-                rel_speed, rel_accel, car_heading_rad,
-            )
-        from busmerge.rl.feature_encoding import apply_sensor_noise
-        return apply_sensor_noise(
-            self.noise_sigma,
-            merge_progress, bus_heading_rad, lon_dist, lat_clearance,
-            car_speed, car_accel, car_width, car_length,
-            rel_speed, rel_accel, car_heading_rad,
-            noise_state=self._perception_noise,
-            dt=self.dt,
-            car_id=car_id,
-        )
-
-    def _encode_state(self, merge_progress, bus_heading_rad, lon_dist, lat_clearance,
-                      car_speed, car_accel, car_width, car_length,
-                      rel_speed, rel_accel, car_heading_rad):
-        """
-        Encode 11 features into a normalised state vector for the PPO network.
-
-        Feature  0 : merge_progress     — 0=in bay, 1=in lane   [0, 1]
-        Feature  1 : bus_heading_rad    — kinematic bicycle model heading [-0.54, 0.54] rad (31°)
-        Feature  2 : lon_dist           — longitudinal gap bus-rear to car-front  [-10, 60] m
-        Feature  3 : lat_clearance      — side gap between bus outer edge and car  [-2, 4] m
-        Feature  4 : car_speed          — nearest car longitudinal speed [0, 20] m/s
-        Feature  5 : car_accel          — nearest car acceleration [-9, 3] m/s²
-        Feature  6 : car_width          — nearest car width [1.70, 2.05] m
-        Feature  7 : car_length         — nearest car length [3.5, 5.5] m
-        Feature  8 : rel_speed          — bus_vel − car_vel [-15, 15] m/s
-        Feature  9 : rel_accel          — bus_accel − car_accel [-15, 15] m/s²
-        Feature 10 : car_heading_rad    — nearest car bicycle-model heading [-0.15, 0.15] rad
-
-        feature_dim selects 4-, 7-, or 11-dim output (see busmerge/rl/feature_encoding.py).
-        """
-        from busmerge.rl.feature_encoding import encode_features
-        return encode_features(
-            getattr(self, "feature_dim", 11),
-            merge_progress, bus_heading_rad, lon_dist, lat_clearance,
-            car_speed, car_accel, car_width, car_length,
-            rel_speed, rel_accel, car_heading_rad,
-            noise_sigma=0.0,
-        )
 
     def _governor_check(self, steer_intent: float, gas_intent: float):
         from busmerge.rl.governor_logic import governor_check
@@ -986,46 +922,12 @@ class BusMergeEnv:
         return self._merge_progress() >= 1.0
 
     def _get_state(self):
-        gap, nearest_speed, nearest_accel, nearest_width, relative_speed, nearest_car = self._scan_nearest_car()
-
-        bus_heading_rad = self.bus.heading_angle  # direct from bicycle model
-        progress        = self._merge_progress()
-
-        # Angle-corrected lateral clearance at the bus outer edge
-        bus_lat_edge   = self.bus.lateral_offset + BUS_WIDTH / 2.0
-        car_lat_offset = getattr(nearest_car, 'total_lateral_offset', 0.0) if nearest_car else 0.0
-        lat_clearance  = LANE_WIDTH - bus_lat_edge - (nearest_width - car_lat_offset)  # Bug 7 fix: no floor — AI sees full continuous lateral signal
-
-        # Relative acceleration
-        bus_vel_now = self.bus.velocity
-        bus_accel   = (bus_vel_now - self._prev_bus_vel) / self.dt
-        rel_accel   = bus_accel - nearest_accel
-
-        car_length    = nearest_car.params.length if nearest_car else 4.5
-        car_heading_rad = getattr(nearest_car, 'heading_angle', 0.0) if nearest_car else 0.0
-        # Empty-road sentinels: explicit values so the encoded state reads "safe, no threat"
-        # regardless of clip-range changes.  gap=60→lon_n=1.0; rel_speed=0→rs_n=0.0.
-        if nearest_car is None:
-            gap            = 60.0
-            relative_speed = 0.0
-
-        _car_id = nearest_car.id if nearest_car is not None else None
-        return self._encode_state(
-            *self._apply_sensor_noise(
-                progress,
-                bus_heading_rad,
-                gap,
-                lat_clearance,
-                nearest_speed,
-                nearest_accel,
-                nearest_width,
-                car_length,
-                relative_speed,
-                rel_accel,
-                car_heading_rad,
-                car_id=_car_id,
-            )
-        )
+        """The agent's observation, built by the same function the production engine uses."""
+        return build_observation(
+            self.bus, self.vehicles, self._prev_bus_vel, self.dt, getattr(self, "feature_dim", 11),
+            noise_sigma=0.0 if self.eval_mode else self.noise_sigma,
+            noise_state=self._perception_noise,
+        ).state
 
     def _maybe_distract(self, params):
         """15% chance a spawned car is 'distracted' — slower reaction time."""

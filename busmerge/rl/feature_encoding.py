@@ -223,7 +223,7 @@ def encode_features(
     dt: float = 0.1,
     car_id: Optional[int] = None,
 ) -> np.ndarray:
-    """Normalised state vector; ranges match env._encode_state."""
+    """Normalised state vector; ranges are the single definition used by the engine and the training env."""
     if feature_dim not in FEATURE_DIMS:
         raise ValueError(f"feature_dim must be one of {FEATURE_DIMS}, got {feature_dim}")
 

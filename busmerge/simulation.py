@@ -8,9 +8,10 @@ from busmerge.paths import DEFAULT_BRAIN
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.config import SimConfig
 from busmerge.rl.ppo_agent import PPOAgent
-from busmerge.rl.feature_encoding import encode_features, infer_state_dim_from_checkpoint
+from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
+from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
-    BUS_WIDTH as _MC_BUS_WIDTH, LANE_WIDTH as _MC_LANE_WIDTH, BAY_DEPTH as _MC_BAY_DEPTH,
+    BAY_DEPTH as _MC_BAY_DEPTH,
     BUS_MAX_SPEED as _MC_BUS_MAX_SPEED,
     MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
@@ -66,23 +67,6 @@ class SimulationEngine:
         self.noise_sigma = 0.0           # sensor noise std-dev; 0=off (set by caller)
         from busmerge.rl.feature_encoding import PerceptionNoiseState
         self._perception_noise = PerceptionNoiseState()
-
-    def _encode_brain_state(self, merge_progress, bus_angle_rad, lon_dist, lat_clearance,
-                            car_speed, car_accel, car_width, car_length,
-                            rel_speed, rel_accel, car_angle_rad,
-                            noise_sigma=0.0, feature_dim_override=None, car_id=None):
-        """Encode 4/7/11-dim state (must match busmerge/rl/feature_encoding.py + training env)."""
-        dim = feature_dim_override if feature_dim_override is not None else getattr(self, "feature_dim", 11)
-        return encode_features(
-            dim,
-            merge_progress, bus_angle_rad, lon_dist, lat_clearance,
-            car_speed, car_accel, car_width, car_length,
-            rel_speed, rel_accel, car_angle_rad,
-            noise_sigma=noise_sigma,
-            noise_state=self._perception_noise if noise_sigma > 0.0 else None,
-            dt=self.dt,
-            car_id=car_id,
-        )
 
     def init_scenario(self):
         self.vehicles = []
@@ -413,40 +397,16 @@ class SimulationEngine:
         if bus.state == BusState.WAITING_TO_MERGE:
             bus.wait_time += self.dt
 
-            # ── SENSE (shared scan — includes cars ahead of bus front) ─────────────
-            from busmerge.rl.merge_yield import scan_nearest_car_for_merge
-            gap, nearest_speed, nearest_accel, nearest_width, relative_speed, nearest_car = (
-                scan_nearest_car_for_merge(bus, self.vehicles)
+            # ── SENSE: the same observation the training env builds ───────────────
+            obs = build_observation(
+                bus, self.vehicles, self._prev_bus_vel, self.dt, self.feature_dim,
+                noise_sigma=self.noise_sigma, noise_state=self._perception_noise,
             )
-
-            # ── BRAIN (─────────────────────────────────────────────────────────────
-            BUS_WIDTH, LANE_WIDTH = _MC_BUS_WIDTH, _MC_LANE_WIDTH
-            # merge_progress derived from actual lateral position (no stored scalar)
-            merge_progress = float(np.clip(
-                (bus.lateral_offset - (-3.5)) / 3.5, 0.0, 1.0))
-            bus._merge_progress = merge_progress   # keep for legacy telemetry
-            bus_angle_rad  = bus.heading_angle
-            car_lat_offset = getattr(nearest_car, 'total_lateral_offset', 0.0) if nearest_car else 0.0
-            bus_lat_edge   = bus.lateral_offset + BUS_WIDTH / 2.0
-            lat_clearance  = LANE_WIDTH - bus_lat_edge - (nearest_width - car_lat_offset)  # Bug 7 fix
-            bus_accel_now  = (bus.velocity - self._prev_bus_vel) / self.dt
-            rel_accel      = bus_accel_now - nearest_accel
             self._prev_bus_vel = bus.velocity
-            car_length     = nearest_car.params.length if nearest_car else 4.5
-            car_angle_rad  = getattr(nearest_car, 'heading_angle', 0.0) if nearest_car else 0.0
-            # Empty-road sentinels: explicit values so encoded state = "safe, no threat".
-            # gap=60→lon_n=1.0; rel_speed=0→rs_n=0.0. Values match env.
-            if nearest_car is None:
-                gap            = 60.0
-                relative_speed = 0.0
-
-            _car_id = nearest_car.id if nearest_car is not None else None
-            state_array = self._encode_brain_state(
-                merge_progress, bus_angle_rad, gap, lat_clearance,
-                nearest_speed, nearest_accel, nearest_width, car_length,
-                relative_speed, rel_accel, car_angle_rad,
-                noise_sigma=self.noise_sigma, car_id=_car_id)
-            state_tensor = torch.FloatTensor(state_array).unsqueeze(0)
+            gap, nearest_speed, nearest_car = obs.gap, obs.nearest_speed, obs.nearest_car
+            merge_progress = obs.merge_progress
+            bus._merge_progress = merge_progress   # keep for legacy telemetry
+            state_tensor = torch.FloatTensor(obs.state).unsqueeze(0)
 
             if self.external_action is not None:
                 raw_steer, raw_gas = (float(self.external_action[0]), float(self.external_action[1]))
