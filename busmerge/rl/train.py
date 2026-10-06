@@ -321,7 +321,12 @@ def train(
     curriculum_phase2_end=150,  # last epoch of Phase 2 (exclusive)
     feature_dim=11,
     traffic_first=False,
+    seed=None,
 ):
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
     env = BusMergeEnv(governor_disabled=governor_disabled)
     env.feature_dim = feature_dim
     env.state_size = feature_dim
@@ -403,6 +408,12 @@ def train(
     window_succ_sum = window_crash_sum = window_to_sum = 0
 
     for epoch in range(epochs):
+        if seed is not None:
+            # Re-seed every epoch: the in-training evaluations reseed the RNGs, which would otherwise
+            # make runs that differ only in --seed follow the same data stream after the first eval.
+            random.seed(seed * 100003 + epoch)
+            np.random.seed(seed * 100003 + epoch)
+            torch.manual_seed(seed * 100003 + epoch)
         # --------------------------------------------------------------------
         # 3-PHASE CURRICULUM SCHEDULE  (v8 -- fixes v7 exploration collapse)
 #

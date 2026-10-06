@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Experiment-branch trainer: 4-, 7-, or 11-feature PPO (same env physics, smaller state).
+Trainer for 4-, 7- or 11-feature PPO policies. The environment runs on SimulationEngine,
+the same physics as the Streamlit app.
 
 Default: traffic-first training (full scenario mix A–F from epoch 0 — no empty road).
 
@@ -40,6 +41,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--disable-governor", action="store_true", default=False,
                         help="Bypass the predictive governor (the app default; used by the exp7sat/v9/v10 checkpoints).")
+    parser.add_argument("--seed", type=int, default=None, help="Seed the training RNGs (reproducible runs).")
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--skip-baseline-eval", action="store_true", default=False)
     parser.add_argument("--batch-size", type=int, default=2000)
@@ -89,4 +91,5 @@ if __name__ == "__main__":
         traffic_first=_traffic,
         dense_seeds=dense_seeds,
         governor_disabled=args.disable_governor,
+        seed=args.seed,
     )
