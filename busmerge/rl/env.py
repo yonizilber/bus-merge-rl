@@ -5,74 +5,7 @@ import random
 from collections import deque
 
 
-# ---------------------------------------------------------------------------
-# SAT overlap area — used by the ground-truth safety reward (exp7sat only)
-# ---------------------------------------------------------------------------
-
-def _rect_corners(cx: float, cy: float, half_l: float, half_w: float,
-                  angle_rad: float) -> np.ndarray:
-    """Return (4,2) array of rectangle corners rotated by angle_rad."""
-    c, s = np.cos(angle_rad), np.sin(angle_rad)
-    dx = np.array([ half_l,  half_l, -half_l, -half_l], dtype=np.float64)
-    dy = np.array([ half_w, -half_w, -half_w,  half_w], dtype=np.float64)
-    xs = cx + dx * c - dy * s
-    ys = cy + dx * s + dy * c
-    return np.stack([xs, ys], axis=1)
-
-
-def _clip_polygon_by_half_plane(poly: np.ndarray,
-                                a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    """Sutherland-Hodgman clip — keeps vertices on the right side of directed edge a→b.
-    Our rectangles use clockwise winding, so interior = right of each edge (cross <= 0)."""
-    if len(poly) == 0:
-        return poly
-    out = []
-    n = len(poly)
-    edge = b - a
-    for i in range(n):
-        cur = poly[i]
-        nxt = poly[(i + 1) % n]
-        # CW winding: inside = right of edge = cross product <= 0
-        cur_inside = float(np.cross(edge, cur - a)) <= 0.0
-        nxt_inside = float(np.cross(edge, nxt - a)) <= 0.0
-        if cur_inside:
-            out.append(cur)
-        if cur_inside != nxt_inside:
-            denom = float(np.cross(edge, nxt - cur))
-            if abs(denom) > 1e-12:
-                t = float(np.cross(edge, a - cur)) / denom
-                out.append(cur + t * (nxt - cur))
-    return np.array(out, dtype=np.float64) if out else np.empty((0, 2))
-
-
-def _polygon_area(poly: np.ndarray) -> float:
-    """Shoelace formula for a convex polygon (4+ vertices)."""
-    if len(poly) < 3:
-        return 0.0
-    n = len(poly)
-    xs, ys = poly[:, 0], poly[:, 1]
-    return 0.5 * abs(
-        float(np.dot(xs, np.roll(ys, -1)) - np.dot(ys, np.roll(xs, -1)))
-    )
-
-
-def compute_sat_overlap_area(bus_corners: np.ndarray,
-                             car_corners: np.ndarray) -> float:
-    """
-    Area (m²) of the intersection of two convex rectangles.
-    Returns 0.0 when they do not overlap.
-    Uses Sutherland-Hodgman clipping of bus polygon against each edge of car.
-    """
-    clip = bus_corners.copy()
-    n = len(car_corners)
-    for i in range(n):
-        if len(clip) == 0:
-            return 0.0
-        a = car_corners[i]
-        b = car_corners[(i + 1) % n]
-        clip = _clip_polygon_by_half_plane(clip, a, b)
-    return _polygon_area(clip)
-
+from busmerge.geometry import compute_sat_overlap_area, rect_corners as _rect_corners
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_success import is_production_merge_complete
