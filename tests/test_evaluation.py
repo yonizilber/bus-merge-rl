@@ -55,3 +55,13 @@ def test_validation_demo_judges_streamlit_episode_like_the_app():
     assert outcome == "merged"
     assert row["outcome"] == "success"
     assert row["merge_s"] == pytest.approx(meta["merge_s"], abs=0.01)
+
+
+def test_stop_frame_is_not_reported_as_accel_paradox():
+    """The frame in which a car comes to rest (speed floored at 0, accel already reset) is not a
+    second physics path; only frames where the bumper cap overrides the IDM may be flagged."""
+    cfg = SimConfig(total_cars_to_spawn=50, traffic_rate=0.4)
+    ft = run_episode("B", cfg, str(GOLDEN_BRAIN), governor_disabled=True, seed=1).get_follower_trace()
+    stop_frames = ft[(ft["v"] < 0.05) & (ft["car_dv"] < 0.0)]
+    assert len(stop_frames) > 0, "scenario no longer contains a braking-to-rest follower"
+    assert not stop_frames["accel_paradox"].any()

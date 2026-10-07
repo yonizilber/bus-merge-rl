@@ -654,8 +654,11 @@ class SimulationEngine:
             if car_dv == car_dv:  # not NaN
                 implied = car_dv / self.dt if self.dt > 0 else 0.0
                 if abs(implied - car_accel) > 3.0:
-                    # Suppress paradox when stopping to zero (physics floor, not dual-path).
-                    if not (car_v < 0.05 and car_dv < 0.0 and abs(car_accel) > 1.0):
+                    # The frame in which a car comes to rest: speed is floored at 0, so Δv is
+                    # smaller than a*dt and the logged accel has already been reset to 0. That is
+                    # the speed floor, not two competing physics paths.
+                    stopped_this_frame = car_v < 0.05 and car_dv < 0.0
+                    if not stopped_this_frame:
                         accel_paradox = True
             phys_override = bool(getattr(car, "physics_override_active", False))
             phys_reason = str(getattr(car, "physics_override_reason", ""))
