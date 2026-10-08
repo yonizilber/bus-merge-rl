@@ -65,3 +65,18 @@ def test_stop_frame_is_not_reported_as_accel_paradox():
     stop_frames = ft[(ft["v"] < 0.05) & (ft["car_dv"] < 0.0)]
     assert len(stop_frames) > 0, "scenario no longer contains a braking-to-rest follower"
     assert not stop_frames["accel_paradox"].any()
+
+
+def test_side_contact_with_a_car_counts_as_collision():
+    """The bus touching a car alongside it is a collision even if it never ran into the car ahead."""
+    rows = [
+        (20.0, 999, "Bus", "WAITING_TO_MERGE", 300.0, 0.0, 11.0, 2.5, -1.5, 0.3, 0.0, -1.5, False),
+        (20.0, 7, "Car", "Cruising", 298.0, 2.0, 4.5, 1.8, 0.0, 0.0, 0.0, 0.0, False),
+        (24.0, 999, "Bus", "MOVING", 310.0, 5.0, 11.0, 2.5, -0.05, 0.98, 0.0, -0.05, False),
+    ]
+    cols = ["time", "id", "type", "state", "x", "v", "length", "width", "lateral_offset", "merge_progress",
+            "heading_deg", "total_lat", "physical_collision"]
+    df = pd.DataFrame([dict(zip(cols, r)) for r in rows])
+    outcome, meta = classify_outcome(df)
+    assert outcome == "collision"
+    assert meta["first_contact_s"] == pytest.approx(20.0)
