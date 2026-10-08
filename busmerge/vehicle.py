@@ -254,8 +254,9 @@ class Vehicle:
             self._merge_yield_factor(bus) > 0.0
             or float(getattr(self, "last_applied_yield", 0.0)) > 1e-6
         )
+        _strict = bool(getattr(self, "_strict_physics", False))
         _car_frozen = False
-        if leader is not None and not isinstance(self, Bus):
+        if leader is not None and not isinstance(self, Bus) and not _strict:
             from busmerge.rl.bumper_kinematics import car_stop_hold_pre
             _car_frozen = car_stop_hold_pre(self, leader)
         # Merge yield must run every frame — never skip IDM while yield factor is active.
@@ -285,12 +286,6 @@ class Vehicle:
                 # the bay-stop law adds exactly the braking that is physically needed.
                 self.acceleration = self.bay_stop_acceleration(self.acceleration)
 
-        if not _car_frozen:
-            self.velocity += self.acceleration * dt
-            if self.velocity < 0:
-                self.velocity = 0.0
-                self.acceleration = 0.0
-
         # Same IDM follower bumper pipeline for cars and bus (MOVING on main road).
         # Virtual stop leader (id=-1) during DECELERATING skips bumpers — position integrates below.
         _uses_bumper_follow = (
@@ -298,13 +293,22 @@ class Vehicle:
             and leader.get("id", -1) != -1
             and (not isinstance(self, Bus) or self.state == BusState.MOVING)
         )
+        if _strict and _uses_bumper_follow:
+            from busmerge.safe_speed import follower_acceleration
+            self.acceleration = follower_acceleration(self, leader, self.acceleration, dt)
+
+        if not _car_frozen:
+            self.velocity += self.acceleration * dt
+            if self.velocity < 0:
+                self.velocity = 0.0
+                self.acceleration = 0.0
 
         if not _uses_bumper_follow:
             # Clear sticky Hand-of-God flags when bumper does not run this frame.
             self.physics_override_active = False
             self.physics_override_reason = ""
 
-        if _uses_bumper_follow:
+        if _uses_bumper_follow and not _strict:
             if not _car_frozen:
                 from busmerge.rl.bumper_kinematics import (
                     limit_follower_to_leader,

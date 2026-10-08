@@ -219,12 +219,17 @@ class SimulationEngine:
                 #   lon (vel+pos) → finalize_bumper → lateral bicycle → THEN cars
                 # Previously: lat (stale vel) → lon → cars → bumper — caused drift mismatch.
                 veh._physics_mode = self.cfg.physics_mode.value
+                veh._strict_physics = self.cfg.strict_physics
                 veh._sim_time = self.time
                 if isinstance(veh, Bus) and veh.state == BusState.WAITING_TO_MERGE:
-                    from busmerge.rl.bumper_kinematics import limit_bus_to_cars_ahead, finalize_bus_bumper
-                    limit_bus_to_cars_ahead(
-                        veh, self.vehicles, self.dt, allow_retreat=False,
-                    )
+                    if self.cfg.strict_physics:
+                        from busmerge.safe_speed import merging_bus_acceleration
+                        veh.acceleration = merging_bus_acceleration(veh, self.vehicles, veh.acceleration, self.dt)
+                    else:
+                        from busmerge.rl.bumper_kinematics import limit_bus_to_cars_ahead
+                        limit_bus_to_cars_ahead(
+                            veh, self.vehicles, self.dt, allow_retreat=False,
+                        )
                 veh.update_physics(self.dt, lead_vehicle, bus=the_bus)
 
                 # After longitudinal update: run lateral bicycle for merging bus
@@ -249,7 +254,9 @@ class SimulationEngine:
                     veh.lateral_offset  += veh.lateral_velocity * self.dt
                     veh.lateral_offset   = float(np.clip(veh.lateral_offset, -4.5, 0.5))
                     # finalize bumper BEFORE cars update (matches training env order)
-                    finalize_bus_bumper(veh, self.vehicles)
+                    if not self.cfg.strict_physics:
+                        from busmerge.rl.bumper_kinematics import finalize_bus_bumper
+                        finalize_bus_bumper(veh, self.vehicles)
 
                 # PHYSICS SNIFFER: compare heading after update against the
                 # maximum physically possible change (steer_rate × dt + 0.01 rad

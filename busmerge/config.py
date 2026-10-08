@@ -39,3 +39,6 @@ class SimConfig:
 
     # --- Physics enforcement ---
     physics_mode: PhysicsMode = PhysicsMode.PRODUCTION
+    # EXPERIMENTAL: replace the follower speed caps, position trims and stop-holds with one
+    # safe-speed limit on acceleration (busmerge/safe_speed.py). Off by default.
+    strict_physics: bool = False

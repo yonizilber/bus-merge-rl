@@ -186,7 +186,8 @@ def _stats(values: list[float]) -> dict:
 
 
 def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: float, cars: int,
-                   physics_mode: str = "production", scenario: str = "B", seed_start: int = 0) -> dict:
+                   physics_mode: str = "production", scenario: str = "B", seed_start: int = 0,
+                   strict_physics: bool = False) -> dict:
     """Run ``seeds`` fixed-seed episodes of the app's Run button and summarise them."""
     outcomes, car_coll = [], 0
     violation_runs: dict[str, int] = {}
@@ -196,7 +197,8 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
     phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
     phases.update(total_s=[], standstill_s=[])
     for seed in range(seed_start, seed_start + seeds):
-        cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars, "physics_mode": PhysicsMode(physics_mode)})
+        cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars, "physics_mode": PhysicsMode(physics_mode),
+                           "strict_physics": strict_physics})
         sim = run_episode(scenario, cfg, str(brain), governor_disabled=True, noise_sigma=noise_sigma, seed=seed)
         df = sim.get_results()
         outcome, _ = classify_outcome(df)
@@ -214,7 +216,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
             for key in phases:
                 phases[key].append(timeline[key])
     return {
-        "brain": brain.name, "physics_mode": physics_mode, "noise_sigma": noise_sigma, "traffic_rate": traffic_rate, "cars": cars,
+        "brain": brain.name, "physics_mode": physics_mode, "strict_physics": strict_physics, "noise_sigma": noise_sigma, "traffic_rate": traffic_rate, "cars": cars,
         "seeds": len(outcomes),
         **{k: outcomes.count(k) for k in ("merged", "collision", "stuck_waiting", "never_waited")},
         "car_collision_frames": car_coll,
