@@ -62,3 +62,26 @@ def test_bus_stops_in_the_bay_physically():
     first_wait = bus.index[bus["state"] == "WAITING_TO_MERGE"][0]
     assert abs(bus.loc[first_wait, "lateral_offset"] - bus.loc[first_wait - 1, "lateral_offset"]) < 0.01
     assert abs(bus.loc[first_wait, "heading_deg"] - bus.loc[first_wait - 1, "heading_deg"]) < 0.5
+
+
+@pytest.mark.slow
+def test_cars_enter_the_road_without_impossible_braking():
+    """Fix B: no car needs braking beyond the physical limit in its first metres on the road."""
+    df = run_episode("B", SimConfig(total_cars_to_spawn=50, traffic_rate=0.8), str(GOLDEN_BRAIN),
+                     governor_disabled=True, seed=1000).get_results()
+    cars = df[df["type"] == "Car"].sort_values(["id", "time"])
+    g = cars.groupby("id")
+    accel = g["v"].diff() / g["time"].diff()
+    assert (accel[cars["x"] < 30.0].dropna() >= -9.5).all()
+
+
+def test_traffic_metrics_count_flow_and_density():
+    from busmerge.traffic_metrics import traffic_metrics
+
+    rows = []
+    for k in range(20):                       # two cars crossing x = 300 one minute apart
+        t = k * 6.0
+        rows.append((t, 1, "Car", 290.0 + t, 1.0, 4.5, 1.8, 0.0, 0.0))
+        rows.append((t, 2, "Car", 230.0 + t, 1.0, 4.5, 1.8, 0.0, 0.0))
+    m = traffic_metrics(_log(rows).assign(state="Cruising"))
+    assert m["flow_veh_per_min"] == pytest.approx(1.0)

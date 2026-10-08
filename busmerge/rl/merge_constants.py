@@ -66,6 +66,9 @@ BUS_ALIGN_HEADING_DEG = 2.0  # heading within this counts as parallel to the ker
 BUS_CRAWL_SPEED_MS    = 1.5  # crawl speed while finishing the alignment past the stop point
 BUS_STOPPED_SPEED_MS  = 0.05 # below this the bus counts as stopped
 
+# Car arrivals: a car is not placed on the road slower than this; the arrival waits instead
+SPAWN_MIN_SPEED_MS = 2.0
+
 # Car stop-hold (bumper_kinematics) — implemented policy: Option A
 CAR_STOP_HOLD_GAP_M      = 0.25  # engage hold when gap to bumper ≤ this and v low
 HOLD_RELEASE_ADVANCE_M   = 0.15  # release hold when max_front advances this far past hold_x

@@ -17,6 +17,7 @@ import torch
 
 from busmerge.config import PhysicsMode, SimConfig
 from busmerge.invariants import check_invariants
+from busmerge.traffic_metrics import traffic_metrics
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.simulation import SimulationEngine
 
@@ -191,6 +192,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
     violation_runs: dict[str, int] = {}
     violation_examples: dict[str, dict] = {}
     worst_decel = 0.0
+    traffic: list[dict] = []
     phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
     phases.update(total_s=[], standstill_s=[])
     for seed in range(seed_start, seed_start + seeds):
@@ -201,6 +203,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
         outcomes.append(outcome)
         car_coll += count_car_collisions(df)
         inv = check_invariants(df)
+        traffic.append(traffic_metrics(df))
         worst_decel = min(worst_decel, inv.worst_decel)
         for kind, n in inv.counts.items():
             violation_runs[kind] = violation_runs.get(kind, 0) + (n > 0)
@@ -220,4 +223,6 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
         "physics_violation_runs": violation_runs,
         "physics_violation_examples": violation_examples,
         "worst_decel_ms2": round(worst_decel, 2),
+        # Traffic around the brain (busmerge.traffic_metrics), to show a change did not thin the traffic.
+        "traffic": {k: round(float(np.nanmean([m[k] for m in traffic])), 2) for k in traffic[0]} if traffic else {},
     }

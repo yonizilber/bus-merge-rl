@@ -62,6 +62,7 @@ def main() -> int:
         r = evaluate_brain(args.brain, SEEDS, sigma, traffic_rate=0.4, cars=50, seed_start=args.seed_start)
         results.append(r)
         print(f"\n{args.brain.name}  noise sigma={sigma}  seeds {args.seed_start}..{args.seed_start + SEEDS - 1}")
+        print(f"  traffic (report only): {r['traffic']}")
         for name, ok, value in check(r):
             print(f"  [{'PASS' if ok else 'FAIL'}] {name:26} measured {value}")
             passed &= ok

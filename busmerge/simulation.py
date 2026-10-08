@@ -9,11 +9,12 @@ from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_
 from busmerge.config import SimConfig
 from busmerge.rl.ppo_agent import PPOAgent
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
+from busmerge.rl.bumper_kinematics import max_approach_speed
 from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
     BAY_DEPTH as _MC_BAY_DEPTH,
     BUS_MAX_SPEED as _MC_BUS_MAX_SPEED,
-    BUS_ALIGN_HEADING_DEG, BUS_STOPPED_SPEED_MS,
+    BUS_ALIGN_HEADING_DEG, BUS_STOPPED_SPEED_MS, SPAWN_MIN_SPEED_MS,
     MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
 
@@ -47,6 +48,7 @@ class SimulationEngine:
         self.last_spawn_time = 0.0
         self.traffic_rate = self.cfg.traffic_rate
         self.cars_spawned_count = 0
+        self._pending_arrivals = 0
         
         # --- LOAD THE TRAINED PYTORCH BRAIN ---
         # brain_path overrides the default checkpoint; a missing file is an error.
@@ -87,6 +89,7 @@ class SimulationEngine:
         self._frame_prev_x = {}
         self._perception_noise.reset()
         self.cars_spawned_count = 0
+        self._pending_arrivals = 0
         self.cars_finished_count = 0 
         
         # Spawn the bus at the start line (0.0).
@@ -456,20 +459,41 @@ class SimulationEngine:
         # model handles DECELERATING/MOVING via update_physics.
 
     def _try_spawn_car(self):
-        if self.cars_spawned_count >= self.cfg.total_cars_to_spawn: return
-        if self.time - self.last_spawn_time < 0.5: return
-        
-        if len(self.vehicles) > 0:
-            if self.vehicles[-1].position < 15.0: return 
+        """Arrivals at the road start, placed only in a state a real car could be in.
 
-        if random.random() < (self.traffic_rate * self.dt):
-            self.global_id_counter += 1
-            _, sampled_params = sample_vehicle_params()
-            start_speed = max(5.5, sampled_params.max_speed * random.uniform(0.68, 0.95))
-            c = Vehicle(self.global_id_counter, position=0.0, velocity=start_speed, params=sampled_params)
-            self.vehicles.append(c)
-            self.last_spawn_time = self.time
-            self.cars_spawned_count += 1
+        Arrivals are drawn as before (probability traffic_rate·dt per frame, only while the entry is
+        clear: 0.5 s since the last car and the nearest car at least 15 m in), so the traffic volume is
+        unchanged. A car enters at the lower of its desired speed and the speed from which it can still
+        stop behind the car ahead even if that car stopped dead (``max_approach_speed``, the same limit
+        the follower physics applies). If that is below SPAWN_MIN_SPEED_MS the arrival is held and
+        placed as soon as there is room: delayed, never dropped, and never in need of impossible braking.
+        """
+        if self.time - self.last_spawn_time < 0.5:
+            return
+        leader = min(self.vehicles, key=lambda v: v.position) if self.vehicles else None
+        if leader is not None and leader.position < 15.0:
+            return
+        if self._pending_arrivals == 0:
+            if self.cars_spawned_count >= self.cfg.total_cars_to_spawn:
+                return
+            if random.random() >= self.traffic_rate * self.dt:
+                return
+            self._pending_arrivals = 1
+
+        _, sampled_params = sample_vehicle_params()
+        start_speed = max(5.5, sampled_params.max_speed * random.uniform(0.68, 0.95))
+        if leader is not None:
+            room = float(leader.position) - float(leader.params.length) - float(sampled_params.min_gap)
+            start_speed = min(start_speed, max_approach_speed(
+                room, self.dt, comfortable_brake=float(sampled_params.comfortable_brake)))
+            if start_speed < SPAWN_MIN_SPEED_MS:
+                return
+        self.global_id_counter += 1
+        c = Vehicle(self.global_id_counter, position=0.0, velocity=start_speed, params=sampled_params)
+        self.vehicles.append(c)
+        self.last_spawn_time = self.time
+        self.cars_spawned_count += 1
+        self._pending_arrivals = 0
 
     def all_vehicles_finished(self) -> bool:
         if self.cars_spawned_count < self.cfg.total_cars_to_spawn: return False
