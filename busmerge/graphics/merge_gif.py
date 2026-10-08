@@ -11,6 +11,7 @@ import pandas as pd
 from PIL import Image
 
 from busmerge.config import SimConfig
+from busmerge.geometry import rect_corners
 
 
 def build_merge_gif(
@@ -39,25 +40,14 @@ def build_merge_gif(
         return None
 
     def lateral_y(row):
-        if row["type"] == "Bus":
-            lo = row.get("lateral_offset", 0.0)
-            return float(lo) if not pd.isna(lo) else 0.0
         tl = row.get("total_lat", row.get("lateral_offset", 0.0))
         return float(tl) if not pd.isna(tl) else 0.0
 
     mz["y_centre"] = mz.apply(lateral_y, axis=1)
     mz["half_w"] = mz["width"] / 2.0
     mz["half_l"] = mz["length"] / 2.0
+    mz["x_centre"] = mz["x"] - mz["half_l"]  # x is the front bumper (physics convention)
     mz["heading"] = mz["heading_deg"].fillna(0.0) if "heading_deg" in mz.columns else 0.0
-
-    def rect_corners(cx, cy, half_l, half_w, angle_deg):
-        th = np.radians(angle_deg)
-        c, s = np.cos(th), np.sin(th)
-        dx = np.array([half_l, half_l, -half_l, -half_l])
-        dy = np.array([half_w, -half_w, -half_w, half_w])
-        xs = cx + dx * c - dy * s
-        ys = cy + dx * s + dy * c
-        return np.stack([xs, ys], axis=1)
 
     bus_m = mz[(mz["type"] == "Bus") & (mz["state"] == "WAITING_TO_MERGE")]
     bus_mov = bus_m[bus_m["v"] > 0.1] if not bus_m.empty else bus_m
@@ -68,7 +58,7 @@ def build_merge_gif(
     else:
         t0 = float(mz["time"].min())
     t0 = max(float(mz["time"].min()), t0)
-    bus_exit = mz[(mz["type"] == "Bus") & (mz["x"] > merge_x_max - mz["length"] / 2)]
+    bus_exit = mz[(mz["type"] == "Bus") & (mz["x_centre"] > merge_x_max)]
     t1 = float(bus_exit["time"].min()) if not bus_exit.empty else float(mz["time"].max())
     times = [t for t in sorted(mz["time"].unique()) if t0 <= t <= t1]
     if len(times) > max_frames:
@@ -106,11 +96,11 @@ def build_merge_gif(
                 color = "#FF8C00"
             else:
                 color = "#3498db"
-            corners = rect_corners(row["x"], row["y_centre"], row["half_l"], row["half_w"], angle)
+            corners = rect_corners(row["x_centre"], row["y_centre"], row["half_l"], row["half_w"], np.radians(angle))
             ax.add_patch(mpatches.Polygon(corners, closed=True, facecolor=color,
                                           edgecolor="white", linewidth=1.2, zorder=5))
             label = f"BUS\n{row.get('v', 0):.1f}" if row["type"] == "Bus" else f"{int(row['id'])}\n{row.get('v', 0):.1f}"
-            ax.text(row["x"], row["y_centre"], label, color="white", ha="center", va="center",
+            ax.text(row["x_centre"], row["y_centre"], label, color="white", ha="center", va="center",
                     fontsize=7, zorder=6)
         ax.set_xlim(merge_x_min, merge_x_max)
         ax.set_ylim(bay_outer_y - 0.4, lane_w / 2 + 0.5)

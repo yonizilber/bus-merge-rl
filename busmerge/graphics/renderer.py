@@ -106,34 +106,26 @@ class SimulationRenderer:
             else:
                 color = '#e74c3c' 
 
-        # --- ROTATION ANGLE ---
-        # Use the physics-based heading if logged; fall back to the sine approximation.
-        angle_degrees = float(row.get('heading_deg', float('nan')))
-        if np.isnan(angle_degrees) or angle_degrees == 0.0:
+        # --- ROTATION ANGLE --- the logged physics heading; 0 means the vehicle is parallel.
+        angle_degrees = float(row.get('heading_deg', 0.0))
+        if np.isnan(angle_degrees):
             angle_degrees = 0.0
-            if v_type == 'Bus':
-                if state_str == 'DECELERATING' and presence < 1.0:
-                    max_angle = np.degrees(np.arctan2(-self.lane_width, 20.0))
-                    angle_degrees = np.sin((1.0 - presence) * np.pi) * max_angle
-                elif state_str == 'WAITING_TO_MERGE' and presence > 0.0:
-                    max_angle = np.degrees(np.arctan2(self.lane_width, 15.0))
-                    angle_degrees = np.sin(presence * np.pi) * max_angle
 
-        # --- DRAW WITH ROTATION ---
-        # We use a transform to rotate the rectangle around its center
-        
+        # --- DRAW WITH ROTATION (around the body centre) ---
+        # x is the front bumper (physics convention): the body spans [x - length, x].
+        x_centre = x_pos - length / 2.0
         rect = patches.Rectangle(
-            (x_pos - length/2, y_pos - width/2), # Shift to center for proper rotation
+            (x_centre - length / 2.0, y_pos - width / 2.0),
             length, width, 
             facecolor=color, edgecolor='black', linewidth=1.5, zorder=5, clip_on=True
         )
         
         # Apply the rotation
-        t = transforms.Affine2D().rotate_deg_around(x_pos, y_pos, angle_degrees) + ax.transData
+        t = transforms.Affine2D().rotate_deg_around(x_centre, y_pos, angle_degrees) + ax.transData
         rect.set_transform(t)
         
         ax.add_patch(rect)
         
         # ID Text
-        ax.text(x_pos, y_pos, str(int(row['id'])), 
+        ax.text(x_centre, y_pos, str(int(row['id'])), 
                 color='white', ha='center', va='center', fontsize=8, fontweight='bold', zorder=6, clip_on=True)

@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 
 
+from busmerge.geometry import compute_sat_overlap_area, vehicle_corners
+from busmerge.invariants import OVERLAP_MIN_AREA_M2
 from busmerge.paths import MODELS_DIR, OUTPUTS_DIR
 from busmerge.config import SimConfig
 from busmerge.simulation import SimulationEngine
@@ -38,62 +40,18 @@ class RunResult:
     merge_s: float | None
 
 
-def lateral_y(row) -> float:
-    if row["type"] == "Bus":
-        return float(row.get("lateral_offset", 0.0))
-    return float(row.get("total_lat", row.get("lateral_offset", 0.0)))
-
-
 def sat_merge_contact(df: pd.DataFrame, t0: float = 35.0, t1: float = 45.0) -> bool:
-    mz = df[(df["time"] >= t0) & (df["time"] <= t1)].copy()
-    if mz.empty:
-        return False
-    mz["y_centre"] = mz.apply(lateral_y, axis=1)
-    mz["half_w"] = mz["width"] / 2.0
-    mz["half_l"] = mz["length"] / 2.0
-
-    def rect_corners(cx, cy, half_l, half_w, angle_deg):
-        th = np.radians(angle_deg)
-        c, s = np.cos(th), np.sin(th)
-        dx = np.array([half_l, half_l, -half_l, -half_l])
-        dy = np.array([half_w, -half_w, -half_w, half_w])
-        xs = cx + dx * c - dy * s
-        ys = cy + dx * s + dy * c
-        return np.stack([xs, ys], axis=1)
-
-    def sat_overlap(poly_a, poly_b):
-        def axes(poly):
-            n = len(poly)
-            return [(poly[(i + 1) % n] - poly[i]) for i in range(n)]
-
-        def project(poly, ax):
-            dots = poly @ ax
-            return dots.min(), dots.max()
-
-        for poly in (poly_a, poly_b):
-            for edge in axes(poly):
-                normal = np.array([-edge[1], edge[0]])
-                min_a, max_a = project(poly_a, normal)
-                min_b, max_b = project(poly_b, normal)
-                if max_a < min_b or max_b < min_a:
-                    return False
-        return True
-
+    """True if the bus polygon overlaps any car polygon between t0 and t1 (same test as the app)."""
+    mz = df[(df["time"] >= t0) & (df["time"] <= t1)]
     for _, grp in mz.groupby("time"):
         bus_rows = grp[grp["type"] == "Bus"]
         if bus_rows.empty:
             continue
-        br = bus_rows.iloc[0]
-        bus_poly = rect_corners(
-            br["x"], br["y_centre"], br["half_l"], br["half_w"],
-            float(br.get("heading_deg", 0.0) or 0.0),
-        )
-        for _, cr in grp[grp["type"] == "Car"].iterrows():
-            car_poly = rect_corners(
-                cr["x"], cr["y_centre"], cr["half_l"], cr["half_w"],
-                float(cr.get("heading_deg", 0.0) or 0.0),
-            )
-            if sat_overlap(bus_poly, car_poly):
+        b = bus_rows.iloc[0]
+        bus_poly = vehicle_corners(b["x"], b["total_lat"], b["length"], b["width"], np.radians(b["heading_deg"]))
+        for _, c in grp[grp["type"] == "Car"].iterrows():
+            car_poly = vehicle_corners(c["x"], c["total_lat"], c["length"], c["width"], np.radians(c["heading_deg"]))
+            if compute_sat_overlap_area(bus_poly, car_poly) > OVERLAP_MIN_AREA_M2:
                 return True
     return False
 

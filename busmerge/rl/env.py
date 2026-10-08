@@ -5,7 +5,7 @@ import random
 from collections import deque
 
 
-from busmerge.geometry import compute_sat_overlap_area, rect_corners as _rect_corners
+from busmerge.geometry import compute_sat_overlap_area, vehicle_corners
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_success import is_production_merge_complete
@@ -665,19 +665,14 @@ class BusMergeEnv:
         _spongy = getattr(self, "spongy_danger_zone_enabled", False)
         _, _, _, _, _, _nearest_for_sat = self._scan_nearest_car()
         if _sat_enabled and _nearest_for_sat is not None:
-            _bus_corners = _rect_corners(
-                float(self.bus.position),
-                float(self.bus.lateral_offset),
-                float(BUS_LENGTH) / 2.0,
-                float(BUS_WIDTH) / 2.0,
-                float(self.bus.heading_angle),
+            _bus_corners = vehicle_corners(
+                float(self.bus.position), float(self.bus.lateral_offset),
+                float(BUS_LENGTH), float(BUS_WIDTH), float(self.bus.heading_angle),
             )
-            _car_lat = float(getattr(_nearest_for_sat, "total_lateral_offset", 0.0))
-            _car_corners = _rect_corners(
+            _car_corners = vehicle_corners(
                 float(_nearest_for_sat.position),
-                _car_lat,
-                float(_nearest_for_sat.params.length) / 2.0,
-                float(_nearest_for_sat.params.width) / 2.0,
+                float(getattr(_nearest_for_sat, "total_lateral_offset", 0.0)),
+                float(_nearest_for_sat.params.length), float(_nearest_for_sat.params.width),
                 float(getattr(_nearest_for_sat, "heading_angle", 0.0)),
             )
             _sat_area = compute_sat_overlap_area(_bus_corners, _car_corners)

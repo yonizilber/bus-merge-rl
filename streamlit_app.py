@@ -8,6 +8,8 @@ import time
 import json
 import os as _os
 from busmerge.paths import MODELS_DIR
+from busmerge.geometry import compute_sat_overlap_area, rect_corners as _geom_rect_corners
+from busmerge.invariants import OVERLAP_MIN_AREA_M2
 from busmerge.rl.feature_encoding import FEATURE_NAMES, infer_state_dim_from_checkpoint
 from busmerge.config import SimConfig
 from busmerge.evaluation import TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
@@ -1138,37 +1140,15 @@ if st.session_state.sim_complete:
             merge_df_all['y_centre']  = merge_df_all.apply(lateral_y, axis=1)
             merge_df_all['half_w']    = merge_df_all['width']  / 2.0
             merge_df_all['half_l']    = merge_df_all['length'] / 2.0
+            # x is the front bumper (physics convention); polygons are built around the centre.
+            merge_df_all['x_centre']  = merge_df_all['x'] - merge_df_all['half_l']
             merge_df_all['heading']   = merge_df_all['heading_deg'].fillna(0.0) if 'heading_deg' in merge_df_all.columns else 0.0
             if 'heading_anomaly' not in merge_df_all.columns:
                 merge_df_all['heading_anomaly'] = False
 
             # ── Rotated-polygon collision detection (per frame) ──────────────────
             def rect_corners(cx, cy, half_l, half_w, angle_deg):
-                """Return 4 corners of a rectangle rotated by angle_deg around (cx,cy)."""
-                θ = np.radians(angle_deg)
-                c, s = np.cos(θ), np.sin(θ)
-                dx = np.array([ half_l,  half_l, -half_l, -half_l])
-                dy = np.array([ half_w, -half_w, -half_w,  half_w])
-                xs = cx + dx * c - dy * s
-                ys = cy + dx * s + dy * c
-                return np.stack([xs, ys], axis=1)   # (4,2)
-
-            def separating_axis_overlap(poly_a, poly_b):
-                """SAT check for two convex polygons (4 corners each). True = overlap."""
-                def axes(poly):
-                    n = len(poly)
-                    return [(poly[(i+1)%n] - poly[i]) for i in range(n)]
-                def project(poly, ax):
-                    dots = poly @ ax
-                    return dots.min(), dots.max()
-                for poly in (poly_a, poly_b):
-                    for edge in axes(poly):
-                        normal = np.array([-edge[1], edge[0]])
-                        minA, maxA = project(poly_a, normal)
-                        minB, maxB = project(poly_b, normal)
-                        if maxA < minB or maxB < minA:
-                            return False
-                return True
+                return _geom_rect_corners(cx, cy, half_l, half_w, np.radians(angle_deg))
 
             collision_times = set()
             for t_val, grp in merge_df_all.groupby('time'):
@@ -1177,12 +1157,12 @@ if st.session_state.sim_complete:
                 if bus_rows.empty or car_rows.empty:
                     continue
                 br = bus_rows.iloc[0]
-                bus_poly = rect_corners(br['x'], br['y_centre'], br['half_l'], br['half_w'],
+                bus_poly = rect_corners(br['x_centre'], br['y_centre'], br['half_l'], br['half_w'],
                                         float(br['heading']) if not pd.isna(br['heading']) else 0.0)
                 for _, cr in car_rows.iterrows():
-                    car_poly = rect_corners(cr['x'], cr['y_centre'], cr['half_l'], cr['half_w'],
+                    car_poly = rect_corners(cr['x_centre'], cr['y_centre'], cr['half_l'], cr['half_w'],
                                             float(cr['heading']) if not pd.isna(cr['heading']) else 0.0)
-                    if separating_axis_overlap(bus_poly, car_poly):
+                    if compute_sat_overlap_area(bus_poly, car_poly) > OVERLAP_MIN_AREA_M2:
                         collision_times.add(t_val)
                         break
 
@@ -1235,7 +1215,7 @@ if st.session_state.sim_complete:
                     angle = float(row['heading']) if not pd.isna(row['heading']) else 0.0
                     color = ('#e74c3c' if row['type'] == 'Bus'
                              else ('#FF8C00' if row['collision_frame'] else '#3498db'))
-                    corners = rect_corners(row['x'], row['y_centre'],
+                    corners = rect_corners(row['x_centre'], row['y_centre'],
                                            row['half_l'], row['half_w'], angle)
                     poly_patch = mpatches.Polygon(corners, closed=True,
                                                   facecolor=color, edgecolor='white',
@@ -1251,7 +1231,7 @@ if st.session_state.sim_complete:
                             poly_patch.set_linewidth(3.0)
                     else:
                         label = f"{int(row['id'])}\n{row.get('v', 0.0):.1f}m/s"
-                    ax.text(row['x'], row['y_centre'], label,
+                    ax.text(row['x_centre'], row['y_centre'], label,
                             color='white', ha='center', va='center',
                             fontsize=6.5, zorder=6)
 
@@ -1286,7 +1266,7 @@ if st.session_state.sim_complete:
             bus_merge_rows = merge_df_all[
                 (merge_df_all['type'] == 'Bus') & (merge_df_all['state'] == 'WAITING_TO_MERGE')]
             bus_exit_rows  = merge_df_all[
-                (merge_df_all['type'] == 'Bus') & (merge_df_all['x'] > MERGE_X_MAX - merge_df_all['length'] / 2)]
+                (merge_df_all['type'] == 'Bus') & (merge_df_all['x_centre'] > MERGE_X_MAX)]
             bus_moving_rows = bus_merge_rows[bus_merge_rows['v'] > 0.1]
             if not bus_moving_rows.empty:
                 _t_bus_active = bus_moving_rows['time'].min()
@@ -1390,7 +1370,7 @@ if st.session_state.sim_complete:
                     for _, row in frame_dbg.iterrows():
                         angle = float(row['heading']) if not pd.isna(row['heading']) else 0.0
                         color = '#e74c3c' if row['type'] == 'Bus' else '#3498db'
-                        corners = rect_corners(row['x'], row['y_centre'],
+                        corners = rect_corners(row['x_centre'], row['y_centre'],
                                                row['half_l'], row['half_w'], angle)
                         ax_d.add_patch(mpatches.Polygon(corners, closed=True,
                                        facecolor=color, edgecolor='white',
@@ -1398,11 +1378,11 @@ if st.session_state.sim_complete:
                         ax_d.scatter(corners[:,0], corners[:,1],
                                      c='yellow', s=30, zorder=8)
                         arrow_len = row['half_l'] * 0.7
-                        ax_d.annotate('', xy=(row['x'] + arrow_len * np.cos(np.radians(angle)),
+                        ax_d.annotate('', xy=(row['x_centre'] + arrow_len * np.cos(np.radians(angle)),
                                               row['y_centre'] + arrow_len * np.sin(np.radians(angle))),
-                                      xytext=(row['x'], row['y_centre']),
+                                      xytext=(row['x_centre'], row['y_centre']),
                                       arrowprops=dict(arrowstyle='->', color='lime', lw=1.8), zorder=9)
-                        ax_d.text(row['x'], row['y_centre'],
+                        ax_d.text(row['x_centre'], row['y_centre'],
                                   f"{int(row['id'])} {angle:.1f}°",
                                   color='white', ha='center', va='center', fontsize=7, zorder=10)
                     ax_d.set_xlim(MERGE_X_MIN, MERGE_X_MAX)
