@@ -267,17 +267,6 @@ class SimulationEngine:
                             f"(max allowed {np.degrees(max_allowed):.3f}°)"
                         )
 
-                # POST-PHYSICS PARKING CRAWL FLOOR:
-                # The IDM may brake the bus to zero even after _handle_bus_logic raised
-                # the velocity floor, because IDM sees the virtual stop-leader and
-                # produces a very large negative acceleration.  Re-apply the floor here
-                # so the bicycle model always has enough forward momentum to finish
-                # rotating the 7 m wheelbase to road-parallel.
-                if (isinstance(veh, Bus) and veh.state == BusState.DECELERATING
-                        and abs(veh.heading_angle) > np.radians(2.0)):
-                    veh.velocity     = max(veh.velocity,     1.5)
-                    veh.acceleration = max(veh.acceleration, 0.0)
-
         if self.record_frames:
             self._record_bus_follower_trace(the_bus)
             self._record_frame()

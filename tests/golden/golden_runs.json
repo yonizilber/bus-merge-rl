@@ -12,21 +12,21 @@
   "steps": 1500
  },
  "B-0": {
-  "bus_final_x": 1001.280274,
-  "fingerprint": "25ecbfac8c40fcb5",
-  "rows": 18357,
+  "bus_final_x": 1001.064256,
+  "fingerprint": "7474e087a0064570",
+  "rows": 18187,
   "steps": 1500
  },
  "B-1": {
-  "bus_final_x": 1000.688538,
-  "fingerprint": "969876f485f84a01",
-  "rows": 17491,
+  "bus_final_x": 1000.02489,
+  "fingerprint": "d3b3ad4538a58a6e",
+  "rows": 16779,
   "steps": 1500
  },
  "B-2": {
-  "bus_final_x": 1000.116293,
-  "fingerprint": "51067f571ec3c93e",
-  "rows": 16388,
+  "bus_final_x": 1000.788557,
+  "fingerprint": "7d89dcdb0a05e465",
+  "rows": 15765,
   "steps": 1500
  }
 }
