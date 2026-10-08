@@ -89,3 +89,29 @@ def check_invariants(df: pd.DataFrame, dt: float = 0.1) -> InvariantReport:
             if area > OVERLAP_MIN_AREA_M2:
                 rep.add("overlap", {"time": float(time[s]), "ids": (int(a_["id"]), int(b_["id"])), "area_m2": round(area, 3)})
     return rep
+
+
+def bus_contact_times(df: pd.DataFrame) -> list[float]:
+    """Times at which the bus body overlaps any car body (exact polygons, front-bumper convention)."""
+    cols = ["time", "x", "total_lat", "length", "width", "heading_deg"]
+    if not set(cols + ["type"]).issubset(df.columns):
+        return []  # a log without geometry cannot show contact
+    bus = df.loc[df["type"] == "Bus", cols]
+    cars = df.loc[df["type"] != "Bus", cols]
+    if bus.empty or cars.empty:
+        return []
+    pairs = bus.merge(cars, on="time", suffixes=("_b", "_c"))
+    centre_gap = np.hypot((pairs["x_b"] - pairs["length_b"] / 2) - (pairs["x_c"] - pairs["length_c"] / 2),
+                          pairs["total_lat_b"] - pairs["total_lat_c"])
+    reach = np.hypot(pairs["length_b"] / 2, pairs["width_b"] / 2) + np.hypot(pairs["length_c"] / 2, pairs["width_c"] / 2)
+    times = set()
+    for r in pairs[centre_gap < reach].itertuples(index=False):
+        if r.time in times:
+            continue
+        area = compute_sat_overlap_area(
+            vehicle_corners(r.x_b, r.total_lat_b, r.length_b, r.width_b, np.radians(r.heading_deg_b)),
+            vehicle_corners(r.x_c, r.total_lat_c, r.length_c, r.width_c, np.radians(r.heading_deg_c)),
+        )
+        if area > OVERLAP_MIN_AREA_M2:
+            times.add(float(r.time))
+    return sorted(times)

@@ -16,7 +16,7 @@ import pandas as pd
 import torch
 
 from busmerge.config import PhysicsMode, SimConfig
-from busmerge.invariants import check_invariants
+from busmerge.invariants import bus_contact_times, check_invariants
 from busmerge.traffic_metrics import traffic_metrics
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.simulation import SimulationEngine
@@ -74,13 +74,18 @@ def classify_outcome(df: pd.DataFrame) -> tuple[str, dict]:
     * The merge is complete at the first later frame where the bus is MOVING or its
       lateral offset reached the production threshold (the same rule the simulation
       itself uses to leave WAITING_TO_MERGE).
-    * A collision is any frame in which the *bus* physically overlaps its leader.
+    * A collision is any frame in which the bus body touches a car body (exact rotated
+      polygons, busmerge.invariants), including a side contact while pulling out, not only
+      running into the vehicle ahead.
     """
     bus = df[df["type"] == "Bus"].sort_values("time") if not df.empty else df
     if bus.empty:
         return "no_bus", {}
     if "physical_collision" in bus.columns and bus["physical_collision"].any():
         return "collision", {}
+    contact = bus_contact_times(df)
+    if contact:
+        return "collision", {"first_contact_s": contact[0], "contact_frames": len(contact)}
 
     states = bus["state"].astype(str)
     waiting = states == "WAITING_TO_MERGE"
