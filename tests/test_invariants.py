@@ -46,3 +46,19 @@ def test_engine_run_has_no_overlap_negative_speed_or_position_jump():
     rep = check_invariants(df)
     for kind in ("overlap", "negative_speed", "position_jump", "accel_over_limit"):
         assert rep.counts[kind] == 0, (kind, rep.examples.get(kind))
+
+
+@pytest.mark.slow
+def test_bus_stops_in_the_bay_physically():
+    """Fix A: the bus brakes within the physical limit, stops parallel to the kerb inside the bay,
+    and the merge starts from the pose it stopped in (no reset)."""
+    df = run_episode("B", SimConfig(total_cars_to_spawn=50), str(GOLDEN_BRAIN), governor_disabled=True, seed=1000).get_results()
+    bus = df[df["type"] == "Bus"].sort_values("time").reset_index(drop=True)
+    accel = bus["v"].diff() / bus["time"].diff()
+    assert accel.min() >= -9.5
+    in_bay = bus[bus["state"] == "IN_BAY"]
+    assert len(in_bay) > 0
+    assert abs(in_bay["heading_deg"].iloc[0]) <= 2.0
+    first_wait = bus.index[bus["state"] == "WAITING_TO_MERGE"][0]
+    assert abs(bus.loc[first_wait, "lateral_offset"] - bus.loc[first_wait - 1, "lateral_offset"]) < 0.01
+    assert abs(bus.loc[first_wait, "heading_deg"] - bus.loc[first_wait - 1, "heading_deg"]) < 0.5

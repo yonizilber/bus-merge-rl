@@ -1,6 +1,6 @@
 """Regression guard for the training environment: a fixed policy on fixed seeds must reproduce
 the stored (observation, reward, done) fingerprints. Regenerate with
-``python tests/test_env_golden.py --update`` only when a behaviour change is intended."""
+``python -m tests.test_env_golden --update`` only when a behaviour change is intended."""
 import hashlib
 import json
 import random

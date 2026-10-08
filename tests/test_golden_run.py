@@ -3,7 +3,7 @@
 The fingerprint hashes every vehicle's (time, id, x, v, total_lat, state) per frame,
 so any behavioural change in the simulation, physics or policy inference shows up here.
 If a change is *intended* to alter behaviour, regenerate the golden file with
-``python tests/test_golden_run.py --update`` and explain the change in the commit.
+``python -m tests.test_golden_run --update`` and explain the change in the commit.
 """
 import hashlib
 import json

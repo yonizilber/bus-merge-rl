@@ -58,6 +58,14 @@ YIELD_BLINKER_DWELL_S   = 3.0   # seconds before dwell end when blinker ramps up
 BUS_MERGE_SCAN_AHEAD_M  = 50.0  # m — cars ahead of bus front (merge blockers)
 BUS_MERGE_SCAN_BEHIND_M = 20.0  # m — cars behind bus front (trailing threat)
 
+# Physical limits shared by the vehicle model and the physics checks (busmerge.invariants)
+MAX_BRAKE_MS2 = 9.0          # hardest braking a road vehicle can achieve (dry asphalt)
+
+# Bus pulling into the bay: it stops only when road-parallel; while still angled it crawls
+BUS_ALIGN_HEADING_DEG = 2.0  # heading within this counts as parallel to the kerb
+BUS_CRAWL_SPEED_MS    = 1.5  # crawl speed while finishing the alignment past the stop point
+BUS_STOPPED_SPEED_MS  = 0.05 # below this the bus counts as stopped
+
 # Car stop-hold (bumper_kinematics) — implemented policy: Option A
 CAR_STOP_HOLD_GAP_M      = 0.25  # engage hold when gap to bumper ≤ this and v low
 HOLD_RELEASE_ADVANCE_M   = 0.15  # release hold when max_front advances this far past hold_x

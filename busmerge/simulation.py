@@ -13,6 +13,7 @@ from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
     BAY_DEPTH as _MC_BAY_DEPTH,
     BUS_MAX_SPEED as _MC_BUS_MAX_SPEED,
+    BUS_ALIGN_HEADING_DEG, BUS_STOPPED_SPEED_MS,
     MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
 
@@ -328,7 +329,11 @@ class SimulationEngine:
                 and not getattr(bus, "_stop_served", False)):
             bus.state = BusState.DECELERATING
         
-        if bus.state == BusState.DECELERATING and dist_to_stop <= 0.5:
+        # The bus arrives when it has physically come to rest near the stop point (its braking is
+        # computed in Bus.bay_stop_acceleration); in the bay it must also be parallel to the kerb.
+        _stopped = bus.velocity <= BUS_STOPPED_SPEED_MS
+        _parallel = abs(bus.heading_angle) <= np.radians(BUS_ALIGN_HEADING_DEG)
+        if bus.state == BusState.DECELERATING and dist_to_stop <= 0.5 and _stopped:
             if self.scenario == "A":
                 bus.velocity = 0.0
                 bus.dwell_timer = bus.stop_duration
@@ -338,16 +343,7 @@ class SimulationEngine:
                 bus.heading_angle = 0.0
                 bus.steer_angle = 0.0
                 bus.wait_time = 0.0
-            elif abs(bus.heading_angle) > np.radians(2.0):
-                # PARKING CRAWL: the 7 m wheelbase needs forward momentum to
-                # rotate the nose back to road-parallel.  Refuse the final stop
-                # until heading is within 2°; maintain a minimum crawl speed so
-                # the pure-pursuit controller can finish the correction.
-                bus.velocity = max(bus.velocity, 1.5)   # m/s crawl floor
-            else:
-                # Bus has stopped and is road-parallel: accept whatever longitudinal
-                # position the crawl left it at — do NOT snap back to target_stop_x,
-                # as that would teleport the bus backward 8–10 m.
+            elif _parallel:
                 bus.velocity = 0.0
                 bus.dwell_timer = bus.stop_duration
                 bus.state = BusState.STOPPED_IN_LANE if self.scenario == "A" else BusState.IN_BAY
@@ -381,17 +377,8 @@ class SimulationEngine:
                     bus.wait_time = 0.0
                     bus.signaling_merge = False
                     bus.blinker_presence = 0.0
-                    # Physics init: bus is parked in bay, parallel to curb.
-                    bus.lateral_offset   = -3.5
-                    bus.velocity         = 0.0
+                    # The merge starts from the pose the bus actually stopped in (no reset).
                     bus.lat_target       = 0.0   # destination: traffic lane
-                    # ALIGN WITH TRAINING: env resets heading=0 at
-                    # spawn (bus parked parallel). Inheriting the bay approach angle
-                    # (-1.94° typical) causes the brain to output gas<0 (refuse to
-                    # merge) because it was never trained on non-zero heading at start.
-                    bus.heading_angle    = 0.0
-                    bus.steer_angle      = 0.0
-                    bus.lateral_velocity = 0.0
 
         # 3. AI MERGE LOGIC — BICYCLE MODEL (The PyTorch Brain)
         if bus.state == BusState.WAITING_TO_MERGE:

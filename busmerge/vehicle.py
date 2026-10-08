@@ -1,4 +1,8 @@
 import numpy as np
+
+from busmerge.rl.merge_constants import (
+    BUS_ALIGN_HEADING_DEG, BUS_CRAWL_SPEED_MS, MAX_BRAKE_MS2,
+)
 from dataclasses import dataclass
 import random
 from typing import Dict
@@ -277,6 +281,9 @@ class Vehicle:
                 _sigma_micro = 0.02 + 0.06 * _idm_demand
                 self.acceleration += float(np.random.normal(0.0, _sigma_micro))
                 self.acceleration = max(self.acceleration, -1.5)
+                # The comfortable plan above may not be enough to stop at the stop point;
+                # the bay-stop law adds exactly the braking that is physically needed.
+                self.acceleration = self.bay_stop_acceleration(self.acceleration)
 
         if not _car_frozen:
             self.velocity += self.acceleration * dt
@@ -317,16 +324,6 @@ class Vehicle:
         elif not _car_frozen:
             self.position += self.velocity * dt
 
-        # BAY-END HARD STOP (Scenario B only): clamp while still in the bay during
-        # decel/dwell — not during main-road MOVING (Scenario A in-lane stop used
-        # the same DECELERATING path and was trapped here at stop_x+exit_taper).
-        if (isinstance(self, Bus) and getattr(self, 'lateral_offset', 0.0) < -0.5
-                and getattr(self, 'state', None) in (BusState.DECELERATING, BusState.IN_BAY)):
-            _bay_end_x = getattr(self, 'target_stop_x', 300.0) + self.exit_taper_length
-            if self.position >= _bay_end_x:
-                self.position = _bay_end_x
-                self.velocity = 0.0
-                self.acceleration = 0.0
 
         if not getattr(self, 'skip_lateral_steering', False):
             # ── STEERING-FIRST LATERAL MODEL ─────────────────────────────────────────
@@ -684,6 +681,33 @@ class Bus(Vehicle):
         # by the standard car physics lateral pass.
         self.skip_lateral_steering = False
         self._stop_served = False
+
+    def bay_stop_acceleration(self, planned: float) -> float:
+        """Longitudinal command while pulling in to stop (DECELERATING).
+
+        Keeps the comfortable ``planned`` braking when it suffices, otherwise brakes exactly as
+        hard as needed to stop at the stop point (v^2 / 2d). Past the stop point a bus that is
+        still angled crawls on at a bounded acceleration until it is parallel, then stops. It never
+        runs past the end of the bay, and no command exceeds the physical braking limit: speed and
+        position always follow from the acceleration, they are never assigned.
+        """
+        v = max(float(self.velocity), 0.0)
+        aligned = abs(self.heading_angle) <= np.radians(BUS_ALIGN_HEADING_DEG)
+        to_stop = float(self.target_stop_x) - float(self.position)
+        to_bay_end = float(self.target_stop_x) + float(self.exit_taper_length) - float(self.position)
+        if to_stop > 0.0:
+            # Reach the stop point at rest if already parallel, otherwise at crawl speed
+            # (the alignment is then finished while crawling, without stopping first).
+            v_end = 0.0 if aligned else min(v, BUS_CRAWL_SPEED_MS)
+            a = min(planned, -(v * v - v_end * v_end) / (2.0 * to_stop))
+        elif not aligned:
+            a = float(np.clip((BUS_CRAWL_SPEED_MS - v) / 0.5,
+                              -self.params.comfortable_brake, self.params.max_accel))
+        else:
+            a = -float(self.params.comfortable_brake)
+        if to_bay_end > 0.0:
+            a = min(a, -v * v / (2.0 * to_bay_end))
+        return max(a, -MAX_BRAKE_MS2)
 
     def set_stop_schedule(self, location, duration):
         self.target_stop_x = location
