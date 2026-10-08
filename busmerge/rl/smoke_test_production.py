@@ -27,6 +27,7 @@ import numpy as np
 
 from busmerge.paths import DEFAULT_BRAIN
 from busmerge.evaluation import classify_outcome, run_episode
+from busmerge.invariants import check_invariants
 from busmerge.config import SimConfig
 
 
@@ -64,6 +65,8 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
     merge_times = []
     wait_times  = []
 
+    physics_bad_runs = 0
+    physics_kinds: set[str] = set()
     for seed in range(n_seeds):
         # Defaults equal the Streamlit sidebar defaults (0.4 cars/s, 50 cars).
         cfg = SimConfig(total_cars_to_spawn=total_cars, traffic_rate=traffic_rate)
@@ -78,7 +81,12 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
             print(f"  [seed {seed}] SKIP — engine init failed: {e}")
             continue
 
-        outcome, meta = classify_outcome(engine.get_results())
+        df = engine.get_results()
+        outcome, meta = classify_outcome(df)
+        inv = check_invariants(df)
+        if inv.total:
+            physics_bad_runs += 1
+            physics_kinds.update(k for k, n in inv.counts.items() if n)
         if outcome == "merged":
             successes += 1
             merge_times.append(meta["merge_s"])
@@ -119,7 +127,10 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
     print(f"  max_wait    <= {max_wait_s}s    : {'PASS' if pass_wait  else 'FAIL'}")
     print("=" * 60)
 
-    all_pass = pass_rate and pass_merge and pass_wait
+    pass_physics = physics_bad_runs == 0
+    print(f"  physics checks (busmerge.invariants): {'PASS' if pass_physics else 'FAIL'}"
+          f"  ({physics_bad_runs}/{total} runs with violations: {', '.join(sorted(physics_kinds)) or '-'})")
+    all_pass = pass_rate and pass_merge and pass_wait and pass_physics
     print(f"\nSMOKE TEST {'PASSED' if all_pass else 'FAILED'}")
 
     if write_sidecar:
@@ -133,6 +144,8 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
             "timeouts": timeouts,
             "avg_merge_s": None if avg_merge_s == float("inf") else avg_merge_s,
             "max_wait_s": None if max_wait_s_obs == float("inf") else max_wait_s_obs,
+            "physics_violation_runs": physics_bad_runs,
+            "physics_violation_kinds": sorted(physics_kinds),
             "n_seeds": n_seeds,
             "scenario": scenario,
             "tested_at": datetime.now(timezone.utc).isoformat(),

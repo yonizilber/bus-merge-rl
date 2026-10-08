@@ -19,7 +19,6 @@ MAX_DECEL_MS2 = 9.0        # the limit the vehicle model itself documents (hard 
 DECEL_TOLERANCE = 0.5      # numerical slack on top of the limit
 MAX_ACCEL_MS2 = 5.0        # no vehicle here can accelerate faster than this
 OVERLAP_MIN_AREA_M2 = 0.01  # ignore numerical touching
-OVERLAP_SCAN_M = 20.0
 POSITION_TOLERANCE_M = 0.5  # |Δx − v·dt| allowed (the position update uses a mix of old and new speed)
 
 
@@ -68,52 +67,25 @@ def check_invariants(df: pd.DataFrame, dt: float = 0.1) -> InvariantReport:
             rep.add(kind, {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
                            "v": float(row["v"]), "dv": float(row["dv"]), "dx": float(row["dx"])})
 
-    # Overlap: real rotated rectangles; x is the front bumper (physics convention).
-    for time_s, frame in df.groupby("time"):
-        if len(frame) < 2:
+    # Overlap: exact rotated-rectangle test, only for pairs whose bounding circles touch.
+    # x is the front bumper (physics convention); the body centre is x - length / 2.
+    f = df.sort_values("time", kind="stable")
+    time = f["time"].to_numpy()
+    cx = (f["x"] - f["length"] / 2.0).to_numpy()
+    cy = f["total_lat"].to_numpy(dtype=float)
+    radius = np.hypot(f["length"].to_numpy() / 2.0, f["width"].to_numpy() / 2.0)
+    starts = np.r_[0, np.flatnonzero(np.diff(time)) + 1, len(f)]
+    for s, e in zip(starts[:-1], starts[1:]):
+        if e - s < 2:
             continue
-        rows = frame.to_dict("records")
-        for i in range(len(rows)):
-            for j in range(i + 1, len(rows)):
-                a_, b_ = rows[i], rows[j]
-                if abs(a_["x"] - b_["x"]) > OVERLAP_SCAN_M:
-                    continue
-                area = compute_sat_overlap_area(
-                    vehicle_corners(a_["x"], a_["total_lat"], a_["length"], a_["width"], np.radians(a_["heading_deg"])),
-                    vehicle_corners(b_["x"], b_["total_lat"], b_["length"], b_["width"], np.radians(b_["heading_deg"])),
-                )
-                if area > OVERLAP_MIN_AREA_M2:
-                    rep.add("overlap", {"time": float(time_s), "ids": (int(a_["id"]), int(b_["id"])), "area_m2": round(area, 3)})
-    return rep
-
-    d = df.sort_values(["id", "time"]).copy()
-    g = d.groupby("id")
-    d["dv"] = g["v"].diff()
-    d["dx"] = g["x"].diff()
-    d["dt_obs"] = g["time"].diff()
-    d = d[d["dt_obs"].between(dt * 0.5, dt * 1.5)]  # skip a vehicle's first frame and gaps
-
-    accel = d["dv"] / d["dt_obs"]
-    rep.worst_decel = float(accel.min()) if len(accel) else 0.0
-    for kind, mask in (
-        ("decel_over_limit", accel < -(MAX_DECEL_MS2 + DECEL_TOLERANCE)),
-        ("accel_over_limit", accel > MAX_ACCEL_MS2),
-        ("negative_speed", d["v"] < -1e-6),
-        ("backward_motion", d["dx"] < -1e-6),
-        ("position_jump", (d["dx"] - d["v"] * d["dt_obs"]).abs() > POSITION_TOLERANCE_M),
-    ):
-        for _, row in d[mask].iterrows():
-            rep.add(kind, {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
-                           "v": float(row["v"]), "dv": float(row["dv"]), "dx": float(row["dx"])})
-
-    # Overlap: bounding boxes (x is the front bumper, so a vehicle occupies [x - length, x]).
-    for t, f in df.groupby("time"):
-        if len(f) < 2:
-            continue
-        x = f["x"].to_numpy(); L = f["length"].to_numpy(); lat = f["total_lat"].to_numpy(); w = f["width"].to_numpy()
-        lon = np.minimum(x[:, None], x[None, :]) - np.maximum((x - L)[:, None], (x - L)[None, :]) > 0.05
-        lateral = np.abs(lat[:, None] - lat[None, :]) < (w[:, None] + w[None, :]) / 2.0 - 0.05
-        hit = np.triu(lon & lateral, k=1)
-        for i, j in zip(*np.nonzero(hit)):
-            rep.add("overlap", {"time": float(t), "ids": (int(f["id"].iloc[i]), int(f["id"].iloc[j]))})
+        dist = np.hypot(cx[s:e, None] - cx[None, s:e], cy[s:e, None] - cy[None, s:e])
+        near = np.triu(dist < radius[s:e, None] + radius[None, s:e], k=1)
+        for i, j in zip(*np.nonzero(near)):
+            a_, b_ = f.iloc[s + i], f.iloc[s + j]
+            area = compute_sat_overlap_area(
+                vehicle_corners(a_["x"], a_["total_lat"], a_["length"], a_["width"], np.radians(a_["heading_deg"])),
+                vehicle_corners(b_["x"], b_["total_lat"], b_["length"], b_["width"], np.radians(b_["heading_deg"])),
+            )
+            if area > OVERLAP_MIN_AREA_M2:
+                rep.add("overlap", {"time": float(time[s]), "ids": (int(a_["id"]), int(b_["id"])), "area_m2": round(area, 3)})
     return rep

@@ -1,14 +1,20 @@
 {
   "checkpoint": "ppo_bus_brain_v11_engine.pth",
-  "passed": true,
+  "passed": false,
   "success_rate": 1.0,
   "successes": 10,
   "total": 10,
   "crashes": 0,
   "timeouts": 0,
-  "avg_merge_s": 4.5600000000000644,
-  "max_wait_s": 40.1000000000003,
+  "avg_merge_s": 4.4000000000000625,
+  "max_wait_s": 40.2000000000003,
+  "physics_violation_runs": 10,
+  "physics_violation_kinds": [
+    "decel_over_limit",
+    "overlap",
+    "position_jump"
+  ],
   "n_seeds": 10,
   "scenario": "B",
-  "tested_at": "2026-10-06T17:19:27.572921+00:00"
+  "tested_at": "2026-10-08T12:48:57.429474+00:00"
 }

@@ -16,6 +16,7 @@ import pandas as pd
 import torch
 
 from busmerge.config import PhysicsMode, SimConfig
+from busmerge.invariants import check_invariants
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.simulation import SimulationEngine
 
@@ -187,6 +188,9 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
                    physics_mode: str = "production", scenario: str = "B", seed_start: int = 0) -> dict:
     """Run ``seeds`` fixed-seed episodes of the app's Run button and summarise them."""
     outcomes, car_coll = [], 0
+    violation_runs: dict[str, int] = {}
+    violation_examples: dict[str, dict] = {}
+    worst_decel = 0.0
     phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
     phases.update(total_s=[], standstill_s=[])
     for seed in range(seed_start, seed_start + seeds):
@@ -196,6 +200,12 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
         outcome, _ = classify_outcome(df)
         outcomes.append(outcome)
         car_coll += count_car_collisions(df)
+        inv = check_invariants(df)
+        worst_decel = min(worst_decel, inv.worst_decel)
+        for kind, n in inv.counts.items():
+            violation_runs[kind] = violation_runs.get(kind, 0) + (n > 0)
+            if n and kind not in violation_examples:
+                violation_examples[kind] = {"seed": seed, **inv.examples[kind]}
         timeline = merge_timeline(df) if outcome == "merged" else None
         if timeline:
             for key in phases:
@@ -206,4 +216,8 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
         **{k: outcomes.count(k) for k in ("merged", "collision", "stuck_waiting", "never_waited")},
         "car_collision_frames": car_coll,
         "after_boarding": {k: _stats(v) for k, v in phases.items()},
+        # Physics checks (busmerge.invariants): number of runs with at least one violation of each kind.
+        "physics_violation_runs": violation_runs,
+        "physics_violation_examples": violation_examples,
+        "worst_decel_ms2": round(worst_decel, 2),
     }

@@ -9,7 +9,7 @@ import json
 import os as _os
 from busmerge.paths import MODELS_DIR
 from busmerge.geometry import compute_sat_overlap_area, rect_corners as _geom_rect_corners
-from busmerge.invariants import OVERLAP_MIN_AREA_M2
+from busmerge.invariants import OVERLAP_MIN_AREA_M2, check_invariants
 from busmerge.rl.feature_encoding import FEATURE_NAMES, infer_state_dim_from_checkpoint
 from busmerge.config import SimConfig
 from busmerge.evaluation import TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
@@ -234,10 +234,14 @@ if _available_brains:
     _smoke = _read_smoke_sidecar(selected_brain_path)
     if _smoke is None:
         st.sidebar.warning("No smoke test on file for this checkpoint.")
+    elif "physics_violation_runs" not in _smoke:
+        st.sidebar.warning("The smoke result on file predates the physics checks. Re-run it.")
     elif not _smoke.get("passed"):
-        st.sidebar.error(
-            f"Smoke FAILED ({_smoke.get('successes', '?')}/{_smoke.get('total', '?')} merges)."
-        )
+        _why = f"{_smoke.get('successes', '?')}/{_smoke.get('total', '?')} merges"
+        if _smoke.get("physics_violation_runs"):
+            _why += (f"; physics violations in {_smoke['physics_violation_runs']} run(s): "
+                     + ", ".join(_smoke.get("physics_violation_kinds", [])))
+        st.sidebar.error(f"Smoke FAILED ({_why}).")
     else:
         st.sidebar.success(
             f"Smoke passed ({_smoke.get('success_rate', 0) * 100:.0f}% success, σ=0)."
@@ -682,6 +686,19 @@ if st.session_state.sim_complete:
         st.warning("Bus never entered WAITING_TO_MERGE — check scenario B and bay setup.")
     elif _outcome == "no_merge":
         st.warning("Bus moved without a clear merge-from-wait sequence.")
+
+    # --- Physics checks: impossible moments are shown, never hidden ---
+    _inv = check_invariants(df)
+    if _inv.total == 0:
+        st.success("Physics checks: no physically impossible moment in this run.")
+    else:
+        _parts = ", ".join(f"{k.replace('_', ' ')} ×{n}" for k, n in _inv.counts.items() if n)
+        st.error(
+            f"Physics checks failed: {_parts}. Worst braking {_inv.worst_decel:.1f} m/s² "
+            "(physical limit 9). The first example of each kind is listed below."
+        )
+        with st.expander("First example of each physics violation"):
+            st.json(_inv.examples)
 
     # --- Analytics ---
     analytics = AnalyticsEngine(df, config)

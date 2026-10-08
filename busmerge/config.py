@@ -8,8 +8,8 @@ class PhysicsMode(Enum):
     PRODUCTION  — enforce velocity caps + loud telemetry flags (default for
                   Streamlit and smoke tests; keeps smooth visuals while making
                   Hand-of-God events observable).
-    DEBUG       — skip velocity overrides; raise PhysicsCollisionError on
-                  overlap (use for accident forensics with --physics-mode debug).
+    DEBUG       — skip velocity overrides (same as TRAINING); overlaps are reported by
+                  busmerge.invariants, nothing is raised.
     TRAINING    — skip velocity caps and position snaps; spongy SAT is the sole
                   crash judge so PPO can feel overlap pain (required for v10).
     """

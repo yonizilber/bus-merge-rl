@@ -10,6 +10,10 @@ Thresholds were fixed on 2026-10-06, before any engine-trained brain existed, fr
 Time is measured from the end of boarding to fully merged, in the app engine, with the app's
 default settings (scenario B, 0.4 cars/s, 50 cars, governor off).
 
+Every run is also checked by busmerge.invariants; any physically impossible moment (braking beyond
+9 m/s^2, backward motion, a position that does not follow from the speed, vehicle overlap) fails the
+gate. A brain cannot pass while the simulation it runs in is cheating.
+
     python scripts/acceptance.py --brain models/ppo_bus_brain_exp7satv9_best.pth
 """
 from __future__ import annotations
@@ -32,7 +36,12 @@ MAX_P95_S = 7.0
 def check(result: dict) -> list[tuple[str, bool, str]]:
     total = result["after_boarding"]["total_s"]
     sigma = result["noise_sigma"]
-    return [
+    physics = [
+        (f"no {kind.replace('_', ' ')}", runs == 0,
+         f"{runs}/{result['seeds']} runs" + (f", e.g. {result['physics_violation_examples'][kind]}" if runs else ""))
+        for kind, runs in result["physics_violation_runs"].items()
+    ]
+    return physics + [
         (f"merged >= {MIN_MERGED[sigma]}/{SEEDS}", result["merged"] >= MIN_MERGED[sigma], f"{result['merged']}/{result['seeds']}"),
         (f"collisions <= {MAX_COLLISIONS}", result["collision"] <= MAX_COLLISIONS, str(result["collision"])),
         (f"mean total <= {MAX_MEAN_S} s", total["mean"] is not None and total["mean"] <= MAX_MEAN_S, str(total["mean"])),
@@ -54,7 +63,7 @@ def main() -> int:
         results.append(r)
         print(f"\n{args.brain.name}  noise sigma={sigma}  seeds {args.seed_start}..{args.seed_start + SEEDS - 1}")
         for name, ok, value in check(r):
-            print(f"  [{'PASS' if ok else 'FAIL'}] {name:24} measured {value}")
+            print(f"  [{'PASS' if ok else 'FAIL'}] {name:26} measured {value}")
             passed &= ok
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
