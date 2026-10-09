@@ -698,7 +698,7 @@ class Bus(Vehicle):
         if to_stop > 0.0:
             # Reach the stop point at rest if already parallel, otherwise at crawl speed
             # (the alignment is then finished while crawling, without stopping first).
-            v_end = 0.0 if aligned else min(v, BUS_CRAWL_SPEED_MS)
+            v_end = 0.0 if aligned else BUS_CRAWL_SPEED_MS
             a = min(planned, -(v * v - v_end * v_end) / (2.0 * to_stop))
         elif not aligned:
             a = float(np.clip((BUS_CRAWL_SPEED_MS - v) / 0.5,

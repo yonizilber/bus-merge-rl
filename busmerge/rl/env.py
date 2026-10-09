@@ -6,13 +6,14 @@ from collections import deque
 
 
 from busmerge.geometry import compute_sat_overlap_area, vehicle_corners
+from busmerge.invariants import OVERLAP_MIN_AREA_M2
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_success import is_production_merge_complete
 from busmerge.config import PhysicsMode, SimConfig
 from busmerge.simulation import SimulationEngine
 from busmerge.rl.merge_constants import (
-    BUS_WIDTH, BUS_LENGTH, BAY_DEPTH,
+    BUS_WIDTH, BAY_DEPTH,
 )
 
 # ---------------------------------------------------------------------------
@@ -659,35 +660,32 @@ class BusMergeEnv:
         # Cache presence factor for crash/terminal checks
         _pf = self.bus.presence_factor
 
-        # ── SAT ground-truth overlap (exp7sat only; zero-cost when disabled) ──
-        _sat_area = 0.0
+        # ── Contact judge: the same test the acceptance gate uses (busmerge.invariants) ──
+        # Exact polygons of the bus and of every car near it; the bus lateral position includes its
+        # lane drift (total_lateral_offset), exactly as in the frame log the gate reads.
         _sat_enabled = getattr(self, "sat_penalty_enabled", False)
         _spongy = getattr(self, "spongy_danger_zone_enabled", False)
-        _, _, _, _, _, _nearest_for_sat = self._scan_nearest_car()
-        if _sat_enabled and _nearest_for_sat is not None:
-            _bus_corners = vehicle_corners(
-                float(self.bus.position), float(self.bus.lateral_offset),
-                float(BUS_LENGTH), float(BUS_WIDTH), float(self.bus.heading_angle),
-            )
-            _car_corners = vehicle_corners(
-                float(_nearest_for_sat.position),
-                float(getattr(_nearest_for_sat, "total_lateral_offset", 0.0)),
-                float(_nearest_for_sat.params.length), float(_nearest_for_sat.params.width),
-                float(getattr(_nearest_for_sat, "heading_angle", 0.0)),
-            )
-            _sat_area = compute_sat_overlap_area(_bus_corners, _car_corners)
+        _sat_area = self._bus_contact_area() if _sat_enabled else 0.0
 
         # lon_dist for reward + features = bus_rear − car_front (same as `gap` above)
         _lon_dist = float(gap)
 
+        # Term 5a: contact is a crash, judged before success (a merge that touches a car is not a
+        # success) and with the acceptance gate's threshold, so training and evaluation agree on
+        # what a collision is. (The experimental v10 "spongy" profile keeps its own rules below.)
+        if _sat_enabled and not _spongy and _sat_area > OVERLAP_MIN_AREA_M2:
+            reward -= 2500.0 + 1000.0 * min(progress / 0.75, 1.0)
+            done = True
+            self.last_crash = True
+
         # Term 4: terminal success (+5000)
-        if self._merge_complete():
+        elif self._merge_complete():
             reward += 5000.0
             self._gap_at_success = gap
             done = True
             self.last_success = True
 
-        # Term 5: SAT safety — v10 spongy danger zone vs v9 instant death
+        # Term 5b: v10 spongy danger zone (experimental profile, exp7satv10 run tags only)
         elif _sat_enabled and _spongy:
             # Catastrophic crash: large polygon overlap only
             if _sat_area > 3.0:
@@ -700,18 +698,6 @@ class BusMergeEnv:
             # Proximity repulsion: tight positive gap (car behind bus) during active merge
             if not done and 0.0 <= _lon_dist < 2.0 and progress > 0.1:
                 reward -= 5.0
-
-        elif _sat_enabled and _sat_area > 1.0:
-            # v9 binary SAT terminal (exp7sat / exp7satv9 — unchanged)
-            reward -= 2500.0 + 1000.0 * min(progress / 0.75, 1.0)
-            done = True
-            self.last_crash = True
-
-        elif _sat_enabled and 0.0 < _sat_area <= 1.0:
-            # Sideswipe-scale overlap below the v9 binary-terminal threshold — was a silent
-            # dead zone (no gradient at all). Graded, non-terminal; mirrors the spongy
-            # branch's per-m^2 magnitude above without touching that branch's own code path.
-            reward -= 50.0 * _sat_area
 
         elif (not _sat_enabled
               and gap <= 0.0 and gap > -15.0):
@@ -776,6 +762,22 @@ class BusMergeEnv:
             _vs = max(1, self._total_steps)
             info['governor_veto_rate'] = self.episode_governor_vetos / _vs
         return state, reward, done, info
+
+    def _bus_contact_area(self) -> float:
+        """Largest overlap (m²) between the bus body and any car body, exact rotated polygons."""
+        bus = self.bus
+        bus_poly = vehicle_corners(float(bus.position), float(bus.total_lateral_offset),
+                                   float(bus.params.length), float(bus.params.width), float(bus.heading_angle))
+        reach = float(bus.params.length) + 6.0   # beyond this along the road no car can touch the bus
+        worst = 0.0
+        for car in self.vehicles:
+            if abs(float(car.position) - float(bus.position)) > reach:
+                continue
+            car_poly = vehicle_corners(float(car.position), float(car.total_lateral_offset),
+                                       float(car.params.length), float(car.params.width),
+                                       float(getattr(car, "heading_angle", 0.0)))
+            worst = max(worst, compute_sat_overlap_area(bus_poly, car_poly))
+        return worst
 
     def _merge_complete(self) -> bool:
         """Terminal success: the same rule the engine and the app use to call the merge done."""
