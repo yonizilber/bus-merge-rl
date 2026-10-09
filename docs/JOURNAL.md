@@ -169,5 +169,12 @@ is the weak penalty for small contact plus the old position convention v11 was t
 - unit tests for the safe-speed law
 - a slow, still-angled bus can again accelerate to crawl speed
 
-**Fine-tune v12** (v11 on strict physics with the corrected judge, 2 seeds × 300 epochs): see
-[TRAINING.md](TRAINING.md) for the results.
+**Fine-tune v12** (v11 on strict physics with the corrected judge, 2 seeds × 300 epochs) **failed
+acceptance**, and was no better than v11 measured on the same code.
+- **v11** (the fair reference): 98/100 merged, 2 collisions (side contact), 0 physics violations.
+- **v12, seed 1:** 3-4 collisions.
+- **v12, seed 2:** stayed in the bay in 9-20 runs.
+- **During training**, the evaluation never improved (26-28/30). The training signal did not teach the
+  brain to wait for a car alongside.
+- **Still open:** the decision on adopting strict physics with v11 (see ROADMAP); details in
+  [TRAINING.md](TRAINING.md).

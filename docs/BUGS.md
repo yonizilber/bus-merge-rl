@@ -50,7 +50,7 @@ the physics-check function was 35× faster after vectorisation and had dead code
 | # | Issue | Where | Notes |
 |---|---|---|---|
 | O1 | Default physics still contains impossible moments: 68/100 runs brake beyond 9 m/s², 3-4/100 move a car backwards or jump its position | `rl/bumper_kinematics.py` (speed caps, position trims, stop-holds) | Strict physics: 0/100 |
-| O2 | Bus-car side contact in 2/100 runs (v11, strict physics) | brain behaviour | Real: pulling out while a car is alongside. Fine-tune v12 targets it |
+| O2 | Bus-car side contact in 2/100 runs (v11, strict physics) | brain behaviour | Real: pulling out while a car is alongside. A 300-epoch fine-tune (v12) did not remove it, see TRAINING.md |
 | O3 | Clamps on the merging bus (lateral to [-4.5, 0.5], heading to ±60°) are corrections the checks do not count | `simulation.py` merge steering step | Count when they bind, then remove |
 | O4 | No check that the bus stays inside the bay geometry | — | Largest stop measured 315.44 m, 0.44 m into the exit taper |
 | O5 | Arrival in the bay still assigns `velocity = 0` (≤ 0.05 m/s) | `simulation.py` arrival | Within the physical limit, but an assignment |
