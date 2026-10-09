@@ -44,6 +44,7 @@ class BusMergeEnv:
                  physics_mode: PhysicsMode = PhysicsMode.PRODUCTION):
         self.dt        = 0.1
         self.physics_mode = physics_mode
+        self.strict_physics = False  # EXPERIMENTAL: busmerge/safe_speed.py instead of the caps
         self.engine: Optional[SimulationEngine] = None
         self.max_steps = 250   # 25 s max — halved so terminal rewards stay visible under discounting
         self.eval_mode = eval_mode
@@ -420,7 +421,8 @@ class BusMergeEnv:
 
     def _attach_engine(self):
         """Put the scenario the generator just built into a SimulationEngine, which then runs it."""
-        cfg = SimConfig(total_cars_to_spawn=0, physics_mode=self.physics_mode)  # no new arrivals
+        cfg = SimConfig(total_cars_to_spawn=0, physics_mode=self.physics_mode,  # no new arrivals
+                        strict_physics=self.strict_physics)
         engine = SimulationEngine(scenario="B", config=cfg, governor_disabled=self.governor_disabled,
                                   load_brain=False)
         assert abs(engine.dt - self.dt) < 1e-9, "engine and env time steps differ"
@@ -483,6 +485,7 @@ class BusMergeEnv:
             chain = self.vehicles[:]
             for idx, veh in enumerate(chain):
                 veh._physics_mode = self.physics_mode.value
+                veh._strict_physics = self.strict_physics
                 leader, _ = resolve_car_leader(chain, idx, self.bus)
                 veh.update_physics(self.dt, leader=leader, bus=self.bus)
 

@@ -41,6 +41,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--disable-governor", action="store_true", default=False,
                         help="Bypass the predictive governor (the app default; used by the exp7sat/v9/v10 checkpoints).")
+    parser.add_argument("--strict-physics", action="store_true", default=False,
+                        help="EXPERIMENTAL: train on SimConfig.strict_physics (busmerge/safe_speed.py).")
     parser.add_argument("--seed", type=int, default=None, help="Seed the training RNGs (reproducible runs).")
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--skip-baseline-eval", action="store_true", default=False)
@@ -92,4 +94,5 @@ if __name__ == "__main__":
         dense_seeds=dense_seeds,
         governor_disabled=args.disable_governor,
         seed=args.seed,
+        strict_physics=args.strict_physics,
     )
