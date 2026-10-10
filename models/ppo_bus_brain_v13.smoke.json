@@ -1,0 +1,18 @@
+{
+  "checkpoint": "ppo_bus_brain_v13.pth",
+  "passed": false,
+  "success_rate": 0.9,
+  "successes": 9,
+  "total": 10,
+  "crashes": 1,
+  "timeouts": 0,
+  "avg_merge_s": 11.411111111111273,
+  "max_wait_s": 14.500000000000206,
+  "physics_violation_runs": 1,
+  "physics_violation_kinds": [
+    "overlap"
+  ],
+  "n_seeds": 10,
+  "scenario": "B",
+  "tested_at": "2026-10-10T15:45:41.434024+00:00"
+}

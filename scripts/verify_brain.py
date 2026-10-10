@@ -9,7 +9,7 @@ script records, independently:
   * every other physics violation.
 A run is a strict success only if it merged with none of the above.
 
-    python scripts/verify_brain.py --brain models/ppo_bus_brain_v11_engine.pth --seeds 1000 --seed-start 2000
+    python scripts/verify_brain.py --brain models/ppo_bus_brain_v13.pth --seeds 1000 --seed-start 2000
 Every seed can be replayed in the app: tick "Fixed random seed", enter the seed, keep the defaults.
 """
 from __future__ import annotations
@@ -18,6 +18,7 @@ import argparse
 import json
 import math
 import os
+import statistics
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -47,6 +48,15 @@ def _run(args: tuple[str, int]) -> dict:
     else:
         merge_outcome = outcome
     timeline = merge_timeline(df) if merge_outcome == "merged" else None
+    # Report only: when the whole bus body is first inside the lane after boarding ends (whatever the
+    # "merged" criterion says), and the highest lateral position it reaches while merging.
+    merging = df[(df["type"] == "Bus") & (df["state"] == "WAITING_TO_MERGE")]
+    in_lane_s, max_lateral = None, None
+    if not merging.empty:
+        below, _ = _edge_excess_lane(merging)
+        if (below <= 0).any():
+            in_lane_s = round(float(merging["time"].to_numpy()[(below <= 0).argmax()] - merging["time"].iloc[0]), 1)
+        max_lateral = round(float(merging["lateral_offset"].max()), 3)
     cars = df[df["type"] == "Car"]
     car_below, car_above = edge_masks(cars)
     other = {k: n for k, n in inv.counts.items()
@@ -69,7 +79,19 @@ def _run(args: tuple[str, int]) -> dict:
         "car_max_over_centre_m": _max_over_centre(cars) if car_above.any() else 0.0,
         "other_violations": other,
         "first_contact_s": meta.get("first_contact_s"),
+        "body_in_lane_s": in_lane_s,
+        "max_lateral_merging_m": max_lateral,
     }
+
+
+def _edge_excess_lane(rows):
+    """How far each row's body reaches below the lane's kerb (the bay does not count as lane)."""
+    import numpy as np
+    from busmerge.geometry import KERB_Y, body_corners_xy
+    _, ys = body_corners_xy(rows["x"].to_numpy(dtype=float), rows["total_lat"].to_numpy(dtype=float),
+                            rows["length"].to_numpy(dtype=float), rows["width"].to_numpy(dtype=float),
+                            np.radians(rows["heading_deg"].to_numpy(dtype=float)))
+    return KERB_Y - ys.min(axis=1), None
 
 
 def _where(df, t: float) -> str:
@@ -144,6 +166,17 @@ def main() -> None:
     print(f"Runs where a car crossed a road edge: {rate(len(car_runs))}   by edge: {edges}"
           + (f"   worst over the centre line: {max(r['car_max_over_centre_m'] for r in car_runs):.2f} m" if car_runs else ""))
 
+    in_lane = [r["body_in_lane_s"] for r in rows if r["body_in_lane_s"] is not None]
+    print(f"\nReport only (not a pass criterion): whole bus inside the lane after boarding in {rate(len(in_lane))}"
+          + (f"; time to it median {statistics.median(in_lane):.1f} s, p95 {sorted(in_lane)[int(0.95 * (len(in_lane) - 1))]:.1f} s" if in_lane else ""))
+    lat = [r["max_lateral_merging_m"] for r in rows if r["max_lateral_merging_m"] is not None]
+    if lat:
+        from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
+        print(f"Highest lateral position while merging: median {statistics.median(lat):.2f} m "
+              f"(merged needs >= {PRODUCTION_MERGE_LATERAL_THRESHOLD:.2f} m)")
+    times = [r["merge_total_s"] for r in rows if r["merge_total_s"] is not None]
+    if times:
+        print(f"Time from end of boarding to merged: mean {statistics.mean(times):.2f} s, p95 {sorted(times)[int(0.95 * (len(times) - 1))]:.2f} s")
     print("\nSeeds to watch in the app (Fixed random seed = seed, defaults otherwise):")
     shown = 0
     for kind in BRAIN_FAILURES:

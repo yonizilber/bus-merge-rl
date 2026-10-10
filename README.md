@@ -13,8 +13,10 @@ run scenarios, compare trained agents, and inspect the merge frame by frame.
 The default agent merged in 97.9% of unseen runs, until hidden corrections were removed from the
 simulation. It turned out the agent asked to go only half way out of the bay, and relied on an
 overshooting steering controller to carry it into the lane (and over the centre line in every run).
-With the controller fixed, it merged in 0% of runs. The full investigation, the fixes and the
-retraining are in [docs/CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md).
+With the controller fixed, it merged in 0% of runs. The retrained agent (v13) merges in 97.8% of
+1,000 unseen runs without ever crossing the centre line; 89.4% are clean by every physical check.
+The full investigation, the fixes and the retraining are in
+[docs/CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md).
 
 ## Quickstart
 

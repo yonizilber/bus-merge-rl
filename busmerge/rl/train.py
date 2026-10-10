@@ -12,7 +12,7 @@ from busmerge.rl.env import BusMergeEnv
 
 # Reward/crash-rule flags of the current run. train() sets them from the run tag so that the
 # in-training evaluations judge episodes with exactly the rules the policy is trained under.
-ENV_FLAGS = {"sat_penalty_enabled": False, "spongy_danger_zone_enabled": False}
+ENV_FLAGS = {"sat_penalty_enabled": False, "spongy_danger_zone_enabled": False, "commit_steer_weight": 8.0}
 from busmerge.rl.ppo_agent import PPOAgent
 
 
@@ -314,6 +314,7 @@ def train(
     lr=None,
     governor_disabled=False,
     run_tag="11feat",
+    commit_steer_weight=8.0,
     # Curriculum learning (3-phase): fixes v7 exploration collapse.
     # Phase 1: pure easy road (Scenario G only).  Phase 2: gradual mix-in.
     # Phase 3: full normal traffic.  Set both to 0 to disable curriculum.
@@ -333,8 +334,11 @@ def train(
     # SAT ground-truth penalty: enabled only for the exp7sat run-tag
     env.sat_penalty_enabled = str(run_tag).startswith("exp7sat")
     env.spongy_danger_zone_enabled = str(run_tag).startswith("exp7satv10")
+    env.commit_steer_weight = commit_steer_weight
     ENV_FLAGS.update(sat_penalty_enabled=env.sat_penalty_enabled,
-                     spongy_danger_zone_enabled=env.spongy_danger_zone_enabled)
+                     spongy_danger_zone_enabled=env.spongy_danger_zone_enabled,
+                     commit_steer_weight=commit_steer_weight)
+    print(f"Safe-steer weight once out of the bay: {commit_steer_weight}")
     if env.sat_penalty_enabled:
         print("SAT ground-truth penalty ENABLED (exp7sat mode).")
     if env.spongy_danger_zone_enabled:
@@ -703,7 +707,9 @@ def train(
                 print(f"Promoted zero-crash ≥90%-success model -> {runtime_path}")
 
             # If evaluation regresses for several windows, roll back to best model.
-            if no_improve_windows >= rollback_patience and os.path.exists(best_path):
+            # rollback_patience 0 disables it: a run that starts with no successful evaluation would
+            # otherwise be reset to its starting weights every `patience` evaluations.
+            if rollback_patience and no_improve_windows >= rollback_patience and os.path.exists(best_path):
                 _load_policy_weights(agent, best_path)
                 no_improve_windows = 0
                 print(f"Rollback triggered: restored policy from {best_path}")

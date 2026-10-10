@@ -79,7 +79,7 @@ in-lane stop baseline, uses `STOPPED_IN_LANE` instead of the bay.
 |---|---|---|
 | `DECELERATING` (last 50 m) | follows the drawn kerb into the bay: target = how far the road edge under the bus's front has dropped (`geometry.bay_pull_in_target`) | comfortable IDM plan toward the stop point, limited by `Bus.bay_stop_acceleration` (below) |
 | `IN_BAY` | held | boarding for `bus_dwell_time` |
-| `WAITING_TO_MERGE` | the PPO agent decides | the PPO agent decides; ends at `lateral_offset ≥ -0.1` |
+| `WAITING_TO_MERGE` | the PPO agent decides | the PPO agent decides; ends at `lateral_offset ≥ -0.25` (`merge_success.PRODUCTION_MERGE_LATERAL_THRESHOLD`; the bus is then wholly in the lane if nearly parallel) |
 
 `Bus.bay_stop_acceleration` limits the `DECELERATING` plan as follows:
 - **Before the stop point:** brake exactly as needed to reach it at rest, or at crawl speed if the bus
@@ -217,17 +217,29 @@ car jerk.
 
 ## 8. Brains (models/)
 
-Acceptance on 100 unseen seeds (1000-1099), app defaults, after strict physics was adopted
-(2026-10-10). Merged / collisions / stuck, then mean and p95 time from the end of boarding to merged:
+Measured with `scripts/verify_brain.py` on seeds 2000-2999, which were never used for training or
+selection; app defaults; honest steering; merge threshold -0.25 m. *Merged* is judged on the traffic
+only. *Strict* also requires the bus to stay on the road and out of the opposing lane, with no other
+physics violation.
 
-| Checkpoint | Trained on | Noise 0 | Noise 0.15 | Time (noise 0) |
-|---|---|---|---|---|
-| `ppo_bus_brain_v11_engine.pth` (**default**) | unified env, v9 fine-tune | 97 / 3 / 0 | 96 / 4 / 0 | 4.8 / 5.4 s |
-| `ppo_bus_brain_exp7satv10_best.pth` | legacy env, "spongy" profile | 98 / 2 / 0 | 97 / 2 / 1 | 5.7 / 6.1 s |
-| `ppo_bus_brain_exp7satv9_best.pth` | legacy env (golden-test brain) | 93 / 2 / 5 | 94 / 2 / 4 | 5.9 / 6.3 s |
-| `ppo_bus_brain_exp7sat*_best.pth`, `exp4`, `exp7` | legacy env | not measured | | |
+| Checkpoint | Seeds | Merged | Contact | Stuck | Strict | Mean / p95 time |
+|---|---|---|---|---|---|---|
+| `ppo_bus_brain_v13.pth` (**default**, golden-test brain) | 1,000 | 97.8% | 2.2% | 0% | 89.4% | 13.3 / 16.7 s |
+| `ppo_bus_brain_v11_engine.pth` | 1,000 | 0% | 0.8% | 99.2% | 0% | |
+| `ppo_bus_brain_exp7satv10_best.pth` | 100 | 0 | 0 | 100 | 0 | |
+| `ppo_bus_brain_exp7satv9_best.pth` | 100 | 0 | 0 | 100 | 0 | |
 
-- **No brain passes acceptance:** every collision is a side contact while pulling out with a car
-  alongside (BUGS O2). There are no physics violations apart from those contacts.
-- **v11 vs v10:** v11 is the fastest. v10 has slightly fewer contacts, but with 100 seeds the
-  difference between 2 and 3-4 is not significant.
+The v11, v10 and v9 rows were measured at the old -0.10 m threshold; those brains stop half way, so
+the threshold does not matter for them.
+
+- **v13** is v11 fine-tuned under honest steering ([TRAINING.md](TRAINING.md)).
+  - **Where it fails strict:** in 8.7% of runs the kerb corner at the end of the exit taper cuts into
+    its side, when it steers out slowly from the far end of the bay.
+  - **Contact:** 2.2% of runs are side contacts while pulling out with a car alongside.
+  - **Centre line:** it never crosses it.
+- **v9-v11** were trained while the merge steering overshot its target. They ask for a target half
+  way out of the bay and stop there ([case study](CASE_STUDY_REWARD_HACKING.md)).
+- **Acceptance (`scripts/acceptance.py`) is not passed by any brain.** Its time limits (mean ≤ 6.0 s,
+  p95 ≤ 7.0 s) were set while the steering overshot. Under honest steering, even a scripted
+  full-throttle merge takes 6.3 s on average. The limits need to be re-derived (a decision for the
+  project owner).

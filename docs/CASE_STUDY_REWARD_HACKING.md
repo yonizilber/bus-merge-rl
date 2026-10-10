@@ -4,8 +4,10 @@
 was removed from the simulation, the same runs showed the bus crossing the centre line in 100% of
 them. The cause was a steering controller that overshot every target. The agent had learned to rely
 on that overshoot: it asked to go only half way out of the bay and let the defect carry it into the
-lane. With the controller fixed, the agent merged in 0% of runs. This document records how this was
-found, how it was fixed, and what it took to retrain.
+lane. With the controller fixed, the agent merged in 0% of runs. Retraining also required fixing two
+bugs in the training loop. The retrained agent, v13, merges in 97.8% of runs with no centre-line
+crossing; 89.4% of runs are clean by every physical check. This document records how all of this was
+found, fixed and measured.
 
 All numbers come from the same code the Streamlit app runs (`busmerge/evaluation.py`), on seeds
 2000-2999 that were never used for training or selection, unless stated otherwise.
@@ -164,7 +166,68 @@ owner.
 
 ## 8. Fine-tune
 
-*In progress; results will be added here.*
+**Two attempts that failed, and why.**
+- **First attempt:** v11, the corrected start poses and PPO buffer, the unchanged reward, 3 seeds. The
+  mean steer command at the half-way state rose from 0.06 to about 0.2, then fell back to v11's value.
+- **Second attempt:** a stronger reward to finish the merge once out of the bay (below). Again it rose,
+  and again it fell back.
+
+The cause was the training loop, not the reward. After 3 evaluations without a new best (30 epochs),
+the trainer restores the best checkpoint. A run that starts at 0 successes has no best except its
+starting weights, so every 30 epochs of learning were thrown away. The same mechanism rolled the
+earlier v12 fine-tune back 7-8 times in 31 evaluations. Rollback is now a flag (`--rollback-patience`,
+0 = off).
+
+**The reward change.** The per-step term that pays for steering toward the lane while the gap is safe
+had weight 8. Once the bus is out of the bay (progress ≥ 0.15), the weight is now 30: finish what you
+started. Inside the bay, and with a car within 6 m, nothing changed, so the brain still has a reason
+to wait for a gap.
+
+**Third attempt, rollback off, 300 epochs, about 45 minutes** (four runs in parallel). Mean steer at
+the half-way state (v11: 0.06; about 0.94 reaches the lane):
+
+| Run | Epoch 50 | Epoch 100 | Epoch 150 | Result at epoch 300 |
+|---|---|---|---|---|
+| weight 8 (original reward) | 0.24 | 0.34 | 0.36 | still half way (highest lateral -0.86 m) |
+| weight 30 | 0.43 | 0.79 | 0.83 | the whole bus in the lane in every run |
+| weight 60, two seeds | 0.48-0.51 | 0.57-0.58 | 0.62-0.63 | stops at -0.28 to -0.32 m |
+
+**The threshold.** At epoch 300 the weight-30 brain put the whole bus inside the lane in every run,
+but stopped at a median of -0.13 m. The threshold for "merged" was -0.10 m, so 75 of 100 selection
+runs counted as stuck. A 2.5 m bus centred at -0.25 m is wholly inside the 3.5 m lane, 0.25 m clear of
+the kerb. The project owner moved the threshold to -0.25 m, defined in one place
+(`merge_success.py`) and used by the engine, the evaluation and training. The change turned all 75
+stuck runs into merges and added no violation.
+
+**Result: v13** (weight 30, epoch 300). It was selected on seeds 1000-1099 (100 merged, 0 contact,
+91 strict) and measured on the 1,000 unseen seeds 2000-2999:
+
+| | v11 under the old steering | v11 under honest steering | **v13 under honest steering** |
+|---|---|---|---|
+| Merged (judged on traffic) | 97.9% | 0% | **97.8%** (95% CI 96.7-98.5%) |
+| Contact with a car | 2.1% | 0.8% | **2.2%** |
+| Stuck | 0% | 99.2% | **0%** |
+| Bus over the centre line | 100% | 0% | **0%** |
+| Bus off the road | 50.5% | 100% | **8.7%** (all at the exit kerb corner) |
+| **Strict success** | **0%** | **0%** | **89.4%** (95% CI 87.3-91.2%) |
+| Mean / p95 time from end of boarding to merged | 4.8 / 5.4 s* | | 13.3 / 16.7 s |
+
+\* measured on seeds 1000-1099 in acceptance.
+
+The merge rate on traffic is unchanged; what changed is that it is now physical. The merge takes
+almost three times as long. Even a scripted merge at full throttle, steering at once, takes 6.3 s
+under honest steering. So the acceptance limits of 6.0 s mean and 7.0 s p95, set while the steering
+overshot, cannot be met by any policy and have to be re-derived.
+
+**Remaining failures (the input for the known limitations).**
+- **Exit kerb corner (8.7%).** From the far end of the stop range (about 306-307 m) the brain steers
+  out slowly, and the kerb corner at the end of the exit taper cuts into the bus's side. Scripted
+  exits from the same stops are clean, so this is the brain, not the geometry.
+- **Contact with a car (2.2%).** Pulling out while a car is alongside, as with every earlier brain.
+- **Tilted at the threshold (3 of 1,000 runs).** The bus passed -0.25 m while still turned, with a rear
+  corner over the kerb line. -0.25 m means wholly in the lane only when the bus is nearly parallel.
+- **Cars over the centre line (report only).** It happened in 60% of runs, up to 0.93 m (13.7% with
+  v11 under honest steering). The slower merge makes cars move over for the bus for longer.
 
 ## 9. Lessons
 
@@ -177,5 +240,9 @@ owner.
    (go half way) was the evidence.
 4. **One source of truth for geometry.** The bay existed in three drawings and one physics model, and
    they disagreed. Training start poses, stop points, drawings and checks now share one module.
-5. **Audit the learner as well as the reward.** The reward was fine; the PPO buffer was biased
-   against the one action the fix required.
+5. **Audit the learner and the training loop, not only the reward.** The reward ranked a full merge
+   far above stopping half way. But the PPO buffer was biased against the one action the fix
+   required, and a rollback rule silently reset every attempt to its starting weights.
+6. **A ranking is not a gradient.** That the optimal policy earns the most says nothing about whether
+   learning can get there from where the agent is. A probe of the policy's mean action on fixed states
+   showed in minutes what the in-training success rate (0/30 throughout) could not.

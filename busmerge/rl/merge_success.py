@@ -2,8 +2,12 @@
 
 from busmerge.rl.merge_constants import BAY_DEPTH
 
-# simulation.py transitions WAITING_TO_MERGE → MOVING at this lateral (not progress==1.0).
-PRODUCTION_MERGE_LATERAL_THRESHOLD = -0.1
+# The merge is complete (WAITING_TO_MERGE → MOVING in simulation.py, "merged" in the evaluation and
+# success in training) once the bus centre is this close to the lane centre. At -0.25 m the 2.5 m wide
+# bus is wholly inside the 3.5 m lane, 0.25 m clear of the kerb; the lane-keeping controller then
+# centres it. It was -0.10 m until 2026-10-10, a margin that only an overshooting controller reached
+# quickly (docs/CASE_STUDY_REWARD_HACKING.md); the change was the project owner's decision.
+PRODUCTION_MERGE_LATERAL_THRESHOLD = -0.25
 
 
 def merge_progress_from_lateral(lateral_offset: float, bay_depth: float = BAY_DEPTH) -> float:
@@ -26,8 +30,8 @@ def is_production_merge_complete(
     """
     Match simulation.py + Streamlit merge banner.
 
-    The full sim declares merge done when lateral_offset >= -0.1 m (→ MOVING),
-    which is only ~97% progress — not 1.0.  Streamlit also accepts MOVING after
+    The full sim declares merge done when lateral_offset >= PRODUCTION_MERGE_LATERAL_THRESHOLD
+    (→ MOVING), which is about 93% progress, not 1.0.  Streamlit also accepts MOVING after
     WAITING_TO_MERGE.  Training-only gates that require progress >= 1.0 will
     false-fail production runs.
     """

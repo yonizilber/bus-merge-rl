@@ -252,3 +252,43 @@ the overshooting steering. The app's brain table now says so.
 **Open (user decision).**
 - A fine-tune under the fixed dynamics (BUGS O8).
 - First, fix the training env's start poses: 14.6% of them put the bus off the road (BUGS O9).
+
+## 2026-10-10 (evening): fine-tune under honest steering, v13
+
+The user chose a time-boxed fine-tune, kept off `main`, with a fallback to documenting the result if it
+failed.
+
+**Before training.**
+- **Start poses:** checked with the checker's own road-edge function (P16).
+- **PPO buffer:** unbiased at the action limit (P17).
+- **Reward:** audited by running fixed policies. A full merge earns about 6,700 more than holding half
+  way.
+
+**Attempts 1 and 2 failed.** The mean steer at the half-way state (probed on fixed observations) rose,
+then fell back to v11's value. The cause was a rollback rule: after 30 epochs without a better
+evaluation, training restored the best checkpoint, which for a run starting at 0 successes is its
+starting weights (P18). It also rolled the earlier v12 fine-tune back 7-8 times.
+
+**Attempt 3, rollback off.** Four runs of 300 epochs (about 45 minutes): weight 8, 30 and 60 for the
+safe-steer term once out of the bay.
+- **Weight 30:** got the whole bus into the lane in every run, but stopped at a median of -0.13 m,
+  short of the -0.10 m threshold.
+- **Weight 8:** stayed half way.
+- **Weight 60:** stopped at about -0.3 m.
+
+**Threshold, the user's decision:** -0.25 m, the bus wholly inside the lane. It is one constant used
+by the engine, the evaluation and training.
+
+**Selection**, seeds 1000-1099: weight 30 at epoch 300 had 100 merged, 0 contact, 91 strict.
+
+**v13 on the 1,000 unseen seeds:**
+- **Merge outcome:** 97.8% merged, 2.2% contact, 0% stuck.
+- **Road edges:** 0% over the centre line; 8.7% off the road (exit kerb corner).
+- **Strict success:** 89.4%.
+- **No other violation.**
+- **Time:** mean 13.3 s, p95 16.7 s.
+
+v13 is now the default and the golden-test brain. Its 10-seed smoke test fails: 9/10, with one contact
+counted as a physics violation.
+
+**Next:** development frozen; QA and documentation (ROADMAP 1c).

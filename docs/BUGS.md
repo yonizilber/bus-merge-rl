@@ -43,6 +43,9 @@ repository. Entries before 2026-10-04 are in the original development repository
 | P13 | The bus stopped past the end of the bay in 3% of runs, could stop with its rear in the entry taper, or too close to the exit to steer out | Stop target N(300, 5) clipped to [285, 315] for the front bumper; the bay-end limit was the stop target + 15 m (up to 330 m) | Stop target clipped so the whole bus is in the flat part (rear ≥ 286 m) with 8 m to the exit taper (front ≤ 307 m; measured: from 308 m some exits touch the taper); the limit is the real bay end (315 m); the aim point is `SimConfig.bus_stop_position` | |
 | P14 | The checker could miss the kerb cutting into the side of the bus | Only the four body corners were compared with the road edge; where a taper meets the plain kerb, the kerb has a corner pointing into the road that can enter a body side with all four body corners on the road (up to about 0.5 m) | `geometry.KERB_CORNERS` tested against the body | `test_bus_side_over_the_kerb_corner_is_off_road` |
 | P15 | The drawn bay was defined in three places; the renderer drew 10 m tapers instead of 20/15 m | Copies of the numbers | App, GIF and renderer draw `geometry.bay_outline()`, the outline the checker uses | |
+| P16 | 14.6% of training start poses had a corner past the bay wall; none covered the app's stop range (297-307 m) | The env drew 300 ± 2 m, ±0.4 m, ±4.6° and clipped each separately | Start poses drawn over `geometry.bus_stop_range` and kept only if `geometry.road_edge_excess` (the checker's function) says the body is on the road (`b0aa46b`) | `test_training_start_poses_are_on_the_road_and_cover_the_stop_range` |
+| P17 | PPO learned least from the action the honest steering needs (`steer` ≈ +1, the action limit) | The buffer stored the clipped action with the raw sample's log-probability (was R2): the PPO ratio differed from 1 at the limit before any update, so good full-steer actions lost their gradient and bad ones were amplified | The raw sample is stored; only the vehicle's command is clipped (`b0aa46b`) | `test_ppo_stores_the_sampled_action_with_its_own_log_probability` |
+| P18 | A fine-tune that starts with no successful evaluation can never improve | After 3 evaluations without a new best (30 epochs), training restores the best checkpoint. A run that starts at 0 successes has no best except its starting weights, so every 30 epochs of learning were thrown away. v12 was rolled back 7-8 times in 31 evaluations, which may explain part of its flat curve | `--rollback-patience` (default 3, unchanged); 0 disables it, as used for the 2026-10-10 fine-tune | Logs: steering at the half-way state rose for 20-30 epochs and dropped back to v11's value right after each rollback |
 
 ### App and tooling (`29a06e0` unless noted)
 
@@ -59,11 +62,14 @@ the physics-check function was 35× faster after vectorisation and had dead code
 
 | # | Issue | Where | Notes |
 |---|---|---|---|
-| O2 | Bus-car side contact in 3-4/100 runs (v11), 2/100 (v9, v10) | brain behaviour | Real: pulling out while a car is alongside. The old corrections hid it; a 300-epoch fine-tune (v12) did not remove it, see TRAINING.md |
+| O2 | Bus-car side contact: v13 2.2% of 1,000 runs (v11 under the old steering 2.1%) | brain behaviour | Real: pulling out while a car is alongside. Present in every brain |
 | O5 | Arrival in the bay still assigns `velocity = 0` (≤ 0.05 m/s) | `simulation.py` arrival | Within the physical limit, but an assignment |
 | O7 | Scenario A (in-lane stop) still resets pose on arrival and at dwell end | `simulation.py` | Baseline scenario only |
-| O8 | **No brain merges under honest steering.** v11 commands a lateral target of about -1.5 m (half way out) and holds it; the old controller's overshoot turned that into a full merge (and into the centre-line crossings of P11). With P11 fixed the bus stops half way and drives on with its side over the kerb | brain behaviour | v11 learned to exploit a controller defect; v9 and v10 too (0/100 merged each, seeds 2000-2099). A fine-tune under the fixed dynamics is the user's decision (RL work is halted) |
-| O9 | The training env starts the bus at 300 ± 2 m, lateral -3.5 ± 0.4 m, heading ±4.6°: 14.6% of those poses put a corner past the bay wall (measured on 20,000 draws), and the range does not cover the app's stop range (297-307 m) | `rl/env.py` reset | Fix before any fine-tune |
+| O8 | v9-v11 do not merge under honest steering: they ask for a target half way out and relied on the old controller's overshoot | brain behaviour | **Resolved by v13** (fine-tuned under honest steering, 97.8% merged); the old brains are kept for comparison |
+| O12 | v13: the kerb corner at the end of the exit taper cuts into the bus's side in 8.7% of runs | brain behaviour | From the far end of the stop range (about 306-307 m) the brain steers out slowly; scripted exits from the same stops are clean |
+| O13 | v13 takes 13.3 s on average from the end of boarding to merged (p95 16.7 s), so acceptance's 6.0 / 7.0 s limits fail | acceptance thresholds | The limits were set while the steering overshot; a scripted full-throttle merge takes 6.3 s. Re-derive them (owner's decision) |
+| O14 | With v13, cars cross the centre line in 60% of runs (up to 0.93 m), against 13.7% with v11 under honest steering | car behaviour while the bus merges slowly | Reported, not failed (O10) |
+| O15 | -0.25 m means wholly in the lane only when the bus is nearly parallel: in 3 of 1,000 v13 runs a rear corner was still over the kerb line when the merge counted | `merge_success.py` | A geometric criterion (whole body in the lane) would be exact |
 | O10 | Cars cross the centre line (and the kerb, up to 0.35 m) in about 35% of runs | car lane drift and moving over for the bus | Reported, not failed (`InvariantReport.notes`), decision of 2026-10-10 |
 | O11 | The model rotates the bus about the centre of its body; a real bus pivots near its rear axle, so the tail swing is exaggerated | `vehicle.py` bicycle model | Limits how sharp the exit may be: with a merge look-ahead below 12 m the rear corner swings into the bay wall |
 
@@ -72,7 +78,6 @@ the physics-check function was 35× faster after vectorisation and had dead code
 | # | Issue | Where |
 |---|---|---|
 | R1 | Closing-risk reward term penalises `rel_speed > 0` (gap opening) instead of closing | `rl/env.py` reward term 3 |
-| R2 | PPO stores the clamped action but its log-probability was computed on the unclamped sample | `rl/ppo_agent.py`, `rl/train.py` |
 | R3 | Saving every epoch may overwrite a promoted checkpoint | `rl/train.py` (not verified) |
 | R4 | The experimental "spongy" profile (v10 tags) still treats contact up to 3 m² as non-terminal, unlike the gate | `rl/env.py` |
 | R5 | In-training "best" selection picks checkpoints that are worse in the app | `rl/train.py`; selection is done with `scripts/acceptance.py` instead |

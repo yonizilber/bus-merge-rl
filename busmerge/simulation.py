@@ -7,6 +7,7 @@ from typing import List
 from busmerge.paths import DEFAULT_BRAIN
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, pure_pursuit_steer, sample_vehicle_params
 from busmerge.geometry import bay_pull_in_target, bus_stop_range
+from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.config import SimConfig
 from busmerge.rl.ppo_agent import PPOAgent
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
@@ -413,7 +414,7 @@ class SimulationEngine:
             #   lon (velocity+position) → finalize_bumper → lateral → cars
 
             # Merge complete: lateral_offset has reached lane centre
-            if bus.lateral_offset >= -0.1:
+            if bus.lateral_offset >= PRODUCTION_MERGE_LATERAL_THRESHOLD:
                 bus.state    = BusState.MOVING
                 bus.lat_target = 0.0
 

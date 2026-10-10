@@ -42,6 +42,10 @@ if __name__ == "__main__":
     parser.add_argument("--disable-governor", action="store_true", default=False,
                         help="Bypass the predictive governor (the app default; used by the exp7sat/v9/v10 checkpoints).")
     parser.add_argument("--seed", type=int, default=None, help="Seed the training RNGs (reproducible runs).")
+    parser.add_argument("--rollback-patience", type=int, default=3,
+                        help="Restore the best checkpoint after this many evaluations without improvement; 0 = never.")
+    parser.add_argument("--commit-steer-weight", type=float, default=8.0,
+                        help="Safe-steer reward weight once the bus is out of the bay (8 = as v9-v11 were trained).")
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--skip-baseline-eval", action="store_true", default=False)
     parser.add_argument("--batch-size", type=int, default=2000)
@@ -92,4 +96,6 @@ if __name__ == "__main__":
         dense_seeds=dense_seeds,
         governor_disabled=args.disable_governor,
         seed=args.seed,
+        commit_steer_weight=args.commit_steer_weight,
+        rollback_patience=args.rollback_patience,
     )

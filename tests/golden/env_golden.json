@@ -1,30 +1,30 @@
 {
  "0": {
   "done": true,
-  "fingerprint": "4aeb4682391579d5",
-  "steps": 250,
-  "success": false,
-  "total_reward": -4058.585
+  "fingerprint": "fe79d205cb640e68",
+  "steps": 124,
+  "success": true,
+  "total_reward": 4104.586
  },
  "1": {
   "done": true,
-  "fingerprint": "deee87e51bf9aafe",
-  "steps": 250,
-  "success": false,
-  "total_reward": -4017.91
+  "fingerprint": "ea56998fa53cc99a",
+  "steps": 110,
+  "success": true,
+  "total_reward": 4121.83
  },
  "2": {
   "done": true,
-  "fingerprint": "41e1498a66c64311",
-  "steps": 250,
-  "success": false,
-  "total_reward": -4041.46
+  "fingerprint": "4e6a1c6acecf93df",
+  "steps": 119,
+  "success": true,
+  "total_reward": 4076.885
  },
  "3": {
   "done": true,
-  "fingerprint": "3375daefbd8ae683",
-  "steps": 250,
-  "success": false,
-  "total_reward": -4031.952
+  "fingerprint": "7d63e49b6a4d5f21",
+  "steps": 119,
+  "success": true,
+  "total_reward": 4094.363
  }
 }

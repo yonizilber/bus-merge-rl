@@ -128,12 +128,17 @@ use_fixed_seed = st.sidebar.checkbox(
 )
 run_seed = st.sidebar.number_input("Seed", 0, 1_000_000, 0, disabled=not use_fixed_seed)
 
-# --- Brain picker (default = v11, trained on the same engine this app runs) ---
-_DEFAULT_BRAIN_BASENAME = "ppo_bus_brain_v11_engine.pth"
+# --- Brain picker (default = v13, fine-tuned under the honest steering this app runs) ---
+_DEFAULT_BRAIN_BASENAME = "ppo_bus_brain_v13.pth"
 _BRAIN_OPTIONS = [
     {
+        "path": str(MODELS_DIR / "ppo_bus_brain_v13.pth"),
+        "label": "11-feat v13 ★ default (fine-tuned under honest steering)",
+        "features": "",
+    },
+    {
         "path": str(MODELS_DIR / "ppo_bus_brain_v11_engine.pth"),
-        "label": "11-feat v11 ★ default (trained on the app engine)",
+        "label": "11-feat v11 (relied on the old steering's overshoot; stops half way now)",
         "features": "",
     },
     {
@@ -221,19 +226,21 @@ if _available_brains:
 
     with st.sidebar.expander("Brain comparison (measured)"):
         st.markdown(
-            "**No brain merges under the current physics.** Measured with `scripts/verify_brain.py` "
-            "(the same code as the Run button; Scenario B, 0.4 cars/s, 50 cars, governor off) on seeds "
-            "that were not used to select any brain:\n\n"
-            "| Brain | Seeds | Merged | Stuck half way | Contact |\n"
-            "|---|---|---|---|---|\n"
-            "| v11 (default) | 1,000 | 0% | 99.2% | 0.8% |\n"
-            "| v10 best | 100 | 0 | 100 | 0 |\n"
-            "| v9 best | 100 | 0 | 100 | 0 |\n\n"
-            "All three were trained while the merge steering overshot its target: they ask for a "
-            "lateral target about half way out of the bay, and the overshoot carried the bus into the "
-            "lane and over the centre line. With the steering fixed the bus goes where the brain asks. "
-            "Earlier figures (v11 97/100) measured the brain together with that defect. "
-            "See docs/BUGS.md (P11, O8)."
+            "**Setup:** `scripts/verify_brain.py` (the same code as the Run button): Scenario B, "
+            "0.4 cars/s, 50 cars, governor off, on seeds 2000-2999, which were never used for training "
+            "or selection. *Merged* is judged on the traffic only. *Strict* also requires the bus to stay "
+            "on the road and out of the opposing lane, with no other physics violation.\n\n"
+            "| Brain | Seeds | Merged | Contact | Stuck | Strict | Mean / p95 time |\n"
+            "|---|---|---|---|---|---|---|\n"
+            "| v13 (default) | 1,000 | 97.8% | 2.2% | 0% | 89.4% | 13.3 / 16.7 s |\n"
+            "| v11 | 1,000 | 0% | 0.8% | 99.2% | 0% | |\n"
+            "| v10 best | 100 | 0 | 0 | 100 | 0 | |\n"
+            "| v9 best | 100 | 0 | 0 | 100 | 0 | |\n\n"
+            "**Where v13 fails strict:** in 8.7% of runs the kerb corner at the end of the exit taper cuts into "
+            "the bus's side, when it steers out slowly from the far end of the bay. It never crosses "
+            "the centre line. v9-v11 were trained while the merge steering overshot its target. They "
+            "ask for a target half way out of the bay and stop there now. See "
+            "docs/CASE_STUDY_REWARD_HACKING.md."
         )
 
     _smoke = _read_smoke_sidecar(selected_brain_path)

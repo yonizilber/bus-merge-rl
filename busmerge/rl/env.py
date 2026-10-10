@@ -22,6 +22,9 @@ from busmerge.rl.merge_constants import (
 STRAIGHTEN_ZONE = 5.0       # metres from stop: autopilot begins counter-steer
 
 
+COMMITTED_PROGRESS = 0.15   # merge progress beyond which the bus is out of the bay
+
+
 class BusMergeEnv:
     """
     Bus-merge RL environment — Phase C steering-first rewrite.
@@ -45,6 +48,7 @@ class BusMergeEnv:
         self.dt        = 0.1
         self.engine: Optional[SimulationEngine] = None
         self.max_steps = 250   # 25 s max — halved so terminal rewards stay visible under discounting
+        self.commit_steer_weight = 8.0   # safe-steer weight once out of the bay (8 = as v9-v11 were trained)
         self.eval_mode = eval_mode
         self.governor_disabled = governor_disabled
 
@@ -648,10 +652,15 @@ class BusMergeEnv:
         # risk exists but steer=0 never triggers a crash.  This term creates a per-step
         # gradient that pulls the mean upward whenever it is safe to merge.
         # Active in both "core" and "phase1" profiles; scales with how safe the road is.
+        # Once the bus is out of the bay (progress >= COMMITTED_PROGRESS) the weight is
+        # `commit_steer_weight`: "finish what you started". With honest steering the bus stops where
+        # the brain aims, and a brain that aims half way never samples a success, so the weak
+        # in-bay weight (8) alone did not move it (2026-10-10, docs/CASE_STUDY_REWARD_HACKING.md).
         _raw_steer = getattr(self, "_governor_raw_steer", 0.0)
         if gap > 6.0 and _raw_steer > 0.0 and progress < 1.0:
             _safe_scale = float(np.clip((gap - 6.0) / 20.0, 0.0, 1.0))   # 0 at 6m, 1 at 26m+
-            reward += 8.0 * _raw_steer * _safe_scale
+            _w = self.commit_steer_weight if progress >= COMMITTED_PROGRESS else 8.0
+            reward += _w * _raw_steer * _safe_scale
 
         # Cache presence factor for crash/terminal checks
         _pf = self.bus.presence_factor

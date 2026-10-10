@@ -29,6 +29,8 @@ animation.gif
 # Model checkpoints: only the curated set in models/ is versioned
 *.bak
 models/*
+!models/ppo_bus_brain_v13.pth
+!models/ppo_bus_brain_v13.smoke.json
 !models/ppo_bus_brain_v11_engine.pth
 !models/ppo_bus_brain_v11_engine.smoke.json
 !models/ppo_bus_brain_exp7satv9_best.pth
