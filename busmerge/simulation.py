@@ -9,7 +9,7 @@ from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_
 from busmerge.config import SimConfig
 from busmerge.rl.ppo_agent import PPOAgent
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
-from busmerge.rl.bumper_kinematics import max_approach_speed
+from busmerge.safe_speed import merging_bus_acceleration, safe_speed
 from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
     BAY_DEPTH as _MC_BAY_DEPTH,
@@ -218,18 +218,8 @@ class SimulationEngine:
                 # Physics order for WAITING_TO_MERGE bus must match training env exactly:
                 #   lon (vel+pos) → finalize_bumper → lateral bicycle → THEN cars
                 # Previously: lat (stale vel) → lon → cars → bumper — caused drift mismatch.
-                veh._physics_mode = self.cfg.physics_mode.value
-                veh._strict_physics = self.cfg.strict_physics
-                veh._sim_time = self.time
                 if isinstance(veh, Bus) and veh.state == BusState.WAITING_TO_MERGE:
-                    if self.cfg.strict_physics:
-                        from busmerge.safe_speed import merging_bus_acceleration
-                        veh.acceleration = merging_bus_acceleration(veh, self.vehicles, veh.acceleration, self.dt)
-                    else:
-                        from busmerge.rl.bumper_kinematics import limit_bus_to_cars_ahead
-                        limit_bus_to_cars_ahead(
-                            veh, self.vehicles, self.dt, allow_retreat=False,
-                        )
+                    veh.acceleration = merging_bus_acceleration(veh, self.vehicles, veh.acceleration, self.dt)
                 veh.update_physics(self.dt, lead_vehicle, bus=the_bus)
 
                 # After longitudinal update: run lateral bicycle for merging bus
@@ -253,10 +243,6 @@ class SimulationEngine:
                     veh.lateral_velocity = veh.velocity * np.sin(veh.heading_angle)
                     veh.lateral_offset  += veh.lateral_velocity * self.dt
                     veh.lateral_offset   = float(np.clip(veh.lateral_offset, -4.5, 0.5))
-                    # finalize bumper BEFORE cars update (matches training env order)
-                    if not self.cfg.strict_physics:
-                        from busmerge.rl.bumper_kinematics import finalize_bus_bumper
-                        finalize_bus_bumper(veh, self.vehicles)
 
                 # PHYSICS SNIFFER: compare heading after update against the
                 # maximum physically possible change (steer_rate × dt + 0.01 rad
@@ -459,9 +445,8 @@ class SimulationEngine:
 
         Arrivals are drawn as before (probability traffic_rate·dt per frame, only while the entry is
         clear: 0.5 s since the last car and the nearest car at least 15 m in), so the traffic volume is
-        unchanged. A car enters at the lower of its desired speed and the speed from which it can still
-        stop behind the car ahead even if that car stopped dead (``max_approach_speed``, the same limit
-        the follower physics applies). If that is below SPAWN_MIN_SPEED_MS the arrival is held and
+        unchanged. A car enters at the lower of its desired speed and the safe speed behind the car ahead
+        (busmerge.safe_speed.safe_speed, the same law every follower obeys). If that is below SPAWN_MIN_SPEED_MS the arrival is held and
         placed as soon as there is room: delayed, never dropped, and never in need of impossible braking.
         """
         if self.time - self.last_spawn_time < 0.5:
@@ -480,8 +465,8 @@ class SimulationEngine:
         start_speed = max(5.5, sampled_params.max_speed * random.uniform(0.68, 0.95))
         if leader is not None:
             room = float(leader.position) - float(leader.params.length) - float(sampled_params.min_gap)
-            start_speed = min(start_speed, max_approach_speed(
-                room, self.dt, comfortable_brake=float(sampled_params.comfortable_brake)))
+            start_speed = min(start_speed, safe_speed(
+                room, float(leader.velocity), float(sampled_params.comfortable_brake), self.dt))
             if start_speed < SPAWN_MIN_SPEED_MS:
                 return
         self.global_id_counter += 1
@@ -554,7 +539,7 @@ class SimulationEngine:
         if not self._should_record_follower_trace(bus):
             return
 
-        from busmerge.rl.bumper_kinematics import leader_max_follower_front, bus_blocking_max_front
+        from busmerge.safe_speed import bus_blocking_max_front, leader_max_follower_front
         from busmerge.rl.merge_yield import bus_gap_to_car_front
         from busmerge.rl.traffic_leaders import resolve_car_leader
 
@@ -584,7 +569,6 @@ class SimulationEngine:
             "max_front_allowed": float("nan"),
             "yield_eff": float("nan"),
             "yield_raw": float("nan"),
-            "hold_x": float("nan"),
             "leader_id": None,
             "bus_is_leader": False,
             "leader_presence": float("nan"),
@@ -597,8 +581,6 @@ class SimulationEngine:
             "reaction_timer": float("nan"),
             "brake_note": "",
             "follower_switched": False,
-            "physics_override": False,
-            "physics_override_reason": "",
             "accel_paradox": False,
             "blinker_presence": float(getattr(bus, "blinker_presence", 0.0)),
             "signaling_merge": bool(getattr(bus, "signaling_merge", False)),
@@ -619,7 +601,6 @@ class SimulationEngine:
             leader, _ = resolve_car_leader(self.vehicles, idx, bus)
             y_eff = float(getattr(car, "last_applied_yield", car._merge_yield_factor(bus)))
             y_raw = float(car._merge_yield_factor(bus))
-            hold = getattr(car, "_hold_x", None)
             bus_is_leader = False
             if leader is not None:
                 max_front = leader_max_follower_front(leader, float(car.params.min_gap))
@@ -647,8 +628,8 @@ class SimulationEngine:
             comfort = float(getattr(car.params, "comfortable_brake", 2.5))
             # Classify IDM foot first (logged acceleration), then annotate bumper.
             idm_note = ""
-            if hold is not None and car_v < 0.5:
-                idm_note = "hold"
+            if car_v < 0.05:
+                idm_note = "stopped"
             elif car_accel <= -5.0:
                 idm_note = "emergency"
             elif car_accel <= -3.5:
@@ -667,16 +648,7 @@ class SimulationEngine:
                     stopped_this_frame = car_v < 0.05 and car_dv < 0.0
                     if not stopped_this_frame:
                         accel_paradox = True
-            phys_override = bool(getattr(car, "physics_override_active", False))
-            phys_reason = str(getattr(car, "physics_override_reason", ""))
-            # Brake note = IDM class; if bumper also fired, prefix so both are visible.
-            # Old bug: HoG only shown when idm_note=="" — so "comfort" hid active HoG.
-            if phys_override and idm_note:
-                brake_note = f"{idm_note}+hog"
-            elif phys_override:
-                brake_note = "hand_of_god"
-            else:
-                brake_note = idm_note
+            brake_note = idm_note
             row.update({
                 "car_id": car.id,
                 "x": car_x,
@@ -687,7 +659,6 @@ class SimulationEngine:
                 "max_front_allowed": float(max_front),
                 "yield_eff": y_eff,
                 "yield_raw": y_raw,
-                "hold_x": float(hold) if hold is not None else float("nan"),
                 "leader_id": leader.get("id") if leader else None,
                 "bus_is_leader": bus_is_leader,
                 "leader_presence": float(leader.get("presence", 1.0)) if leader else float("nan"),
@@ -700,8 +671,6 @@ class SimulationEngine:
                 "reaction_timer": float(car.reaction_timer),
                 "brake_note": brake_note,
                 "follower_switched": switched,
-                "physics_override": phys_override,
-                "physics_override_reason": phys_reason,
                 "accel_paradox": accel_paradox,
             })
 
@@ -796,8 +765,6 @@ class SimulationEngine:
                 'heading_anomaly':  self.heading_anomaly if isinstance(v, Bus) else False,
                 'yield_eff': _yield_eff,
                 'bus_control': _bus_control if isinstance(v, Bus) else "",
-                'physics_override': bool(getattr(v, 'physics_override_active', False)),
-                'physics_override_reason': str(getattr(v, 'physics_override_reason', "")),
                 'blinker_presence': float(getattr(the_bus, 'blinker_presence', 0.0)) if isinstance(v, Bus) else float('nan'),
                 'governor_reason': str(getattr(v, 'last_governor_reason', "")) if (isinstance(v, Bus) and v.state == BusState.WAITING_TO_MERGE) else "",
                 'shield_condition': str(getattr(v, 'last_shield_condition', "")) if (isinstance(v, Bus) and v.state == BusState.WAITING_TO_MERGE) else "",

@@ -1,18 +1,16 @@
 """
-Tests for the virtual blinker presence and physics enforcement modes.
+Tests for the virtual blinker presence and the braking it causes.
 
 Scenarios validated:
   1. Car at 25 m during full dwell (presence=0.1)  → Y > 0, mild decel (no emergency)
   2. Car at 6 m during last 3 s   (presence=0.25) → speed bleeds below 10 m/s in 2 s
   3. Regression: IN_BAY → WAITING_TO_MERGE with gap 6.5 m: |Δv| < 2.0 m/s in first 0.1 s
-  4. PhysicsMode.TRAINING skips velocity cap (bumper_kinematics gating)
-  5. PhysicsMode.PRODUCTION fires velocity cap + sets physics_override_active
+  4. A car behind a bus that starts to merge never brakes beyond 9 m/s^2
 """
 
 
 import pytest
 from busmerge.vehicle import Vehicle, Bus, BusState
-from busmerge.rl.bumper_kinematics import limit_follower_to_leader
 
 
 # ---------------------------------------------------------------------------
@@ -46,8 +44,9 @@ def _advance_n_steps(car: Vehicle, bus, n: int, dt: float = 0.1):
 # Test 1: full dwell presence (0.10) — car 25 m behind bus → Y > 0, gentle decel
 # ---------------------------------------------------------------------------
 
-def test_soft_bumper_wake_while_yield_slewing():
-    """When Y is still ramping, Hand of God must not snap −6 m/s in one frame."""
+def test_car_behind_a_bus_starting_to_merge_never_brakes_beyond_the_limit():
+    """When the bus starts to merge in front of a fast car, the car's speed may drop by at most
+    9 m/s^2 · dt per frame (the old bumper cap could remove 6 m/s in one frame)."""
     from busmerge.rl.traffic_leaders import vehicle_leader_state
     bus = _make_bus(state=BusState.WAITING_TO_MERGE, blinker_presence=0.0)
     bus.lateral_offset = -2.5
@@ -55,13 +54,11 @@ def test_soft_bumper_wake_while_yield_slewing():
     bus.velocity = 2.5
     car = _make_car(position=300.0 - 11.0 - 5.5, velocity=10.76)
     car.last_applied_yield = 0.25
-    car._physics_mode = "production"
-    v0 = car.velocity
-    limit_follower_to_leader(car, vehicle_leader_state(bus), 0.1)
-    assert abs(car.velocity - v0) <= 2.0 + 1e-6, (
-        f"soft wake failed: Δv={car.velocity - v0:.2f} (must be ≤ 2 m/s)"
-    )
-    assert car.physics_override_active is True
+    for _ in range(10):
+        v0 = car.velocity
+        car.reaction_timer = 0.0
+        car.update_physics(0.1, leader=vehicle_leader_state(bus), bus=bus)
+        assert v0 - car.velocity <= 0.9 + 1e-9, f"speed dropped {v0 - car.velocity:.2f} m/s in one frame"
 
 
 def test_full_dwell_presence_yields_nonzero():
@@ -144,57 +141,6 @@ def test_transition_delta_v_less_than_2():
     )
 
 
-# ---------------------------------------------------------------------------
-# Test 4: PhysicsMode.TRAINING — bumper cap is skipped
-# ---------------------------------------------------------------------------
-
-def test_training_mode_skips_velocity_cap():
-    """In TRAINING mode, limit_follower_to_leader must not reduce velocity."""
-    leader = {
-        "id": 99,
-        "position": 295.0,
-        "velocity": 0.0,
-        "length": 4.5,
-        "rear_x": 290.5,
-        "presence": 1.0,
-    }
-    car = _make_car(position=289.0, velocity=20.0)
-    car._physics_mode = "training"
-    v_before = float(car.velocity)
-    limit_follower_to_leader(car, leader, dt=0.1)
-    assert car.velocity == v_before, (
-        f"TRAINING mode must not cap velocity; before={v_before}, after={car.velocity}"
-    )
-    assert car.physics_override_active is False
-
-
-# ---------------------------------------------------------------------------
-# Test 5: PhysicsMode.PRODUCTION — bumper cap fires and sets override telemetry
-# ---------------------------------------------------------------------------
-
-def test_production_mode_sets_override_telemetry():
-    """In PRODUCTION mode, limit_follower_to_leader caps velocity and flags override."""
-    leader = {
-        "id": 99,
-        "position": 295.0,
-        "velocity": 0.0,
-        "length": 4.5,
-        "rear_x": 290.5,
-        "presence": 1.0,
-    }
-    # Put car almost at the leader rear (gap ≈ 0.5 m) travelling fast
-    car = _make_car(position=289.8, velocity=15.0)
-    car._physics_mode = "production"
-    limit_follower_to_leader(car, leader, dt=0.1)
-    assert car.velocity < 15.0, "PRODUCTION mode must cap velocity"
-    assert car.physics_override_active is True, "physics_override_active must be set"
-    assert "gap=" in car.physics_override_reason, "override reason must include gap info"
-
-
-# ---------------------------------------------------------------------------
-# Test 6: traffic_leaders — IN_BAY always ignores bus as formal IDM leader
-# ---------------------------------------------------------------------------
-
 def test_traffic_leaders_always_ignores_bus_in_bay():
     """IN_BAY bus is NEVER a formal IDM queue leader — blinker or not.
 
@@ -226,7 +172,6 @@ def test_full_dwell_does_not_phantom_stop():
     assert car.velocity > 5.0, (
         f"Car phantom-stopped during IN_BAY dwell: v={car.velocity:.2f} m/s"
     )
-    assert getattr(car, "_hold_x", None) is None, "stop-hold must not engage on bay bus"
 
 
 def test_early_waiting_bay_bus_not_queue_leader():

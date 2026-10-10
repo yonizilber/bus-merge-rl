@@ -12,7 +12,7 @@ from busmerge.rl.env import BusMergeEnv
 
 # Reward/crash-rule flags of the current run. train() sets them from the run tag so that the
 # in-training evaluations judge episodes with exactly the rules the policy is trained under.
-ENV_FLAGS = {"sat_penalty_enabled": False, "spongy_danger_zone_enabled": False, "strict_physics": False}
+ENV_FLAGS = {"sat_penalty_enabled": False, "spongy_danger_zone_enabled": False}
 from busmerge.rl.ppo_agent import PPOAgent
 
 
@@ -322,7 +322,6 @@ def train(
     feature_dim=11,
     traffic_first=False,
     seed=None,
-    strict_physics=False,
 ):
     if seed is not None:
         random.seed(seed)
@@ -334,12 +333,8 @@ def train(
     # SAT ground-truth penalty: enabled only for the exp7sat run-tag
     env.sat_penalty_enabled = str(run_tag).startswith("exp7sat")
     env.spongy_danger_zone_enabled = str(run_tag).startswith("exp7satv10")
-    env.strict_physics = strict_physics
     ENV_FLAGS.update(sat_penalty_enabled=env.sat_penalty_enabled,
-                     spongy_danger_zone_enabled=env.spongy_danger_zone_enabled,
-                     strict_physics=strict_physics)
-    if strict_physics:
-        print("Strict physics ENABLED (busmerge/safe_speed.py).")
+                     spongy_danger_zone_enabled=env.spongy_danger_zone_enabled)
     if env.sat_penalty_enabled:
         print("SAT ground-truth penalty ENABLED (exp7sat mode).")
     if env.spongy_danger_zone_enabled:

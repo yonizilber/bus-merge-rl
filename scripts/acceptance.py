@@ -54,15 +54,12 @@ def main() -> int:
     ap.add_argument("--brain", required=True, type=Path)
     ap.add_argument("--seed-start", type=int, default=0,
                     help="first seed; use a range not used while developing/selecting the brain (e.g. 1000)")
-    ap.add_argument("--strict-physics", action="store_true",
-                    help="EXPERIMENTAL: evaluate with SimConfig.strict_physics (busmerge/safe_speed.py)")
     ap.add_argument("--out", type=Path, default=None, help="write the raw results as JSON")
     args = ap.parse_args()
 
     results, passed = [], True
     for sigma in MIN_MERGED:
-        r = evaluate_brain(args.brain, SEEDS, sigma, traffic_rate=0.4, cars=50, seed_start=args.seed_start,
-                           strict_physics=args.strict_physics)
+        r = evaluate_brain(args.brain, SEEDS, sigma, traffic_rate=0.4, cars=50, seed_start=args.seed_start)
         results.append(r)
         print(f"\n{args.brain.name}  noise sigma={sigma}  seeds {args.seed_start}..{args.seed_start + SEEDS - 1}")
         print(f"  traffic (report only): {r['traffic']}")

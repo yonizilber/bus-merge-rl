@@ -51,7 +51,7 @@ def _summarize_follower_brakes(ft: pd.DataFrame) -> dict:
     if car.empty:
         return {}
     hard = car[car["brake_note"].astype(str).str.contains(r"hard|emergency", na=False)]
-    holds = car[car["brake_note"].astype(str).str.startswith("hold", na=False)]
+    holds = car[car["brake_note"].astype(str).str.startswith("stopped", na=False)]
     worst = car.loc[car["accel"].idxmin()] if car["accel"].notna().any() else None
     return {
         "car_id": int(car["car_id"].iloc[0]),
@@ -340,20 +340,6 @@ show_bus_entry_telemetry = st.sidebar.checkbox(
     help="Bus decel/bay table: speed, heading, steer.",
 )
 
-st.sidebar.subheader("⚙️ Physics Mode")
-from busmerge.config import PhysicsMode
-_physics_mode_label = st.sidebar.selectbox(
-    "Bumper enforcement",
-    options=["PRODUCTION", "DEBUG", "TRAINING"],
-    index=0,
-    help=(
-        "**PRODUCTION** — enforce velocity caps + telemetry flags (default).\n\n"
-        "**DEBUG** — skip velocity overrides; crash on overlap (forensics).\n\n"
-        "**TRAINING** — skip caps; spongy SAT is sole crash judge (for v10 study)."
-    ),
-)
-_physics_mode_enum = PhysicsMode(_physics_mode_label.lower())
-
 # --- Simulation Execution ---
 config = SimConfig(
     total_cars_to_spawn=batch_size, 
@@ -361,7 +347,6 @@ config = SimConfig(
     pax_per_car=pax_car,
     pax_per_bus=pax_bus,
     bus_dwell_time=bus_stop_duration,
-    physics_mode=_physics_mode_enum,
 )
 
 # --- Training validation demo (10 held-out seeds × N episodes) ---
@@ -650,19 +635,9 @@ if st.session_state.sim_complete:
                     f"Car **#{_fb['car_id']}** held position for **{_fb['hold_frames']}** frames during merge "
                     f"(min speed {_fb['min_speed']:.2f} m/s). See telemetry below."
                 )
-    # Hand of God / accel paradox banners
+    # Accel paradox: logged acceleration does not explain the speed change (should never happen)
     _fdf = st.session_state.get("follower_df")
     if _fdf is not None and len(_fdf) > 0:
-        if "physics_override" in _fdf.columns:
-            _hog_frames = _fdf[_fdf["physics_override"] == True]
-            if len(_hog_frames) > 0:
-                _hog_car = int(_hog_frames.iloc[0].get("car_id", -1))
-                _hog_t = float(_hog_frames.iloc[0]["time"])
-                _hog_reason = str(_hog_frames.iloc[0].get("physics_override_reason", ""))
-                st.sidebar.warning(
-                    f"[Hand of God] Bumper cap fired — Car #{_hog_car} "
-                    f"at t={_hog_t:.1f}s\n\n`{_hog_reason}`"
-                )
         if "accel_paradox" in _fdf.columns:
             _par_frames = _fdf[_fdf["accel_paradox"] == True]
             if len(_par_frames) > 0:
@@ -671,7 +646,7 @@ if st.session_state.sim_complete:
                 st.sidebar.warning(
                     f"[Accel Paradox] Implied Δv/dt ≠ logged accel — "
                     f"Car #{_par_car} at t={_par_t:.1f}s  "
-                    "(dual-path physics detected)"
+                    "(the logged acceleration does not explain the speed change)"
                 )
 
     if _outcome == "stuck_waiting":
@@ -934,8 +909,8 @@ if st.session_state.sim_complete:
                 "Tracks the same car behind the bus (sticky ID). "
                 "**Car accel** is the physics deceleration (m/s²) — use this to judge brake severity. "
                 "**Car Δv** is speed change this step; divide by 0.1 s to get implied m/s² (can spike when follower ID switches). "
-                "**Brake note:** `comfort` / `hard` / `emergency` = IDM foot. "
-                "`hand_of_god` or `…+hog` = bumper also capped velocity that frame."
+                "**Brake note:** `comfort` / `hard` / `emergency` = braking class, `stopped` = at rest. "
+                "Every speed change comes from the logged acceleration (no corrections exist)."
             )
             if _follower_df is None or _follower_df.empty:
                 st.info("No follower trace — use Scenario B and run a simulation.")
@@ -991,15 +966,12 @@ if st.session_state.sim_complete:
                     "max_front_allowed": "Car max front (m)",
                     "yield_eff": "Yield Y",
                     "yield_raw": "Yield Raw",
-                    "hold_x": "Hold X (m)",
                     "leader_id": "Leader ID",
                     "bus_is_leader": "Bus is leader",
                     "leader_presence": "Leader presence",
                     "leader_info": "Sees (leader)",
                     "bus_visibility": "Bus presence seen",
                     "car_state": "Car state",
-                    "physics_override": "Hand of God",
-                    "physics_override_reason": "HoG reason",
                     "accel_paradox": "Accel paradox",
                     "blinker_presence": "Blinker pres.",
                     "signaling_merge": "Signaling",
@@ -1008,7 +980,7 @@ if st.session_state.sim_complete:
                     "Frame", "Time (s)", "Bus state", "Bus merge P",
                     "Car ID", "Car vel (m/s)", "Car accel (m/s²)", "Car Δv (m/s)",
                     "Brake note", "Rear gap (m)", "Yield Y", "Yield Raw",
-                    "Bus is leader", "Hand of God", "Accel paradox",
+                    "Bus is leader", "Accel paradox",
                     "Blinker pres.", "Signaling",
                 ]
                 _rest = [c for c in ft.columns if c not in _lead_cols]
@@ -1017,17 +989,15 @@ if st.session_state.sim_complete:
                 def _highlight_brake_rows(row):
                     """Readable highlights on dark Streamlit theme (avoid pale yellow)."""
                     note = str(row.get("Brake note", "") or "")
-                    if row.get("Hand of God") or row.get("Accel paradox") or "+hog" in note:
+                    if row.get("Accel paradox"):
                         # Slate blue — readable white text, not yellow-on-yellow
                         return ["background-color: #2b4c6f; color: #e8f1fa"] * len(row)
                     if note == "emergency" or note.startswith("emergency"):
                         return ["background-color: #6b2b2b; color: #ffe8e8"] * len(row)
                     if note == "hard" or note.startswith("hard"):
                         return ["background-color: #6b4a22; color: #fff0dd"] * len(row)
-                    if note == "hold":
+                    if note == "stopped":
                         return ["background-color: #2a3f5c; color: #dce8f5"] * len(row)
-                    if note == "hand_of_god":
-                        return ["background-color: #2b4c6f; color: #e8f1fa"] * len(row)
                     return [""] * len(row)
 
                 st.dataframe(

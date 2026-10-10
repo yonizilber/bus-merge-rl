@@ -13,7 +13,6 @@ import json
 import time
 from pathlib import Path
 
-from busmerge.config import PhysicsMode
 from busmerge.evaluation import evaluate_brain
 from busmerge.paths import MODELS_DIR, OUTPUTS_DIR
 
@@ -21,7 +20,6 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=30)
     ap.add_argument("--noise", type=float, nargs="*", default=[0.0])
-    ap.add_argument("--physics-mode", choices=[m.value for m in PhysicsMode], default="production")
     ap.add_argument("--traffic-rate", type=float, default=0.4)
     ap.add_argument("--cars", type=int, default=50)
     ap.add_argument("--brains", nargs="*", default=None, help="file names in models/ (default: all)")
@@ -33,7 +31,7 @@ def main() -> None:
     for brain in brains:
         for sigma in args.noise:
             t0 = time.time()
-            r = evaluate_brain(brain, args.seeds, sigma, args.traffic_rate, args.cars, args.physics_mode)
+            r = evaluate_brain(brain, args.seeds, sigma, args.traffic_rate, args.cars)
             r["wall_s"] = round(time.time() - t0, 1)
             results.append(r)
             print(json.dumps(r), flush=True)

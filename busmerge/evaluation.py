@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from busmerge.config import PhysicsMode, SimConfig
+from busmerge.config import SimConfig
 from busmerge.invariants import bus_contact_times, check_invariants
 from busmerge.traffic_metrics import traffic_metrics
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
@@ -175,10 +175,10 @@ def merge_timeline(df: pd.DataFrame) -> Optional[dict]:
 
 
 # Streamlit sidebar defaults (streamlit_app.py): scenario B, 0.4 cars/s, 50 cars,
-# 15 s dwell, 1.2 / 50 passengers, PRODUCTION physics, governor off.
+# 15 s dwell, 1.2 / 50 passengers, governor off.
 APP_DEFAULTS = dict(
     total_cars_to_spawn=50, traffic_rate=0.4, bus_dwell_time=15,
-    pax_per_car=1.2, pax_per_bus=50.0, physics_mode=PhysicsMode.PRODUCTION,
+    pax_per_car=1.2, pax_per_bus=50.0,
 )
 
 
@@ -191,8 +191,7 @@ def _stats(values: list[float]) -> dict:
 
 
 def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: float, cars: int,
-                   physics_mode: str = "production", scenario: str = "B", seed_start: int = 0,
-                   strict_physics: bool = False) -> dict:
+                   scenario: str = "B", seed_start: int = 0) -> dict:
     """Run ``seeds`` fixed-seed episodes of the app's Run button and summarise them."""
     outcomes, car_coll = [], 0
     violation_runs: dict[str, int] = {}
@@ -202,8 +201,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
     phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
     phases.update(total_s=[], standstill_s=[])
     for seed in range(seed_start, seed_start + seeds):
-        cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars, "physics_mode": PhysicsMode(physics_mode),
-                           "strict_physics": strict_physics})
+        cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars})
         sim = run_episode(scenario, cfg, str(brain), governor_disabled=True, noise_sigma=noise_sigma, seed=seed)
         df = sim.get_results()
         outcome, _ = classify_outcome(df)
@@ -221,7 +219,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
             for key in phases:
                 phases[key].append(timeline[key])
     return {
-        "brain": brain.name, "physics_mode": physics_mode, "strict_physics": strict_physics, "noise_sigma": noise_sigma, "traffic_rate": traffic_rate, "cars": cars,
+        "brain": brain.name, "noise_sigma": noise_sigma, "traffic_rate": traffic_rate, "cars": cars,
         "seeds": len(outcomes),
         **{k: outcomes.count(k) for k in ("merged", "collision", "stuck_waiting", "never_waited")},
         "car_collision_frames": car_coll,

@@ -69,14 +69,6 @@ BUS_STOPPED_SPEED_MS  = 0.05 # below this the bus counts as stopped
 # Car arrivals: a car is not placed on the road slower than this; the arrival waits instead
 SPAWN_MIN_SPEED_MS = 2.0
 
-# Car stop-hold (bumper_kinematics) — implemented policy: Option A
-CAR_STOP_HOLD_GAP_M      = 0.25  # engage hold when gap to bumper ≤ this and v low
-HOLD_RELEASE_ADVANCE_M   = 0.15  # release hold when max_front advances this far past hold_x
-
-# Bumper approach caps — avoid closing full min_gap in one frame (infinite-decel snaps)
-BUMPER_APPROACH_FRAME_FRACTION = 0.6  # max fraction of remaining gap closable per step
-BUMPER_OVERSHOOT_TRIM_M = 0.5  # max position snap per frame (micro-overshoot only)
-
 # Lateral squeeze hysteresis (vehicle.py) — prevents Reacting/Squeezing state flutter
 SQUEEZE_ENTER_URGENCY = 0.12  # enter squeeze above this (m lane deficit)
 SQUEEZE_EXIT_URGENCY  = 0.02  # exit squeeze only below this (Schmitt trigger)

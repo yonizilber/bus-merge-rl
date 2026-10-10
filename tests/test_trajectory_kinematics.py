@@ -13,7 +13,7 @@ import numpy as np
 
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS
 from busmerge.rl.traffic_leaders import resolve_car_leader, vehicle_leader_state, bus_rear_bumper_x
-from busmerge.rl.bumper_kinematics import leader_max_follower_front
+from busmerge.safe_speed import leader_max_follower_front
 from busmerge.rl.merge_yield import bus_gap_to_car_front
 
 MAX_BACKWARD_STEP_M = 0.0    # cars must never move backward on the road
@@ -132,32 +132,34 @@ def test_stable_rear_blocks_yaw_only_jump():
     print(f"  PASS  static_rear_yaw_invariant  rear={rears[0]:.1f}")
 
 
-def test_car_hold_frozen_until_bus_advances():
-    """Stopped car stays at hold_x until bus bumper advances (Option A)."""
+def test_car_stays_behind_a_blocking_bus_until_it_advances():
+    """A car that has stopped behind a bus stays behind it, and moves on once the bus advances.
+
+    The car starts 25 m behind the bus's bumper line: a car that is already on the line at 8 m/s
+    (the old setup) cannot stop there physically (3.6 m are needed even at 9 m/s^2); the old
+    stop-hold froze it in place instead.
+    """
     bus = Bus(999, 308.0, 0.0, CAR_PARAMS)
     bus.state = BusState.WAITING_TO_MERGE
     bus.lateral_offset = -2.0
     bus.heading_angle = np.radians(10.0)
     bus._merge_progress = 0.35
-    car = Vehicle(4, 295.0, 8.0, CAR_PARAMS)
-    for _ in range(40):
+    car = Vehicle(4, 270.0, 8.0, CAR_PARAMS)
+    for _ in range(120):
         _step_pair(bus, car)
-    hold = getattr(car, "_hold_x", None)
-    assert hold is not None, "car should engage stop-hold near bus"
-    frozen_x = [car.position]
-    for _ in range(30):
-        bus.heading_angle = np.radians(12.0 + 5.0 * np.sin(_ * 0.2))
+    max_front = leader_max_follower_front(vehicle_leader_state(bus), MIN_GAP_M)
+    assert car.velocity < 0.05, f"car should have stopped behind the bus, v={car.velocity:.2f}"
+    assert car.position <= max_front + 1e-6, f"car passed the bus's bumper line: {car.position:.2f} > {max_front:.2f}"
+    stopped_x = car.position
+    for k in range(30):
+        bus.heading_angle = np.radians(12.0 + 5.0 * np.sin(k * 0.2))
         _step_pair(bus, car)
-        frozen_x.append(car.position)
-    assert max(frozen_x) - min(frozen_x) < 0.02, (
-        f"car moved while bus still blocked: {frozen_x[:5]}...{frozen_x[-3:]}"
-    )
+    assert abs(car.position - stopped_x) < 0.02, "car moved while the bus still blocked it"
     for _ in range(20):
         bus.position += 0.5
         _step_pair(bus, car)
-    assert car.position > hold + 0.1, "car should creep after bus advances"
-    print(f"  PASS  car_hold_frozen  hold={hold:.2f} final={car.position:.2f}")
-
+    assert car.position > stopped_x + 0.1, "car should move on after the bus advances"
+    print(f"  PASS  car_stays_behind_bus  stopped={stopped_x:.2f} final={car.position:.2f}")
 
 def test_no_overlap_with_bus_bumper():
     """Car never moves backward; may sit slightly past max_front until bus advances."""
@@ -180,28 +182,6 @@ def test_no_overlap_with_bus_bumper():
     for i in range(1, len(xs)):
         assert xs[i] >= xs[i - 1] - 1e-6
     print(f"  PASS  monotonic_near_bumper  car={car.position:.2f} rear_gap={_rear_gap(bus, car):.2f}")
-
-
-def test_macro_overshoot_no_position_snap():
-    """12 m past max_front — trim cap must not teleport (Option A safety net)."""
-    from busmerge.rl.bumper_kinematics import apply_monotonic_bumper_limit
-    from busmerge.rl.traffic_leaders import vehicle_leader_state
-
-    bus = Bus(999, 300.316, 0.2, CAR_PARAMS)
-    bus.state = BusState.WAITING_TO_MERGE
-    car = Vehicle(4, 299.565, 13.77, CAR_PARAMS)
-    car._monotonic_x = 287.316
-
-    leader = vehicle_leader_state(bus)
-    max_front = leader_max_follower_front(leader, MIN_GAP_M)
-    assert 299.565 - max_front > 0.5
-
-    apply_monotonic_bumper_limit(car, max_front)
-    assert car.position >= 299.565 - 1e-4, (
-        f"macro snap: 299.565 -> {car.position:.3f} max_front={max_front:.3f}"
-    )
-    assert car.velocity == 0.0
-    print(f"  PASS  macro_overshoot_no_snap  pos={car.position:.3f}")
 
 
 def test_merge_start_alongside_no_teleport():
@@ -228,35 +208,26 @@ def test_merge_start_alongside_no_teleport():
     print(f"  PASS  merge_start_alongside  {xs[0]:.3f}->{xs[-1]:.3f}m")
 
 
-def test_negative_gap_post_no_backward_teleport():
-    """
-    Reproduce Streamlit t≈46.8 s: car past max_front, v→0 — must not snap back ~2 m.
-    """
-    from busmerge.rl.bumper_kinematics import car_stop_hold_post, apply_monotonic_bumper_limit
-    from busmerge.rl.traffic_leaders import vehicle_leader_state
-
+def test_car_past_the_bumper_line_brakes_without_moving_back():
+    """Streamlit t≈46.8 s case: a car already past the legal line never moves backward and never brakes
+    beyond 9 m/s^2. (The old stop-hold also froze it at 0 m/s; once the car is alongside the bus it no
+    longer follows the bus, and whether it touches the bus is judged by the contact check.)"""
     bus = Bus(999, 318.25, 0.36, CAR_PARAMS)
     bus.state = BusState.WAITING_TO_MERGE
     bus.heading_angle = np.radians(12.0)
     bus.lateral_offset = -2.0
     bus._merge_progress = 0.04
     car = Vehicle(4, 307.057, 3.4, CAR_PARAMS)
-    car._monotonic_x = 307.057
-    car.acceleration = -2.0
-
-    leader = vehicle_leader_state(bus)
-    max_front = leader_max_follower_front(leader, MIN_GAP_M)
+    max_front = leader_max_follower_front(vehicle_leader_state(bus), MIN_GAP_M)
     assert car.position > max_front + 0.5, "setup: car ahead of legal line"
-
-    apply_monotonic_bumper_limit(car, max_front)
-    car_stop_hold_post(car, leader)
-
-    assert car.position >= 307.057 - 1e-4, (
-        f"teleport: {307.057} -> {car.position}"
-    )
-    assert car.velocity == 0.0
-    print(f"  PASS  negative_gap_no_teleport  pos={car.position:.3f} max_front={max_front:.3f}")
-
+    xs, vs = [car.position], [car.velocity]
+    for _ in range(10):
+        _step_pair(bus, car)
+        xs.append(car.position)
+        vs.append(car.velocity)
+    assert all(b >= a - 1e-9 for a, b in zip(xs, xs[1:])), f"car moved back: {xs}"
+    assert all((a - b) / 0.1 <= 9.0 + 1e-6 for a, b in zip(vs, vs[1:])), f"braking beyond 9 m/s^2: {vs}"
+    print(f"  PASS  past_line_brakes_physically  pos={car.position:.3f} max_front={max_front:.3f}")
 
 def test_streamlit_yaw_merge_window_monotonic():
     """Aggressive yaw + creeping bus — 200 steps, zero backward car steps."""
@@ -305,23 +276,19 @@ def test_bus_rear_retreat_does_not_snap_car_backward():
 
 def test_bus_no_snap_when_car_alongside():
     """t≈42.3 s: car front past bus front but rear beside bus — bus must not snap back."""
-    from busmerge.rl.bumper_kinematics import bus_blocking_max_front, finalize_bus_bumper
+    from busmerge.safe_speed import bus_blocking_max_front
 
     bus = Bus(999, 317.0, 12.5, CAR_PARAMS)
     bus.state = BusState.WAITING_TO_MERGE
     car = Vehicle(5, 319.0, 14.3, CAR_PARAMS)
     mf, _ = bus_blocking_max_front(bus, [bus, car])
     assert mf is None, f"alongside car must not block bus, got max_front={mf}"
-
-    x0 = bus.position
-    finalize_bus_bumper(bus, [bus, car])
-    assert bus.position >= x0 - 1e-4, f"bus snap: {x0} -> {bus.position}"
-    print(f"  PASS  bus_alongside_no_snap  bus stays at {bus.position:.1f}m")
+    print("  PASS  bus_alongside_not_blocked")
 
 
 def test_bus_blocks_when_car_fully_ahead():
     """Car rear cleared bus front — bumper line applies."""
-    from busmerge.rl.bumper_kinematics import bus_blocking_max_front
+    from busmerge.safe_speed import bus_blocking_max_front
 
     bus = Bus(999, 310.0, 5.0, CAR_PARAMS)
     car = Vehicle(5, 325.0, 10.0, CAR_PARAMS)
@@ -330,20 +297,6 @@ def test_bus_blocks_when_car_fully_ahead():
     assert mf is not None
     assert abs(mf - (car_rear - bus.params.min_gap)) < 1e-4
     print(f"  PASS  bus_blocks_fully_ahead  max_front={mf:.1f}")
-
-
-def test_bus_macro_overshoot_no_teleport():
-    """Bus past phantom max_front by >0.5 m — stop only, no macro snap (Fix B)."""
-    from busmerge.rl.bumper_kinematics import apply_bus_monotonic_bumper_limit, enforce_bus_forward_only
-
-    bus = Bus(999, 317.0, 12.5, CAR_PARAMS)
-    bus.state = BusState.WAITING_TO_MERGE
-    bus._monotonic_x = 317.0
-    apply_bus_monotonic_bumper_limit(bus, 312.5)
-    enforce_bus_forward_only(bus)
-    assert bus.position >= 317.0 - 1e-4, f"macro bus snap -> {bus.position}"
-    assert bus.velocity == 0.0
-    print(f"  PASS  bus_macro_no_teleport  pos={bus.position:.1f}")
 
 
 def test_queue_car_monotonic_behind_car():
@@ -364,34 +317,5 @@ def test_queue_car_monotonic_behind_car():
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("TRAJECTORY KINEMATICS (location-based)")
-    print("=" * 60)
-    failed = []
-    for fn in (
-        test_bus_no_snap_when_car_alongside,
-        test_bus_blocks_when_car_fully_ahead,
-        test_bus_macro_overshoot_no_teleport,
-        test_stable_rear_blocks_yaw_only_jump,
-        test_macro_overshoot_no_position_snap,
-        test_merge_start_alongside_no_teleport,
-        test_negative_gap_post_no_backward_teleport,
-        test_yaw_oscillation_no_car_teleport,
-        test_streamlit_yaw_merge_window_monotonic,
-        test_car4_merge_hold_locations,
-        test_car_hold_frozen_until_bus_advances,
-        test_no_overlap_with_bus_bumper,
-        test_bus_rear_retreat_does_not_snap_car_backward,
-        test_queue_car_monotonic_behind_car,
-    ):
-        try:
-            fn()
-        except AssertionError as e:
-            failed.append((fn.__name__, str(e)))
-            print(f"  FAIL  {fn.__name__}: {e}")
-    print("=" * 60)
-    if failed:
-        print(f"FAILED {len(failed)} test(s)")
-        sys.exit(1)
-    print("ALL TRAJECTORY KINEMATICS TESTS PASSED")
-    sys.exit(0)
+    import pytest
+    sys.exit(pytest.main([__file__, "-q"]))

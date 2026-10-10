@@ -68,17 +68,6 @@ def test_yield_no_discontinuity_near_close_gaps():
     print("  PASS  yield_no_discontinuity_near_close_gaps")
 
 
-def test_approach_speed_soft_cap():
-    """High speed + small gap must not allow full-gap closure in one frame."""
-    from busmerge.rl.bumper_kinematics import max_approach_speed
-    dt = 0.1
-    gap = 1.5
-    cap = max_approach_speed(gap, dt, comfortable_brake=2.5)
-    assert cap < gap / dt, f"cap should be below gap/dt={gap/dt}, got {cap:.2f}"
-    assert cap <= (2.0 * 2.5 * gap) ** 0.5 + 1e-6
-    print(f"  PASS  approach_speed_soft_cap  cap={cap:.2f} m/s (gap={gap}m)")
-
-
 def test_far_gap_free_flow():
     """P≈0.02, gap=60 m — no yield, near free flow."""
     bus = Bus(999, 300.0, 0.2, CAR_PARAMS)
@@ -242,20 +231,22 @@ def test_no_bumper_jitter_behind_stopped_bus():
     print(f"  PASS  no_bumper_jitter  final_gap={bus.position - bus.projected_length_along_x() - car.position:.2f}")
 
 
-def test_bus_retreat_smooth_not_teleport():
-    """Bus too far forward eases back over multiple steps."""
-    bus = Bus(999, 315.0, 0.0, CAR_PARAMS)
+def test_merging_bus_brakes_physically_behind_a_stopped_car():
+    """A fast merging bus closing on a stopped car brakes at most 9 m/s^2 and never moves back."""
+    from busmerge.safe_speed import merging_bus_acceleration
+    bus = Bus(999, 315.0, 10.0, CAR_PARAMS)
     bus.state = BusState.WAITING_TO_MERGE
-    car = Vehicle(33, 318.0, 0.0, CAR_PARAMS)
-    from busmerge.rl.bumper_kinematics import limit_bus_to_cars_ahead
-    p0 = bus.position
-    limit_bus_to_cars_ahead(bus, [bus, car], 0.1)
-    bus.position += bus.velocity * 0.1
-    step1_move = bus.position - p0
-    assert step1_move > -0.25, f"bus teleported back {step1_move:.2f} m in one step"
-    assert step1_move <= 0.0, "bus should retreat not advance when blocked ahead"
-    print(f"  PASS  bus_retreat_smooth  step1_delta={step1_move:.3f}")
-
+    car = Vehicle(33, 330.0, 0.0, CAR_PARAMS)
+    a = merging_bus_acceleration(bus, [bus, car], 0.5, 0.1)
+    assert a == -9.0, f"expected the physical braking limit, got {a}"
+    xs = [bus.position]
+    for _ in range(15):
+        bus.acceleration = merging_bus_acceleration(bus, [bus, car], 0.5, 0.1)
+        bus.velocity = max(0.0, bus.velocity + bus.acceleration * 0.1)
+        bus.position += bus.velocity * 0.1
+        xs.append(bus.position)
+    assert all(b2 >= b1 for b1, b2 in zip(xs, xs[1:]))
+    print(f"  PASS  merging_bus_brakes_physically  final v={bus.velocity:.2f}")
 
 def test_queue_no_overlap():
     """Two cars in queue must not occupy the same bumper position."""
@@ -476,7 +467,6 @@ if __name__ == "__main__":
     for fn in (
         test_yield_factor_math,
         test_yield_no_discontinuity_near_close_gaps,
-        test_approach_speed_soft_cap,
         test_far_gap_free_flow,
         test_mild_decel_mid_range,
         test_clear_brake_close,
@@ -485,7 +475,7 @@ if __name__ == "__main__":
         test_car_ahead_of_bus_no_yield,
         test_bus_scan_sees_car_ahead,
         test_no_bumper_jitter_behind_stopped_bus,
-        test_bus_retreat_smooth_not_teleport,
+        test_merging_bus_brakes_physically_behind_a_stopped_car,
         test_queue_no_overlap,
         test_multi_car_no_lookthrough,
         test_first_sight_brakes_when_progress_high,

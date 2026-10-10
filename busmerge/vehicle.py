@@ -1,5 +1,6 @@
 import numpy as np
 
+from busmerge.safe_speed import follower_acceleration
 from busmerge.rl.merge_constants import (
     BUS_ALIGN_HEADING_DEG, BUS_CRAWL_SPEED_MS, MAX_BRAKE_MS2,
 )
@@ -205,14 +206,6 @@ class Vehicle:
         self.lane_drift = 0.0          # O-U lane-keeping uncertainty (m)
         # Rate-limited yield actually used in IDM last step (Surprise Filter).
         self.last_applied_yield = 0.0
-        # Physics enforcement mode — set by SimulationEngine / training env each step.
-        # Reads "production" by default; bumper_kinematics gates on this value.
-        self._physics_mode = "production"
-        self._sim_time = 0.0
-        # Physics override telemetry — set by bumper_kinematics when Hand of God fires.
-        self.physics_override_active = False
-        self.physics_override_reason: str = ""
-        self.physics_override_frame: float = 0.0
 
     def update_physics(self, dt: float, leader=None, bus=None):
         # --- 1. SQUEEZE EXIT LOGIC ---
@@ -254,13 +247,8 @@ class Vehicle:
             self._merge_yield_factor(bus) > 0.0
             or float(getattr(self, "last_applied_yield", 0.0)) > 1e-6
         )
-        _strict = bool(getattr(self, "_strict_physics", False))
-        _car_frozen = False
-        if leader is not None and not isinstance(self, Bus) and not _strict:
-            from busmerge.rl.bumper_kinematics import car_stop_hold_pre
-            _car_frozen = car_stop_hold_pre(self, leader)
         # Merge yield must run every frame — never skip IDM while yield factor is active.
-        if (not _car_frozen and (self.reaction_timer <= 0 or _merge_leader or _bus_yield)
+        if ((self.reaction_timer <= 0 or _merge_leader or _bus_yield)
                 and not _is_merging_bus):
             self.acceleration = self._calculate_idm_accel(leader, bus, dt=dt)
             if self.reaction_timer <= 0:
@@ -286,48 +274,23 @@ class Vehicle:
                 # the bay-stop law adds exactly the braking that is physically needed.
                 self.acceleration = self.bay_stop_acceleration(self.acceleration)
 
-        # Same IDM follower bumper pipeline for cars and bus (MOVING on main road).
-        # Virtual stop leader (id=-1) during DECELERATING skips bumpers — position integrates below.
-        _uses_bumper_follow = (
+        # Following a vehicle ahead (cars, and the bus once back in the lane): the driver's command
+        # is limited by the safe-speed law (busmerge/safe_speed.py). Speed and position then follow
+        # from the acceleration; nothing is assigned. The virtual stop leader of a bus pulling into
+        # the bay (id -1) is handled by Bus.bay_stop_acceleration instead.
+        _follows_leader = (
             leader is not None
             and leader.get("id", -1) != -1
             and (not isinstance(self, Bus) or self.state == BusState.MOVING)
         )
-        if _strict and _uses_bumper_follow:
-            from busmerge.safe_speed import follower_acceleration
+        if _follows_leader:
             self.acceleration = follower_acceleration(self, leader, self.acceleration, dt)
 
-        if not _car_frozen:
-            self.velocity += self.acceleration * dt
-            if self.velocity < 0:
-                self.velocity = 0.0
-                self.acceleration = 0.0
-
-        if not _uses_bumper_follow:
-            # Clear sticky Hand-of-God flags when bumper does not run this frame.
-            self.physics_override_active = False
-            self.physics_override_reason = ""
-
-        if _uses_bumper_follow and not _strict:
-            if not _car_frozen:
-                from busmerge.rl.bumper_kinematics import (
-                    limit_follower_to_leader,
-                    finalize_follower_bumper,
-                    car_stop_hold_post,
-                )
-                limit_follower_to_leader(self, leader, dt, sim_time=getattr(self, "_sim_time", 0.0))
-                self.position += self.velocity * dt
-            else:
-                from busmerge.rl.bumper_kinematics import (
-                    finalize_follower_bumper,
-                    car_stop_hold_post,
-                )
-            finalize_follower_bumper(self, leader)
-            if not isinstance(self, Bus):
-                car_stop_hold_post(self, leader)
-        elif not _car_frozen:
-            self.position += self.velocity * dt
-
+        self.velocity += self.acceleration * dt
+        if self.velocity < 0:
+            self.velocity = 0.0          # comes to rest; vehicles do not reverse
+            self.acceleration = 0.0
+        self.position += self.velocity * dt
 
         if not getattr(self, 'skip_lateral_steering', False):
             # ── STEERING-FIRST LATERAL MODEL ─────────────────────────────────────────
