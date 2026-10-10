@@ -1,0 +1,28 @@
+{
+ "traffic_rate": 0.4,
+ "cars": 50,
+ "date": "2026-10-10",
+ "merge_threshold_m": -0.1,
+ "commit": "7b59caf",
+ "note": "archived: measured before the steering fix, when the merge steering overshot its target",
+ "label": "v11, old steering",
+ "brain": "ppo_bus_brain_v11_engine.pth",
+ "seeds": [
+  2000,
+  2999
+ ],
+ "name": "v11_old_steering",
+ "summary": {
+  "n": 1000,
+  "merged_pct": 97.9,
+  "contact_pct": 2.1,
+  "stuck_pct": 0.0,
+  "strict_pct": 0.0,
+  "over_centre_pct": 100.0,
+  "off_road_pct": 50.5,
+  "time_mean_s": 4.9,
+  "time_p95_s": 5.5,
+  "cars_near_bus": null,
+  "flow_per_min": null
+ }
+}

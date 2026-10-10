@@ -1,0 +1,28 @@
+{
+ "traffic_rate": 0.6,
+ "cars": 50,
+ "date": "2026-10-10",
+ "merge_threshold_m": -0.25,
+ "commit": "32790fa",
+ "note": "engine code at 32790fa; uncommitted changes were outside the engine (training loop, tests, app, docs)",
+ "label": "v13 at 0.6 cars/s",
+ "brain": "ppo_bus_brain_v13.pth",
+ "seeds": [
+  2000,
+  2099
+ ],
+ "name": "v13_rate0.6",
+ "summary": {
+  "n": 100,
+  "merged_pct": 98.0,
+  "contact_pct": 2.0,
+  "stuck_pct": 0.0,
+  "strict_pct": 88.0,
+  "over_centre_pct": 0.0,
+  "off_road_pct": 11.0,
+  "time_mean_s": 13.2,
+  "time_p95_s": 15.5,
+  "cars_near_bus": 3.02,
+  "flow_per_min": 19.3
+ }
+}

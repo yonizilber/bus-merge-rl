@@ -9,6 +9,7 @@ import json
 import os as _os
 from busmerge.paths import MODELS_DIR
 from busmerge.geometry import compute_sat_overlap_area, rect_corners as _geom_rect_corners
+from busmerge import results
 from busmerge.geometry import BAY_WALL_Y, bay_outline
 from busmerge.invariants import OVERLAP_MIN_AREA_M2, check_invariants
 from busmerge.rl.feature_encoding import FEATURE_NAMES, infer_state_dim_from_checkpoint
@@ -225,22 +226,18 @@ if _available_brains:
         )
 
     with st.sidebar.expander("Brain comparison (measured)"):
+        _v13 = results.load(results.DEFAULT)["summary"]
         st.markdown(
             "**Setup:** `scripts/verify_brain.py` (the same code as the Run button): Scenario B, "
-            "0.4 cars/s, 50 cars, governor off, on seeds 2000-2999, which were never used for training "
-            "or selection. *Merged* is judged on the traffic only. *Strict* also requires the bus to stay "
-            "on the road and out of the opposing lane, with no other physics violation.\n\n"
-            "| Brain | Seeds | Merged | Contact | Stuck | Strict | Mean / p95 time |\n"
-            "|---|---|---|---|---|---|---|\n"
-            "| v13 (default) | 1,000 | 97.8% | 2.2% | 0% | 89.4% | 13.3 / 16.7 s |\n"
-            "| v11 | 1,000 | 0% | 0.8% | 99.2% | 0% | |\n"
-            "| v10 best | 100 | 0 | 0 | 100 | 0 | |\n"
-            "| v9 best | 100 | 0 | 0 | 100 | 0 | |\n\n"
-            "**Where v13 fails strict:** in 8.7% of runs the kerb corner at the end of the exit taper cuts into "
-            "the bus's side, when it steers out slowly from the far end of the bay. It never crosses "
-            "the centre line. v9-v11 were trained while the merge steering overshot its target. They "
-            "ask for a target half way out of the bay and stop there now. See "
-            "docs/CASE_STUDY_REWARD_HACKING.md."
+            "0.4 cars/s, 50 cars, governor off, on seeds that were never used for training or selection. "
+            "*Merged* is judged on the traffic only. *Strict* also requires the bus to stay on the road "
+            "and out of the opposing lane, with no other physics violation.\n\n"
+            + results.brain_table()
+            + f"\n\n**Where v13 fails strict:** in {_v13['off_road_pct']:.1f}% of runs the kerb corner at the end "
+            "of the exit taper cuts into its side, when it steers out slowly from the far end of the bay. "
+            "v9-v11 were trained while the merge steering overshot its target. They ask for a target half "
+            "way out of the bay and stop there now (docs/CASE_STUDY_REWARD_HACKING.md). Generated from "
+            "results/ (tests/test_published_numbers.py)."
         )
 
     _smoke = _read_smoke_sidecar(selected_brain_path)
@@ -319,6 +316,11 @@ else:
 
 st.sidebar.subheader("📊 Diagnostics (after run)")
 st.sidebar.caption("Off by default — skip heavy post-run work for faster dashboard load.")
+show_merge_zone_animation = st.sidebar.checkbox(
+    "Merge-zone animation",
+    value=True,
+    help="Top-down frames and GIF of the merge zone (renders every frame; the slowest part of a run).",
+)
 show_queue_anomalies = st.sidebar.checkbox(
     "Queue anomalies",
     value=False,
@@ -665,7 +667,17 @@ if st.session_state.sim_complete:
         _mp = _meta.get("max_progress")
         _extra = f" (max progress { _mp:.0%})" if _mp is not None else ""
         st.error(
-            f"Bus never fully merged (progress < 100%){_extra} — waited ~{_meta.get('wait_s', 0):.0f}s."
+            f"Bus never completed the merge into the lane{_extra} — waited ~{_meta.get('wait_s', 0):.0f}s."
+        )
+    elif _outcome == "off_road":
+        st.error(
+            f"Bus left the road (kerb or bay wall) at t={_meta.get('first_off_road_s', float('nan')):.1f}s, "
+            f"for {_meta.get('off_road_frames', 0)} frames — a failure, even if it then merged."
+        )
+    elif _outcome == "over_centre_line":
+        st.error(
+            f"Bus crossed the centre line into the opposing lane at "
+            f"t={_meta.get('first_over_centre_s', float('nan')):.1f}s — a failure, even if it then merged."
         )
     elif _outcome == "collision":
         st.error("Physical collision in merge zone — brain failed safety.")
@@ -1116,7 +1128,9 @@ if st.session_state.sim_complete:
 
         merge_df_all = df[(df['x'] >= MERGE_X_MIN) & (df['x'] <= MERGE_X_MAX)].copy()
 
-        if merge_df_all.empty:
+        if not show_merge_zone_animation:
+            st.caption("Merge-zone animation is off (sidebar, Diagnostics).")
+        elif merge_df_all.empty:
             st.info("No vehicles entered the merge zone in this run.")
         else:
             # ── Per-frame lateral centre ─────────────────────────────────────────

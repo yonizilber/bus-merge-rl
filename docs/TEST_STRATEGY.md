@@ -35,6 +35,22 @@ Menu numbers refer to Part 2.
   - **What the experiments showed:** in 20 constructed placements at 302 m, v13 never touched a car.
     It does leave the bay while a car is still alongside (up to -1.84 m) in about half of them. On an
     empty road it exits cleanly even from 307 m.
+- **#21, rollback:** `tests/test_training_rollback.py`.
+  - The rule is now a function, `train.rollback_due`, and it was fixed: rollback only restores a
+    checkpoint that evaluated with at least one success.
+  - A real two-epoch run set up as in the fine-tune recipe is not reset.
+  - The same run under the old rule is reset, which proves the test can fail.
+- **#26, published numbers:** `tests/test_published_numbers.py`.
+  - `results/` holds each published measurement: per-seed rows and provenance.
+  - Summaries are recomputed from the rows.
+  - The marked blocks in the README, SPECS and the case study must equal what the measurements render.
+  - A changed measurement is caught.
+- **#29, headless app:** `tests/test_app_headless.py`.
+  - The app loads, offers exactly the brains that exist with v13 first, and renders the published table.
+  - For seeds 2000 (merged) and 2001 (off road) it shows the same outcome `verify_brain` measured.
+  - Writing it found a bug: the app had no banner for off-road or centre-line outcomes (BUGS H15).
+  - The merge-zone animation can be switched off in the sidebar; the test does so, because it draws
+    every frame.
 - **Margins:** all of these pass or fail by a wide margin. For example, a merge in 7.6-7.8 s against a
   15 s limit, and a 3,000-point reward gap against a measured 6,900.
 - **Cost:** about 50 s locally for all the new tests.

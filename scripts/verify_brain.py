@@ -114,6 +114,24 @@ def _max_over_centre(cars) -> float:
     return round(float(_edge_excess(cars)[1].max()), 2)
 
 
+def _save_result(args, rows: list[dict]) -> None:
+    """Store the run in results/ with where it came from (busmerge.results)."""
+    import datetime
+    import subprocess
+    from busmerge.results import save
+    from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
+    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"],
+                           capture_output=True, text=True).stdout.strip()
+    path = save(args.save, rows, {
+        "label": args.label or args.save, "brain": Path(args.brain).name,
+        "seeds": [args.seed_start, args.seed_start + len(rows) - 1], "traffic_rate": args.traffic_rate,
+        "cars": args.cars, "merge_threshold_m": PRODUCTION_MERGE_LATERAL_THRESHOLD,
+        "commit": commit + ("+uncommitted" if dirty else ""), "date": datetime.date.today().isoformat(),
+    })
+    print(f"saved {path}")
+
+
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     if n == 0:
         return (0.0, 0.0)
@@ -133,6 +151,8 @@ def main() -> None:
     ap.add_argument("--cars", type=int, default=50, help="cars per run (app default 50)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     ap.add_argument("--out", type=Path, default=Path("outputs/verify_brain.json"))
+    ap.add_argument("--save", metavar="NAME", help="also store the run in results/NAME (published numbers)")
+    ap.add_argument("--label", help="label of the run in published tables (with --save)")
     args = ap.parse_args()
 
     seeds = range(args.seed_start, args.seed_start + args.seeds)
@@ -140,6 +160,8 @@ def main() -> None:
         rows = list(pool.map(_run, [(args.brain, s, args.traffic_rate, args.cars) for s in seeds], chunksize=4))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(rows, indent=1))
+    if args.save:
+        _save_result(args, rows)
 
     n = len(rows)
     def rate(k: int) -> str:

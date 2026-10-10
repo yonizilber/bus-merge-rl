@@ -272,6 +272,17 @@ def evaluate_policy_multi_seed(agent, episodes=40, seeds=(123, 456, 777), verbos
     }
 
 
+def rollback_due(no_improve_windows: int, patience: int, best_eval_success: int) -> bool:
+    """Restore the best checkpoint now?
+
+    Only after ``patience`` evaluations without improvement (0 disables rollback), and only if the best
+    checkpoint has evaluated with at least one success. A run that has never succeeded has no checkpoint
+    better than its current weights; restoring its starting weights would undo all its learning, which
+    is what defeated two fine-tunes (docs/BUGS.md P18).
+    """
+    return patience > 0 and no_improve_windows >= patience and best_eval_success > 0
+
+
 def _load_policy_weights(agent, path, strict=False):
     """Load weights into ``agent``; returns False if absent. With ``strict`` an architecture
     mismatch raises instead of silently starting from random weights."""
@@ -707,9 +718,7 @@ def train(
                 print(f"Promoted zero-crash ≥90%-success model -> {runtime_path}")
 
             # If evaluation regresses for several windows, roll back to best model.
-            # rollback_patience 0 disables it: a run that starts with no successful evaluation would
-            # otherwise be reset to its starting weights every `patience` evaluations.
-            if rollback_patience and no_improve_windows >= rollback_patience and os.path.exists(best_path):
+            if rollback_due(no_improve_windows, rollback_patience, best_eval_success) and os.path.exists(best_path):
                 _load_policy_weights(agent, best_path)
                 no_improve_windows = 0
                 print(f"Rollback triggered: restored policy from {best_path}")
