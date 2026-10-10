@@ -8,6 +8,14 @@ from __future__ import annotations
 
 import numpy as np
 
+from busmerge.rl.merge_constants import (
+    BAY_ENTRY_TAPER_M, BAY_EXIT_TAPER_M, BAY_FLAT_END_X, BAY_FLAT_START_X, LANE_WIDTH,
+)
+
+ROAD_EDGE_Y = LANE_WIDTH / 2.0             # the dashed centre line; beyond it is the opposing lane
+KERB_Y = -LANE_WIDTH / 2.0                 # kerb between the lane and the pavement / bay
+BAY_WALL_Y = KERB_Y - LANE_WIDTH           # back wall of the bay (one lane width deep)
+
 
 def rect_corners(cx: float, cy: float, half_l: float, half_w: float,
                   angle_rad: float) -> np.ndarray:
@@ -78,3 +86,18 @@ def vehicle_corners(front_x: float, lateral: float, length: float, width: float,
                     heading_rad: float) -> np.ndarray:
     """Corners of a vehicle given its front-bumper position (the physics convention)."""
     return rect_corners(front_x - length / 2.0, lateral, length / 2.0, width / 2.0, heading_rad)
+
+
+def road_lower_edge(x):
+    """Lowest drivable y at road position ``x``: the kerb, or the bay wall where the bay is (numpy-aware)."""
+    x = np.asarray(x, dtype=float)
+    entry_start = BAY_FLAT_START_X - BAY_ENTRY_TAPER_M
+    exit_end = BAY_FLAT_END_X + BAY_EXIT_TAPER_M
+    depth = KERB_Y - BAY_WALL_Y
+    edge = np.full_like(x, KERB_Y)
+    entering = (x > entry_start) & (x < BAY_FLAT_START_X)
+    edge = np.where(entering, KERB_Y - depth * (x - entry_start) / BAY_ENTRY_TAPER_M, edge)
+    edge = np.where((x >= BAY_FLAT_START_X) & (x <= BAY_FLAT_END_X), BAY_WALL_Y, edge)
+    leaving = (x > BAY_FLAT_END_X) & (x < exit_end)
+    edge = np.where(leaving, BAY_WALL_Y + depth * (x - BAY_FLAT_END_X) / BAY_EXIT_TAPER_M, edge)
+    return edge

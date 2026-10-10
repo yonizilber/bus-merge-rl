@@ -238,11 +238,8 @@ class SimulationEngine:
                     veh.heading_angle += (
                         veh.velocity * np.tan(veh.steer_angle)
                         / max(veh.params.wheelbase, 0.1)) * self.dt
-                    veh.heading_angle  = float(np.clip(
-                        veh.heading_angle, -np.radians(60.0), np.radians(60.0)))
                     veh.lateral_velocity = veh.velocity * np.sin(veh.heading_angle)
                     veh.lateral_offset  += veh.lateral_velocity * self.dt
-                    veh.lateral_offset   = float(np.clip(veh.lateral_offset, -4.5, 0.5))
 
                 # PHYSICS SNIFFER: compare heading after update against the
                 # maximum physically possible change (steer_rate × dt + 0.01 rad

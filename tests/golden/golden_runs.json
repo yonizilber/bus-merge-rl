@@ -1,31 +1,31 @@
 {
  "A-0": {
   "bus_final_x": 1000.461422,
-  "fingerprint": "258d9c94ec0de9a8",
+  "fingerprint": "89755fbd68840711",
   "rows": 18293,
   "steps": 1500
  },
  "A-1": {
   "bus_final_x": 1000.675238,
-  "fingerprint": "a267ea3052f399fa",
+  "fingerprint": "e5bf5c62d976cf60",
   "rows": 19543,
   "steps": 1500
  },
  "B-0": {
   "bus_final_x": 1000.522715,
-  "fingerprint": "d0bc279b39ea7729",
+  "fingerprint": "f84264581e3b7299",
   "rows": 16843,
   "steps": 1500
  },
  "B-1": {
   "bus_final_x": 1000.099874,
-  "fingerprint": "3e90a22f260e33c0",
+  "fingerprint": "3e983f40094f609e",
   "rows": 17055,
   "steps": 1500
  },
  "B-2": {
   "bus_final_x": 1000.050583,
-  "fingerprint": "2851781763bf848f",
+  "fingerprint": "5866608864db4e87",
   "rows": 17657,
   "steps": 1500
  }

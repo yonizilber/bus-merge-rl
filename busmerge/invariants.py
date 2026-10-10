@@ -13,13 +13,15 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from busmerge.geometry import compute_sat_overlap_area, vehicle_corners
+from busmerge.geometry import ROAD_EDGE_Y, compute_sat_overlap_area, road_lower_edge, vehicle_corners  # ROAD_EDGE_Y = centre line
+from busmerge.rl.merge_constants import EXTREME_HEADING_DEG
 
 MAX_DECEL_MS2 = 9.0        # the limit the vehicle model itself documents (hard braking on dry road)
 DECEL_TOLERANCE = 0.5      # numerical slack on top of the limit
 MAX_ACCEL_MS2 = 5.0        # no vehicle here can accelerate faster than this
 OVERLAP_MIN_AREA_M2 = 0.01  # ignore numerical touching
-POSITION_TOLERANCE_M = 0.5  # |Δx − v·dt| allowed (the position update uses a mix of old and new speed)
+POSITION_TOLERANCE_M = 0.5
+OFF_ROAD_TOLERANCE_M = 0.02  # a corner this far past the kerb / bay wall / centre line counts  # |Δx − v·dt| allowed (the position update uses a mix of old and new speed)
 
 
 @dataclass
@@ -28,6 +30,7 @@ class InvariantReport:
     counts: dict = field(default_factory=lambda: {
         "decel_over_limit": 0, "accel_over_limit": 0, "negative_speed": 0,
         "backward_motion": 0, "position_jump": 0, "overlap": 0,
+        "off_road": 0, "over_centre_line": 0, "extreme_heading": 0,
     })
     worst_decel: float = 0.0
     examples: dict = field(default_factory=dict)
@@ -66,6 +69,20 @@ def check_invariants(df: pd.DataFrame, dt: float = 0.1) -> InvariantReport:
         for _, row in d[mask].iterrows():
             rep.add(kind, {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
                            "v": float(row["v"]), "dv": float(row["dv"]), "dx": float(row["dx"])})
+
+    # Off the road (a body corner below the kerb or the bay wall) and over the centre line (a corner in
+    # the opposing lane). Positions are never clamped, so both can happen and are reported.
+    below, above = edge_masks(df)
+    for kind, mask in (("off_road", below), ("over_centre_line", above)):
+        for _, row in df[mask].iterrows():
+            rep.add(kind, {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
+                           "state": str(row.get("state", "")), "x": round(float(row["x"]), 2),
+                           "lateral": round(float(row["total_lat"]), 2),
+                           "heading_deg": round(float(row["heading_deg"]), 1)})
+    steep = df["heading_deg"].abs() > EXTREME_HEADING_DEG
+    for _, row in df[steep].iterrows():
+        rep.add("extreme_heading", {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
+                                    "heading_deg": round(float(row["heading_deg"]), 1)})
 
     # Overlap: exact rotated-rectangle test, only for pairs whose bounding circles touch.
     # x is the front bumper (physics convention); the body centre is x - length / 2.
@@ -115,3 +132,37 @@ def bus_contact_times(df: pd.DataFrame) -> list[float]:
         if area > OVERLAP_MIN_AREA_M2:
             times.add(float(r.time))
     return sorted(times)
+
+
+def _corners_xy(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    """(n, 4) corner x and y of every row's body (front-bumper convention, rotated by the heading)."""
+    half_l = df["length"].to_numpy(dtype=float) / 2.0
+    half_w = df["width"].to_numpy(dtype=float) / 2.0
+    cx = df["x"].to_numpy(dtype=float) - half_l
+    cy = df["total_lat"].to_numpy(dtype=float)
+    th = np.radians(df["heading_deg"].to_numpy(dtype=float))
+    c, s = np.cos(th)[:, None], np.sin(th)[:, None]
+    dx = np.array([1, 1, -1, -1])[None, :] * half_l[:, None]
+    dy = np.array([1, -1, -1, 1])[None, :] * half_w[:, None]
+    return cx[:, None] + dx * c - dy * s, cy[:, None] + dx * s + dy * c
+
+
+def edge_masks(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    """Rows with a body corner below the kerb / bay wall, and rows with a corner over the centre line."""
+    if df.empty:
+        return np.zeros(0, dtype=bool), np.zeros(0, dtype=bool)
+    xs, ys = _corners_xy(df)
+    below = (ys < road_lower_edge(xs) - OFF_ROAD_TOLERANCE_M).any(axis=1)
+    above = (ys > ROAD_EDGE_Y + OFF_ROAD_TOLERANCE_M).any(axis=1)
+    return below, above
+
+
+def bus_edge_times(df: pd.DataFrame) -> tuple[list[float], list[float]]:
+    """Times at which the bus body is off the road (kerb / bay wall) and over the centre line."""
+    cols = {"type", "time", "x", "total_lat", "length", "width", "heading_deg"}
+    if not cols.issubset(df.columns):
+        return [], []
+    bus = df[df["type"] == "Bus"]
+    below, above = edge_masks(bus)
+    times = lambda m: sorted(float(t) for t in bus.loc[m, "time"].unique())
+    return times(below), times(above)

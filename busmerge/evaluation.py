@@ -16,7 +16,7 @@ import pandas as pd
 import torch
 
 from busmerge.config import SimConfig
-from busmerge.invariants import bus_contact_times, check_invariants
+from busmerge.invariants import bus_contact_times, bus_edge_times, check_invariants
 from busmerge.traffic_metrics import traffic_metrics
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.simulation import SimulationEngine
@@ -68,7 +68,8 @@ def run_episode(
 def classify_outcome(df: pd.DataFrame) -> tuple[str, dict]:
     """Classify a finished run from its frame log.
 
-    Outcomes: ``merged``, ``collision``, ``stuck_waiting``, ``never_waited``, ``no_bus``.
+    Outcomes: ``merged``, ``collision``, ``off_road``, ``over_centre_line``, ``stuck_waiting``,
+    ``never_waited``, ``no_bus``.
 
     * The merge starts at the first WAITING_TO_MERGE frame.
     * The merge is complete at the first later frame where the bus is MOVING or its
@@ -77,6 +78,9 @@ def classify_outcome(df: pd.DataFrame) -> tuple[str, dict]:
     * A collision is any frame in which the bus body touches a car body (exact rotated
       polygons, busmerge.invariants), including a side contact while pulling out, not only
       running into the vehicle ahead.
+    * Off road: any corner of the bus body below the kerb or the bay wall (busmerge.geometry), e.g.
+      cutting the kerb or stopping past the bay. Over the centre line: a corner in the opposing lane.
+      Both are failures, never a merge.
     """
     bus = df[df["type"] == "Bus"].sort_values("time") if not df.empty else df
     if bus.empty:
@@ -86,6 +90,11 @@ def classify_outcome(df: pd.DataFrame) -> tuple[str, dict]:
     contact = bus_contact_times(df)
     if contact:
         return "collision", {"first_contact_s": contact[0], "contact_frames": len(contact)}
+    off_road, over_centre = bus_edge_times(df)
+    if off_road:
+        return "off_road", {"first_off_road_s": off_road[0], "off_road_frames": len(off_road)}
+    if over_centre:
+        return "over_centre_line", {"first_over_centre_s": over_centre[0], "frames": len(over_centre)}
 
     states = bus["state"].astype(str)
     waiting = states == "WAITING_TO_MERGE"
@@ -221,7 +230,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
     return {
         "brain": brain.name, "noise_sigma": noise_sigma, "traffic_rate": traffic_rate, "cars": cars,
         "seeds": len(outcomes),
-        **{k: outcomes.count(k) for k in ("merged", "collision", "stuck_waiting", "never_waited")},
+        **{k: outcomes.count(k) for k in ("merged", "collision", "off_road", "over_centre_line", "stuck_waiting", "never_waited")},
         "car_collision_frames": car_coll,
         "after_boarding": {k: _stats(v) for k, v in phases.items()},
         # Physics checks (busmerge.invariants): number of runs with at least one violation of each kind.

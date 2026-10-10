@@ -85,3 +85,34 @@ def test_traffic_metrics_count_flow_and_density():
         rows.append((t, 2, "Car", 230.0 + t, 1.0, 4.5, 1.8, 0.0, 0.0))
     m = traffic_metrics(_log(rows).assign(state="Cruising"))
     assert m["flow_veh_per_min"] == pytest.approx(1.0)
+
+
+def _bus(t, x, lat, heading=0.0):
+    return (t, 999, "Bus", x, 0.0, 11.0, 2.5, lat, heading)
+
+
+def test_bus_parked_inside_the_bay_is_on_the_road():
+    rep = check_invariants(_log([_bus(0.0, 305.0, -3.5)]))
+    assert rep.counts["off_road"] == 0 and rep.counts["over_centre_line"] == 0
+
+
+def test_bus_below_the_kerb_before_the_bay_is_off_road():
+    # x = 260 is before the entry taper: the kerb is at -1.75, a bus centred at -1.0 reaches -2.25
+    rep = check_invariants(_log([_bus(0.0, 260.0, -1.0)]))
+    assert rep.counts["off_road"] == 1
+
+
+def test_bus_stopped_past_the_end_of_the_bay_is_off_road():
+    # Front at 320: past the flat section the kerb rises again (exit taper), the bus at bay depth hits it
+    rep = check_invariants(_log([_bus(0.0, 320.0, -3.5)]))
+    assert rep.counts["off_road"] == 1
+
+
+def test_corner_over_the_centre_line_is_reported():
+    rep = check_invariants(_log([_bus(0.0, 340.0, 0.3, heading=18.0)]))
+    assert rep.counts["over_centre_line"] == 1
+
+
+def test_heading_beyond_60_degrees_is_reported():
+    rep = check_invariants(_log([_car(0.0, 1, 100.0, 5.0)[:8] + (65.0,)]))
+    assert rep.counts["extreme_heading"] == 1

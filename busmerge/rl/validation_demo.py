@@ -166,7 +166,9 @@ def run_streamlit_episode(
     )
     df = engine.get_results()
     result, meta = classify_outcome(df)
-    outcome = {"merged": "success", "collision": "crash"}.get(result, "timeout")
+    # Same labels as the training-env rows; road-edge failures keep their own name.
+    outcome = {"merged": "success", "collision": "crash", "off_road": "off_road",
+               "over_centre_line": "over_centre_line"}.get(result, "timeout")
     if result == "merged":
         max_progress = 1.0
     else:
@@ -279,11 +281,13 @@ def summarize_comparison(df: pd.DataFrame) -> dict:
         succ = int((grp["outcome"] == "success").sum())
         crash = int((grp["outcome"] == "crash").sum())
         to = int((grp["outcome"] == "timeout").sum())
+        road = int(grp["outcome"].isin(["off_road", "over_centre_line"]).sum())
         out[engine] = {
             "successes": succ,
             "total": n,
             "crashes": crash,
             "timeouts": to,
+            "road_edge_failures": road,
             "score": f"{succ}/{n}",
         }
     return out

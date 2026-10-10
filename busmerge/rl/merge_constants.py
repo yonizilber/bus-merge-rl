@@ -58,6 +58,14 @@ YIELD_BLINKER_DWELL_S   = 3.0   # seconds before dwell end when blinker ramps up
 BUS_MERGE_SCAN_AHEAD_M  = 50.0  # m — cars ahead of bus front (merge blockers)
 BUS_MERGE_SCAN_BEHIND_M = 20.0  # m — cars behind bus front (trailing threat)
 
+# Road geometry: one traffic lane (centre y = 0) and a bus bay below it. The app, the GIF and the
+# physics checks all use these numbers. x is along the road; the bay pocket is one lane wide.
+BAY_FLAT_START_X  = 285.0   # m — start of the full-depth bay section
+BAY_FLAT_END_X    = 315.0   # m — end of the full-depth bay section
+BAY_ENTRY_TAPER_M = 20.0    # m — kerb slopes from the lane edge down to the bay wall before the flat part
+BAY_EXIT_TAPER_M  = 15.0    # m — and back up after it
+EXTREME_HEADING_DEG = 60.0  # beyond this a vehicle is reported (no longer clamped)
+
 # Physical limits shared by the vehicle model and the physics checks (busmerge.invariants)
 MAX_BRAKE_MS2 = 9.0          # hardest braking a road vehicle can achieve (dry asphalt)
 

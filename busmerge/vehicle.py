@@ -366,18 +366,11 @@ class Vehicle:
             #    Longer wheelbase → lower yaw rate for the same steering input
             self.heading_angle += (self.velocity * np.tan(self.steer_angle)
                                    / max(wheelbase, 0.1)) * dt
-            # Heading can exceed steer angle through integration; clip to generous physical limit
-            self.heading_angle = np.clip(self.heading_angle, -np.radians(60.0), np.radians(60.0))
     
             # 5. POSITION UPDATE: lateral_velocity is now a RESULT of heading, not a cause
             self.lateral_velocity = self.velocity * np.sin(self.heading_angle)
             self.lateral_offset  += self.lateral_velocity * dt
-            if is_bus:
-                # Bus range: 0 (lane centre) to −3.5 (bay depth).
-                # Hard wall at −3.5 prevents overshoot; clip at +0.5 is a soft road shoulder.
-                self.lateral_offset = np.clip(self.lateral_offset, -3.5, 0.5)
-            else:
-                self.lateral_offset = np.clip(self.lateral_offset, -0.05, 0.55)
+            # No clamp: a vehicle that steers off the road is reported by busmerge.invariants.
     
             # ── LANE-KEEPING UNCERTAINTY (Ornstein-Uhlenbeck random drift) ─────────────
             # Models the fact that no driver holds exactly the lane centre.
@@ -386,7 +379,6 @@ class Vehicle:
             noise_sig = getattr(self.params, 'lane_keeping_noise', 0.08)
             self.lane_drift = ((1.0 - OU_REVERT * dt) * self.lane_drift
                                + noise_sig * np.sqrt(dt) * np.random.randn())
-            self.lane_drift = np.clip(self.lane_drift, -0.40, 0.40)
 
     @property
     def total_lateral_offset(self):
