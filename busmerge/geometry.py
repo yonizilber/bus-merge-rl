@@ -23,6 +23,11 @@ KERB_CORNERS = np.array([[BAY_FLAT_START_X - BAY_ENTRY_TAPER_M, KERB_Y],
                          [BAY_FLAT_END_X + BAY_EXIT_TAPER_M, KERB_Y]])
 
 
+def _cross(u, v) -> float:
+    """z-component of the cross product of two 2-D vectors (np.cross on 2-D input is deprecated)."""
+    return float(u[0] * v[1] - u[1] * v[0])
+
+
 def rect_corners(cx: float, cy: float, half_l: float, half_w: float,
                   angle_rad: float) -> np.ndarray:
     """Return (4,2) array of rectangle corners rotated by angle_rad."""
@@ -47,14 +52,14 @@ def clip_polygon_by_half_plane(poly: np.ndarray,
         cur = poly[i]
         nxt = poly[(i + 1) % n]
         # CW winding: inside = right of edge = cross product <= 0
-        cur_inside = float(np.cross(edge, cur - a)) <= 0.0
-        nxt_inside = float(np.cross(edge, nxt - a)) <= 0.0
+        cur_inside = _cross(edge, cur - a) <= 0.0
+        nxt_inside = _cross(edge, nxt - a) <= 0.0
         if cur_inside:
             out.append(cur)
         if cur_inside != nxt_inside:
-            denom = float(np.cross(edge, nxt - cur))
+            denom = _cross(edge, nxt - cur)
             if abs(denom) > 1e-12:
-                t = float(np.cross(edge, a - cur)) / denom
+                t = _cross(edge, a - cur) / denom
                 out.append(cur + t * (nxt - cur))
     return np.array(out, dtype=np.float64) if out else np.empty((0, 2))
 
