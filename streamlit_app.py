@@ -689,7 +689,8 @@ if st.session_state.sim_complete:
     if any(_inv.notes.values()):
         st.info(
             "Reported, not a failure: a car's body crossed "
-            + ", ".join(f"{k.replace('car_', '').replace('_', ' ')} in {n} frames" for k, n in _inv.notes.items() if n)
+            + ", ".join(f"{ {'car_off_road': 'the kerb', 'car_over_centre_line': 'the centre line'}[k]} in {n} frames"
+                        for k, n in _inv.notes.items() if n)
             + " (cars drift in their lane and move over for the bus)."
         )
 
