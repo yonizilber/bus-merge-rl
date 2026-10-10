@@ -210,7 +210,7 @@ car jerk.
 | Gate | What it runs | Pass criteria |
 |---|---|---|
 | `pytest` (CI) | unit + regression tests, golden fingerprints of the engine and the env | all green; 9 legacy tests are strict `xfail` |
-| `scripts/acceptance.py` | 100 episodes × noise 0 and 0.15, app defaults; `--seed-start 1000` for unseen seeds | merged 100/100 (≥ 98 with noise), 0 collisions, mean ≤ 6.0 s, p95 ≤ 7.0 s, **0 physics violations of every kind** |
+| `scripts/acceptance.py` | 100 episodes × noise 0 and 0.15, app defaults; `--seed-start 1000` for unseen seeds | merged 100/100 (≥ 98 with noise), 0 collisions, mean ≤ 15.0 s, p95 ≤ 20.0 s (owner's decision, 2026-10-10), **0 physics violations of every kind** |
 | `scripts/verify_brain.py` | 1,000 episodes (seeds 2000-2999), app defaults, in parallel | reports the merge outcome judged on traffic only, the bus's road-edge anomalies by stage, every other violation, car edge crossings, Wilson 95% intervals and up to 10 failure seeds to replay in the app; a strict success is merged with none of them |
 | smoke test / app button | 10 seeds, sidebar traffic settings | ≥ 90% merged, avg merge ≤ 30 s, longest time from end of boarding to merged ≤ 45 s, **0 physics violations** |
 | app banner | every run | shows the outcome, the merge-time breakdown and the physics checks with first examples |
@@ -237,9 +237,28 @@ the threshold does not matter for them.
     its side, when it steers out slowly from the far end of the bay.
   - **Contact:** 2.2% of runs are side contacts while pulling out with a car alongside.
   - **Centre line:** it never crosses it.
+**v13 stress test** (`verify_brain --traffic-rate`, the same 100 unseen seeds 2000-2099 at each inflow,
+50 cars; app defaults otherwise):
+
+| Inflow (cars/s) | Cars within 60 m when boarding ends | Flow past the stop (cars/min) | Merged | Contact | Stuck | Strict | Bus off the road | Mean / p95 time |
+|---|---|---|---|---|---|---|---|---|
+| 0.2 (sparse) | 1.46 | 9.6 | 99 | 1 | 0 | 90 | 9 | 12.9 / 17.3 s |
+| 0.4 (default) | 2.56 | 15.9 | 97 | 3 | 0 | 84 | 13 | 13.3 / 16.6 s |
+| 0.6 (dense) | 3.02 | 19.3 | 98 | 2 | 0 | 88 | 11 | 13.2 / 15.5 s |
+| 0.8 (heavy) | 3.43 | 20.6 | 98 | 2 | 0 | 85 | 13 | 13.2 / 16.1 s |
+
+- **No density has a centre-line crossing, a stuck run or any other physics violation.**
+- **The differences between densities are within the 95% intervals** (about ±6 points at 100 seeds).
+- **The traffic saturates:** doubling the inflow from 0.4 to 0.8 cars/s raises the flow by only 30%
+  and the cars near the bus from 2.6 to 3.4. Arrivals wait for 0.5 s and 15 m of clear road, so "0.8"
+  is not twice as dense. A real stress test needs the training scenarios (jam, platoon) or a
+  different arrival model.
+
 - **v9-v11** were trained while the merge steering overshot its target. They ask for a target half
   way out of the bay and stop there ([case study](CASE_STUDY_REWARD_HACKING.md)).
-- **Acceptance (`scripts/acceptance.py`) is not passed by any brain.** Its time limits (mean ≤ 6.0 s,
-  p95 ≤ 7.0 s) were set while the steering overshot. Under honest steering, even a scripted
-  full-throttle merge takes 6.3 s on average. The limits need to be re-derived (a decision for the
-  project owner).
+- **Acceptance (`scripts/acceptance.py`) is not passed by any brain.** v13 meets the time limits
+  but not the contact and road-edge criteria (O2, O12).
+  - **The time limits:** mean ≤ 15.0 s and p95 ≤ 20.0 s since 2026-10-10. They are meant to fail a
+    brain that freezes, not a cautious one.
+  - **The old limits** (6.0 / 7.0 s) were set while the steering overshot. Under honest steering, even
+    a scripted full-throttle merge takes 6.3 s on average.

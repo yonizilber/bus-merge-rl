@@ -10,7 +10,8 @@ script records, independently:
 A run is a strict success only if it merged with none of the above.
 
     python scripts/verify_brain.py --brain models/ppo_bus_brain_v13.pth --seeds 1000 --seed-start 2000
-Every seed can be replayed in the app: tick "Fixed random seed", enter the seed, keep the defaults.
+Every seed can be replayed in the app: tick "Fixed random seed", enter the seed, and set the same
+sidebar "Inflow (cars/sec)" and "Total Cars to Sim" (defaults 0.4 and 50).
 """
 from __future__ import annotations
 
@@ -25,15 +26,17 @@ from pathlib import Path
 BRAIN_FAILURES = ("collision", "stuck_waiting", "never_waited")
 
 
-def _run(args: tuple[str, int]) -> dict:
-    brain, seed = args
+def _run(args: tuple[str, int, float, int]) -> dict:
+    brain, seed, traffic_rate, cars = args
     import torch
     torch.set_num_threads(1)
     from busmerge.config import SimConfig
     from busmerge.evaluation import APP_DEFAULTS, classify_outcome, merge_timeline, run_episode
     from busmerge.invariants import bus_contact_times, bus_edge_times, check_invariants, edge_masks
 
-    df = run_episode("B", SimConfig(**APP_DEFAULTS), brain, governor_disabled=True, seed=seed).get_results()
+    from busmerge.traffic_metrics import traffic_metrics
+    cfg = SimConfig(**{**APP_DEFAULTS, "traffic_rate": traffic_rate, "total_cars_to_spawn": cars})
+    df = run_episode("B", cfg, brain, governor_disabled=True, seed=seed).get_results()
     outcome, meta = classify_outcome(df)
     inv = check_invariants(df)
     bus = df[df["type"] == "Bus"].set_index("time")["state"]
@@ -80,6 +83,7 @@ def _run(args: tuple[str, int]) -> dict:
         "other_violations": other,
         "first_contact_s": meta.get("first_contact_s"),
         "body_in_lane_s": in_lane_s,
+        "traffic": traffic_metrics(df),
         "max_lateral_merging_m": max_lateral,
     }
 
@@ -125,13 +129,15 @@ def main() -> None:
     ap.add_argument("--brain", required=True)
     ap.add_argument("--seeds", type=int, default=1000)
     ap.add_argument("--seed-start", type=int, default=2000)
+    ap.add_argument("--traffic-rate", type=float, default=0.4, help="car arrivals per second (app default 0.4)")
+    ap.add_argument("--cars", type=int, default=50, help="cars per run (app default 50)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     ap.add_argument("--out", type=Path, default=Path("outputs/verify_brain.json"))
     args = ap.parse_args()
 
     seeds = range(args.seed_start, args.seed_start + args.seeds)
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        rows = list(pool.map(_run, [(args.brain, s) for s in seeds], chunksize=4))
+        rows = list(pool.map(_run, [(args.brain, s, args.traffic_rate, args.cars) for s in seeds], chunksize=4))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(rows, indent=1))
 
@@ -141,7 +147,13 @@ def main() -> None:
         return f"{k:4d} / {n}  = {100 * k / n:5.1f}%   (95% CI {100 * lo:.1f}-{100 * hi:.1f}%)"
 
     strict_success = sum(r["strict_outcome"] == "merged" and not r["other_violations"] for r in rows)
-    print(f"\n{Path(args.brain).name}  seeds {args.seed_start}..{args.seed_start + n - 1}  (app defaults)\n")
+    print(f"\n{Path(args.brain).name}  seeds {args.seed_start}..{args.seed_start + n - 1}  "
+          f"traffic {args.traffic_rate} cars/s, {args.cars} cars (app defaults otherwise)\n")
+    near = [r["traffic"]["cars_near_bus_at_merge_start"] for r in rows if r["traffic"]["cars_near_bus_at_merge_start"] == r["traffic"]["cars_near_bus_at_merge_start"]]
+    flow = [r["traffic"]["flow_veh_per_min"] for r in rows if r["traffic"]["flow_veh_per_min"] == r["traffic"]["flow_veh_per_min"]]
+    if near and flow:
+        print(f"Traffic actually present: {statistics.mean(near):.2f} cars within 60 m of the bus when boarding ends; "
+              f"flow past the stop {statistics.mean(flow):.1f} cars/min\n")
     print("Strict (merged, no contact, never off the road or over the centre line, no other violation):")
     print("  success          ", rate(strict_success))
     print("\nMerge outcome judged on the traffic only (road edges ignored):")

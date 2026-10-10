@@ -292,3 +292,12 @@ v13 is now the default and the golden-test brain. Its 10-seed smoke test fails: 
 counted as a physics violation.
 
 **Next:** development frozen; QA and documentation (ROADMAP 1c).
+
+**Later the same evening.**
+- **Acceptance limits:** mean 15.0 s and p95 20.0 s (the user's decision).
+- **`verify_brain`:** takes `--traffic-rate` and `--cars`, and reports the traffic actually present.
+- **Stress test of v13:** 100 unseen seeds at 0.2, 0.4, 0.6 and 0.8 cars/s. Merged 97-99, contact 1-3,
+  never stuck, never over the centre line, strict 84-90; the differences are within noise.
+- **The arrivals saturate:** at 0.8 cars/s there are only 3.4 cars near the bus, against 2.6 at 0.4.
+- **Test strategy:** a coverage summary and a menu of 29 proposed tests are in
+  [TEST_STRATEGY.md](TEST_STRATEGY.md), for the user to choose from.

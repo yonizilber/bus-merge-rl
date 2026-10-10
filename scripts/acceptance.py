@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Acceptance test for a candidate brain against the measured v9 baseline.
+"""Acceptance test for a candidate brain.
 
-Thresholds were fixed on 2026-10-06, before any engine-trained brain existed, from the
-100-seed measurements of v9_best and v10_best (outputs/baseline_noise_*.json):
-
-    v9_best   sigma 0: 100/100, mean 5.57 s, p95 6.4 s   sigma 0.15: 98/100, mean 5.43 s, p95 5.9 s
-    v10_best  sigma 0: 100/100, mean 5.29 s, p95 5.8 s   sigma 0.15: 100/100, mean 5.28 s, p95 5.8 s
+Time limits (2026-10-10, the project owner's decision): mean <= 15.0 s, p95 <= 20.0 s. They exist to
+fail a brain that freezes or refuses to merge, not a cautious one. The earlier limits (6.0 / 7.0 s,
+set on 2026-10-06 from v9/v10) were measured while the merge steering overshot its target. Under
+honest steering, even a scripted merge at full throttle that ignores traffic takes 6.3 s on average
+(p95 7.1 s), so no brain could meet them (docs/CASE_STUDY_REWARD_HACKING.md).
 
 Time is measured from the end of boarding to fully merged, in the app engine, with the app's
 default settings (scenario B, 0.4 cars/s, 50 cars, governor off).
@@ -29,8 +29,8 @@ SEEDS = 100
 # noise sigma -> minimum merged episodes out of SEEDS
 MIN_MERGED = {0.0: 100, 0.15: 98}
 MAX_COLLISIONS = 0
-MAX_MEAN_S = 6.0
-MAX_P95_S = 7.0
+MAX_MEAN_S = 15.0
+MAX_P95_S = 20.0
 
 
 def check(result: dict) -> list[tuple[str, bool, str]]:

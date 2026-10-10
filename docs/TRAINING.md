@@ -25,8 +25,11 @@ done with `scripts/acceptance.py` on seeds that training never saw.
 
 ## Acceptance (`scripts/acceptance.py`)
 100 episodes in the app engine at noise 0 and 0.15: all merged (>= 98 with noise), no collisions,
-mean time after boarding <= 6.0 s, p95 <= 7.0 s. The thresholds were fixed from the v9/v10 measurements
-before any engine-trained brain existed.
+mean time after boarding <= 15.0 s, p95 <= 20.0 s.
+- **The time limits** were set by the project owner on 2026-10-10, to fail a brain that freezes, not a
+  cautious one.
+- **The earlier limits** (6.0 / 7.0 s, from the v9/v10 measurements) assumed the overshooting
+  steering. A scripted full-throttle merge takes 6.3 s under honest steering.
 
 ## What did not work
 - Training from scratch (600 epochs, same recipe): 20-25 s per merge and some runs stuck waiting.
