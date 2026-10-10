@@ -176,5 +176,32 @@ acceptance**, and was no better than v11 measured on the same code.
 - **v12, seed 2:** stayed in the bay in 9-20 runs.
 - **During training**, the evaluation never improved (26-28/30). The training signal did not teach the
   brain to wait for a car alongside.
-- **Still open:** the decision on adopting strict physics with v11 (see ROADMAP); details in
-  [TRAINING.md](TRAINING.md).
+- Details in [TRAINING.md](TRAINING.md).
+
+## 2026-10-10: strict physics adopted
+
+**Decision.** The user chose to adopt strict physics with v11 rather than invest first in training
+research. A brain that visibly makes 3 contacts in 100 runs is preferred to a simulation that hides them.
+
+**What changed.**
+- **Removed** (state tagged `legacy-hand-of-god`): the follower corrections (`rl/bumper_kinematics.py`),
+  `PhysicsMode`, the strict flag, the override telemetry and the app's physics-mode selector.
+- **Arrivals** use the same safe-speed law as followers. Traffic flow rose 5-12%, because arrivals are
+  no longer throttled as if the car ahead were stationary.
+
+**Tests.**
+- Tests of deleted mechanisms were removed.
+- Two behavioural tests had expected a car to stop where no car physically can. They now start from
+  feasible states.
+
+**One more measurement bug.** The smoke test's "max wait" compared the clock time at which boarding
+ended with 45 s. After fix A every brain "failed" it while merging within 6 s. It now measures the
+wait after boarding.
+
+**Acceptance on unseen seeds**, merged / contact (noise 0); physics violations other than contact: none.
+
+| Brain | Merged / contact | Mean time |
+|---|---|---|
+| v11 | 97 / 3 | 4.8 s |
+| v10 | 98 / 2 | 5.7 s |
+| v9 | 93 / 2, plus 5 stuck | 5.9 s |

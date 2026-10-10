@@ -4,21 +4,22 @@ What comes next, in order. Each step follows the working rules in [JOURNAL.md](J
 one harness for every number, no silent corrections, measurements on seeds not used for
 development, and golden fingerprints changed only on purpose and with an explanation.
 
-## 1. Decide on strict physics (in progress)
+## 1. Strict physics: done (2026-10-10)
 
-- **Fine-tune v12:** v11 on strict physics with the corrected crash judge, 2 seeds × 300 epochs.
-  Results in [TRAINING.md](TRAINING.md).
-- **Adopt if** v12 passes `scripts/acceptance.py --strict-physics --seed-start 1000`: 100/100 merged
-  (≥ 98 with noise), 0 collisions including side contact, mean ≤ 6 s, p95 ≤ 7 s, 0 physics violations.
-- **On adoption:**
-  - make `strict_physics` the default
-  - delete the follower corrections in `rl/bumper_kinematics.py` (speed caps, position trims,
-    stop-holds, forward-only clamps)
-  - delete `PhysicsMode.TRAINING/DEBUG`, `_soft_bumper_velocity` and the "Hand of God" telemetry
-  - compute the spawn speed through `safe_speed` (BUGS O6)
-  - regenerate the golden files and make v12 the default brain
-- **If it does not pass:** keep the flag off and document the default physics' violations (BUGS O1)
-  as a known limitation in the README.
+Adopted with v11 as the default brain after the v12 fine-tune did not beat it. The "Hand of God"
+corrections and `PhysicsMode` are deleted, arrivals use the same safe-speed law, and the golden files
+are regenerated.
+- **Physics violations:** 0 in acceptance, other than contact.
+- **No brain passes acceptance:** every one makes 2-4 side contacts per 100 runs (BUGS O2), which is the
+  open research item below.
+
+## 1b. Teach the brain to wait for a car alongside (research)
+
+**Hypotheses to test one at a time**, each with a fine-tune and acceptance:
+- shaping terms that pay for early lateral progress or steering on a "safe" gap
+- an observation of the nearest car only (no second car, no car alongside)
+- training scenarios in which a moving car beside the bay is rare: add a dedicated scenario
+- the in-training evaluation does not move at all (26-28/30), so measure the reward components first
 
 ## 2. Finish physical correctness
 

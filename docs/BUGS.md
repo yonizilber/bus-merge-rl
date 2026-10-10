@@ -22,6 +22,7 @@ repository. Entries before 2026-10-04 are in the original development repository
 | H11 | "Accel Paradox" on the frame a car stops | Detector compared Δv to the logged accel, already reset to 0 at rest | Stop frame excluded (`48225ad`) | `test_stop_frame_is_not_reported_as_accel_paradox` |
 | H12 | Side contact reported as "merged" | `classify_outcome` only used the bus's rear-end flag | Polygon contact with any car = collision (`eeba728`) | `test_side_contact_with_a_car_counts_as_collision` |
 | H13 | Training and the acceptance gate disagreed on what a collision is | Training judged only the nearest car, without the bus's lane drift, penalised contact up to 1 m² mildly (0.12 m² cost about 6 points) and judged success before contact | Same polygon test, threshold and order as the gate (`973facd`) | `tests/test_crash_judge.py` (incl. a contact with a car that is not the nearest) |
+| H14 | Every brain failed the smoke test after fix A while merging within 6 s | The "max wait" criterion compared the clock time at which boarding ended (`wait_before_merge_s`) with 45 s; it never measured a wait | Measures the longest time from end of boarding to merged; field renamed `boarding_ended_at_s` (`fea1d7c`) | Smoke 10/10 for v9, v10, v11; longest wait 5.2-5.9 s |
 
 ### Physics
 
@@ -33,6 +34,9 @@ repository. Entries before 2026-10-04 are in the original development repository
 | P4 | Cars braked at 16-24 m/s² right after appearing | Spawned at 68-95% of top speed regardless of the car ahead; the follower cap then cut the speed | Spawn speed limited to `max_approach_speed(room)`; arrival deferred below 2 m/s (`ff4e54b`) | 551/955 → 0 violation frames; flow +1-2%; `test_cars_enter_the_road_without_impossible_braking` |
 | P5 | A slow, still-angled bus could not accelerate back to crawl speed before the stop point | `v_end = min(v, crawl)` made the bound 0 | `v_end = crawl` when not parallel (`973facd`) | |
 | P6 | Renderer drew a tilt for vehicles with heading 0 | Fallback "sine approximation" when heading was exactly 0 | Logged heading used as is (`eadf451`) | |
+| P7 | Impossible braking (beyond 9 m/s^2) in 68/100 acceptance runs; cars moved backwards or jumped position in 3-6/100 | "Hand of God" corrections kept cars apart by assignment: speed caps (up to 2.4 m/s per frame), position trims, stop-holds, forward-only clamps | One safe-speed law on acceleration for every follower (`busmerge/safe_speed.py`); corrections deleted (`ea0f727`, tag `legacy-hand-of-god`) | 0 physics violations other than contact in 600 acceptance runs |
+| P8 | Two definitions of a safe speed (arrivals: stationary leader; followers: braking leader) | Arrival rule was written to match the old cap | Arrivals use `safe_speed` (`ea0f727`) | Flow past the stop +5% (0.4 cars/s), +12% (0.8 cars/s): arrivals no longer throttled |
+| P9 | Two tests expected a car to stop where no car can: on the bumper line at 8 m/s (3.6 m needed even at 9 m/s^2), or frozen at 0 m/s while alongside | The stop-hold froze cars in place | Tests start from physically possible states and check the behaviour (`ea0f727`) | |
 
 ### App and tooling (`29a06e0` unless noted)
 
@@ -45,16 +49,14 @@ the physics-check function was 35× faster after vectorisation and had dead code
 
 ## Open
 
-### Physics (most will close if strict physics is adopted, see ROADMAP)
+### Physics
 
 | # | Issue | Where | Notes |
 |---|---|---|---|
-| O1 | Default physics still contains impossible moments: 68/100 runs brake beyond 9 m/s², 3-4/100 move a car backwards or jump its position | `rl/bumper_kinematics.py` (speed caps, position trims, stop-holds) | Strict physics: 0/100 |
-| O2 | Bus-car side contact in 2/100 runs (v11, strict physics) | brain behaviour | Real: pulling out while a car is alongside. A 300-epoch fine-tune (v12) did not remove it, see TRAINING.md |
+| O2 | Bus-car side contact in 3-4/100 runs (v11), 2/100 (v9, v10) | brain behaviour | Real: pulling out while a car is alongside. The old corrections hid it; a 300-epoch fine-tune (v12) did not remove it, see TRAINING.md |
 | O3 | Clamps on the merging bus (lateral to [-4.5, 0.5], heading to ±60°) are corrections the checks do not count | `simulation.py` merge steering step | Count when they bind, then remove |
 | O4 | No check that the bus stays inside the bay geometry | — | Largest stop measured 315.44 m, 0.44 m into the exit taper |
 | O5 | Arrival in the bay still assigns `velocity = 0` (≤ 0.05 m/s) | `simulation.py` arrival | Within the physical limit, but an assignment |
-| O6 | Two definitions of safe speed (spawn: stationary leader; strict follower: braking leader) | `simulation.py`, `safe_speed.py` | Unify when strict physics is adopted |
 | O7 | Scenario A (in-lane stop) still resets pose on arrival and at dwell end | `simulation.py` | Baseline scenario only |
 
 ### Training and reward (pre-existing, not yet addressed)

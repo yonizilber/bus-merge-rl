@@ -27,12 +27,12 @@ How the simulation, the agent and the evaluation work **today**. Numbers come fr
 busmerge/
   simulation.py      SimulationEngine: spawning, bus state machine, physics step, frame log
   vehicle.py         Vehicle (IDM + steering-first bicycle model), Bus, BusState, car classes
-  config.py          SimConfig (traffic, dwell, physics_mode, strict_physics), PhysicsMode
+  config.py          SimConfig (traffic, dwell, passengers)
   evaluation.py      run_episode, classify_outcome, merge_timeline, evaluate_brain  ← the one harness
   invariants.py      physical checks on a frame log; bus_contact_times
   traffic_metrics.py flow past the stop, cars near the bus, car jerk
   geometry.py        rotated rectangles, polygon overlap area, vehicle_corners
-  safe_speed.py      strict-physics safe-speed law (experimental, behind a flag)
+  safe_speed.py      the longitudinal safety law (one safe-speed limit on acceleration)
   paths.py           repository-relative locations (models/, outputs/)
   rl/
     env.py           BusMergeEnv: training scenarios + reward on top of SimulationEngine
@@ -40,7 +40,7 @@ busmerge/
     ppo_agent.py     actor-critic network and PPOAgent (strict checkpoint loading)
     train.py         PPO training loop
     feature_encoding.py, merge_success.py, merge_yield.py, traffic_leaders.py,
-    bumper_kinematics.py, governor_logic.py, merge_constants.py, ...
+    governor_logic.py, merge_constants.py, ...
 streamlit_app.py     dashboard (runs SimulationEngine through busmerge.evaluation)
 scripts/             train.py, acceptance.py, evaluate_brains.py, gate_production.py, diagnostics
 tests/               pytest suite incl. golden fingerprints (tests/golden/)
@@ -59,8 +59,8 @@ models/              versioned checkpoints (default: ppo_bus_brain_v11_engine.pt
   by a "surprise filter"). They also see a virtual blinker during the last 3 s of boarding.
 - **Arrivals (`SimulationEngine._try_spawn_car`):** drawn with probability `traffic_rate·dt` per frame,
   only while the entry is clear (0.5 s since the last car and 15 m to the nearest car).
-  - **Speed:** a car enters at `min(desired, max_approach_speed(room))`, i.e. the speed from which it
-    can stop behind the car ahead even if that car stopped dead.
+  - **Speed:** a car enters at `min(desired, safe_speed(room, v_leader))`, the same law every
+    follower obeys (section 4).
   - **No room:** if that is below 2 m/s, the arrival waits. Arrivals are delayed, never dropped.
 
 **Bus states:** `MOVING → DECELERATING → IN_BAY → WAITING_TO_MERGE → MOVING`. Scenario A, the
@@ -82,17 +82,26 @@ in-lane stop baseline, uses `STOPPED_IN_LANE` instead of the bay.
 
 The merge starts from the pose the bus actually stopped in.
 
-## 4. Follower physics: two modes
+## 4. Follower physics: one safe-speed law
 
-| | default (`strict_physics=False`) | strict (`strict_physics=True`, experimental) |
-|---|---|---|
-| Spacing | `bumper_kinematics`: speed caps before integration (up to 2.4 m/s per frame), position trims, stop-holds, forward-only clamps | `safe_speed`: `a = max(min(a_driver, a_bound), −9)` with `a_bound` from `v_safe = sqrt(v_leader² + 2·b_comf·gap)` and `v_leader + gap/dt` |
-| Impossible physics | occurs: 68/100 runs | none: 0/100 runs |
-| A collision physics cannot avoid | hidden by the corrections | happens and is recorded |
+Every follower (cars, the bus once back in the lane, and the merging bus toward the nearest car fully
+ahead of it) has its driver's acceleration limited by `busmerge/safe_speed.py`:
 
-Strict mode keeps `min_gap` as the buffer. The merging bus gets the same law toward the nearest car
-fully ahead of it. Still active in both modes: the speed floor at 0 (no reversing), and clamps on the
-merging bus (lateral position to [-4.5, 0.5], heading to ±60°), which are not yet counted (see BUGS.md).
+```
+v_safe  = sqrt(v_leader² + 2·b_comf·gap)     gap = leader rear − min_gap − follower front
+v_frame = v_leader + gap / dt
+a       = max(min(a_driver, (min(v_safe, v_frame) − v) / dt), −9 m/s²)
+```
+
+Speed and position then follow from the acceleration. Nothing is assigned. If even 9 m/s² is not
+enough, vehicles touch and the contact is recorded as a collision. The only remaining non-physical
+operations are the speed floor at 0 (vehicles do not reverse) and clamps on the merging bus (lateral
+position to [-4.5, 0.5], heading to ±60°), which are not yet counted (BUGS O3).
+
+This law replaced, on 2026-10-10, the "Hand of God" corrections: speed caps of up to 2.4 m/s per frame,
+position trims, frozen stop-holds and forward-only clamps. Under those, 68/100 acceptance runs
+contained braking beyond 9 m/s², and a contact physics could not avoid was hidden. The old code is at
+the git tag `legacy-hand-of-god`.
 
 ## 5. The agent
 
@@ -139,8 +148,7 @@ distraction.
 - **Success:** +5000, by the app's completion rule.
 - **Timeout:** −3500 − 6000·(idle fraction)².
 
-**Options and run tags:** `--feature-dim`, `--disable-governor`, `--seed` (re-seeded every epoch),
-`--strict-physics`.
+**Options and run tags:** `--feature-dim`, `--disable-governor`, `--seed` (re-seeded every epoch).
 - The run tag selects the reward profile: `exp7sat*` enables the contact judge; `exp7satv10*` selects
   the experimental "spongy" profile.
 - A checkpoint named `<tag>_best.pth` is used as the starting point.
@@ -175,15 +183,23 @@ car jerk.
 | Gate | What it runs | Pass criteria |
 |---|---|---|
 | `pytest` (CI) | unit + regression tests, golden fingerprints of the engine and the env | all green; 9 legacy tests are strict `xfail` |
-| `scripts/acceptance.py` | 100 episodes × noise 0 and 0.15, app defaults; `--seed-start 1000` for unseen seeds; `--strict-physics` | merged 100/100 (≥ 98 with noise), 0 collisions, mean ≤ 6.0 s, p95 ≤ 7.0 s, **0 physics violations of every kind** |
-| smoke test / app button | 10 seeds, sidebar traffic settings | ≥ 90% merged, avg merge ≤ 30 s, max wait ≤ 45 s, **0 physics violations** |
+| `scripts/acceptance.py` | 100 episodes × noise 0 and 0.15, app defaults; `--seed-start 1000` for unseen seeds | merged 100/100 (≥ 98 with noise), 0 collisions, mean ≤ 6.0 s, p95 ≤ 7.0 s, **0 physics violations of every kind** |
+| smoke test / app button | 10 seeds, sidebar traffic settings | ≥ 90% merged, avg merge ≤ 30 s, longest time from end of boarding to merged ≤ 45 s, **0 physics violations** |
 | app banner | every run | shows the outcome, the merge-time breakdown and the physics checks with first examples |
 
 ## 8. Brains (models/)
 
-| Checkpoint | Trained on | Status |
-|---|---|---|
-| `ppo_bus_brain_v11_engine.pth` | unified env (default physics), v9 fine-tune | **default**; 100/100 on unseen seeds; fails the physics gate under default physics (simulation violations); 2/100 contacts under strict physics |
-| `ppo_bus_brain_exp7satv9_best.pth` | legacy env | golden-test brain; 28-30/30 depending on start pose |
-| `ppo_bus_brain_exp7satv10_best.pth` | legacy env, "spongy" profile | comparison only |
-| `ppo_bus_brain_exp7sat*_best.pth`, `exp4`, `exp7` | legacy env | historical |
+Acceptance on 100 unseen seeds (1000-1099), app defaults, after strict physics was adopted
+(2026-10-10). Merged / collisions / stuck, then mean and p95 time from the end of boarding to merged:
+
+| Checkpoint | Trained on | Noise 0 | Noise 0.15 | Time (noise 0) |
+|---|---|---|---|---|
+| `ppo_bus_brain_v11_engine.pth` (**default**) | unified env, v9 fine-tune | 97 / 3 / 0 | 96 / 4 / 0 | 4.8 / 5.4 s |
+| `ppo_bus_brain_exp7satv10_best.pth` | legacy env, "spongy" profile | 98 / 2 / 0 | 97 / 2 / 1 | 5.7 / 6.1 s |
+| `ppo_bus_brain_exp7satv9_best.pth` | legacy env (golden-test brain) | 93 / 2 / 5 | 94 / 2 / 4 | 5.9 / 6.3 s |
+| `ppo_bus_brain_exp7sat*_best.pth`, `exp4`, `exp7` | legacy env | not measured | | |
+
+- **No brain passes acceptance:** every collision is a side contact while pulling out with a car
+  alongside (BUGS O2). There are no physics violations apart from those contacts.
+- **v11 vs v10:** v11 is the fastest. v10 has slightly fewer contacts, but with 100 seeds the
+  difference between 2 and 3-4 is not significant.

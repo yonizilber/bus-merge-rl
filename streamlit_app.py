@@ -222,12 +222,14 @@ if _available_brains:
         st.markdown(
             "**Setup:** Scenario B, 0.4 cars/s, 50 cars, governor off, 100 fixed seeds (1000-1099) "
             "that were not used to select any brain, measured with `scripts/acceptance.py` "
-            "(the same code as the Run button). Time = seconds from end of boarding to fully merged.\n\n"
-            "| Brain | No noise: merged / mean / p95 | Noise 0.15: merged |\n"
-            "|---|---|---:|\n"
-            "| v11 (default) | 100 / 4.6 s / 4.9 s | 100/100 |\n"
-            "| v10 best | 100 / 5.3 s / 5.7 s | 100/100 |\n"
-            "| v9 best | 100 / 5.8 s / 9.4 s | 97/100 |\n\n"
+            "(the same code as the Run button). A collision is any contact between the bus and a car. "
+            "Time = seconds from end of boarding to fully merged.\n\n"
+            "| Brain | Merged / collisions (no noise) | Mean / p95 | With noise 0.15 |\n"
+            "|---|---|---|---|\n"
+            "| v11 (default) | 97 / 3 | 4.8 / 5.4 s | 96 / 4 |\n"
+            "| v10 best | 98 / 2 | 5.7 / 6.1 s | 97 / 2 (1 stuck) |\n"
+            "| v9 best | 93 / 2 (5 stuck) | 5.9 / 6.3 s | 94 / 2 (4 stuck) |\n\n"
+            "No physics violations other than these contacts. "
             "Regenerate with `python scripts/acceptance.py --brain <file> --seed-start 1000`."
         )
 

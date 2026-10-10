@@ -5,6 +5,9 @@ generators, reward, telemetry). Every physics step is executed by `SimulationEng
 code the Streamlit app runs, and the observation is built by `busmerge/rl/observation.py` in both.
 
 ## Default brain: `models/ppo_bus_brain_v11_engine.pth`
+Trained before strict physics was adopted; on the adopted physics it merges 97/100 with 3 side contacts
+(see SPECS section 8).
+
 Fine-tuned from `ppo_bus_brain_exp7satv9_best.pth` for 300 epochs on the unified environment
 (11 features, governor off, seed 2):
 
