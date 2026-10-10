@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from typing import List
 from busmerge.paths import DEFAULT_BRAIN
-from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, pure_pursuit_steer, sample_vehicle_params
+from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.geometry import bay_pull_in_target, bus_stop_range
 from busmerge.rl.merge_success import PRODUCTION_MERGE_LATERAL_THRESHOLD
 from busmerge.config import SimConfig
@@ -227,21 +227,7 @@ class SimulationEngine:
                 # After longitudinal update: run lateral bicycle for merging bus
                 # (uses NEW velocity from this frame — matching training env step order).
                 if isinstance(veh, Bus) and veh.state == BusState.WAITING_TO_MERGE:
-                    _max_steer  = np.radians(veh.params.max_steer_angle_deg)
-                    _steer_rate = np.radians(veh.params.steer_rate_deg_per_s)
-                    _delta_cmd  = float(np.clip(
-                        pure_pursuit_steer(veh.lat_target - veh.lateral_offset, veh.heading_angle,
-                                           veh.params.wheelbase, BUS_MERGE_LOOKAHEAD_M),
-                        -_max_steer, _max_steer))
-                    _d_steer    = float(np.clip(
-                        _delta_cmd - veh.steer_angle,
-                        -_steer_rate * self.dt, _steer_rate * self.dt))
-                    veh.steer_angle   += _d_steer
-                    veh.heading_angle += (
-                        veh.velocity * np.tan(veh.steer_angle)
-                        / max(veh.params.wheelbase, 0.1)) * self.dt
-                    veh.lateral_velocity = veh.velocity * np.sin(veh.heading_angle)
-                    veh.lateral_offset  += veh.lateral_velocity * self.dt
+                    veh.steer_toward(veh.lat_target, BUS_MERGE_LOOKAHEAD_M, self.dt)
 
                 # PHYSICS SNIFFER: compare heading after update against the
                 # maximum physically possible change (steer_rate × dt + 0.01 rad

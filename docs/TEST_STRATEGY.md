@@ -8,6 +8,37 @@ parts:
 Every proposed test names the bug or the class of bug it guards against. Most of these bugs were
 found during this project (see [BUGS.md](BUGS.md)).
 
+## Implemented (2026-10-10)
+
+Menu numbers refer to Part 2.
+- **#3, half-way stall:** `tests/test_brain_behaviour.py`.
+  - v13 merges within 15 s on an empty road from 297, 302 and 307 m.
+  - A companion test checks that v11 is caught stalling.
+  - Two control placements (a car just ahead, a car passing fast) check that the bus waits in the bay.
+- **#13, pure pursuit:** `tests/test_steering_controller.py`, 56 cases.
+  - **Tolerance:** overshoot at most 5% of the starting distance. A 5 cm bound was too strict: the
+    rate-limited controller overshoots 3.5 m steps by 0.10-0.14 m.
+  - **Sensitivity:** the old law fails the same check.
+  - **Scope:** the 6 m pull-in look-ahead is left out, since it is not stable for sudden steps at speed
+    (BUGS O16).
+- **#9, physics under any policy:** `tests/test_physics_any_policy.py`. Uniform and full-extreme random
+  merging policies, at 0.4 and 0.8 cars/s.
+- **#25, single sources:** `tests/test_single_source.py`. An AST scan for the bay x coordinates and the
+  merge threshold, plus a check that the scan can see a copy.
+- **#19, reward ranking:** `tests/test_reward_ranking.py`, with the default and the v13 reward.
+- **#20, training smoke:** `tests/test_training_smoke.py`. Two epochs, all files written to a temporary
+  folder; the weights must change and the app engine must drive with the result.
+- **#1 and #4, strict `xfail` with `raises=AssertionError`:** each reproduced by a placement that fails
+  today.
+  - **#1:** stop at 307 m, a car 6 m behind at 6 m/s, contact of 0.85 m².
+  - **#4:** stop at 307 m, a car passing, the kerb 0.10-0.14 m deep in the body.
+  - **What the experiments showed:** in 20 constructed placements at 302 m, v13 never touched a car.
+    It does leave the bay while a car is still alongside (up to -1.84 m) in about half of them. On an
+    empty road it exits cleanly even from 307 m.
+- **Margins:** all of these pass or fail by a wide margin. For example, a merge in 7.6-7.8 s against a
+  15 s limit, and a 3,000-point reward gap against a measured 6,900.
+- **Cost:** about 50 s locally for all the new tests.
+
 ## 1. Current coverage
 
 ### Runs automatically on every push (CI: `ruff check .` and `pytest`, about 171 test cases, 1-6 minutes)

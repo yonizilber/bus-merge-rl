@@ -301,3 +301,14 @@ counted as a physics violation.
 - **The arrivals saturate:** at 0.8 cars/s there are only 3.4 cars near the bus, against 2.6 at 0.4.
 - **Test strategy:** a coverage summary and a menu of 29 proposed tests are in
   [TEST_STRATEGY.md](TEST_STRATEGY.md), for the user to choose from.
+
+**Automated tests (the user's selection from TEST_STRATEGY.md).**
+- **New tests:** 74 cases, plus 3 strict `xfail`. The suite is 235 passed, 12 xfailed, about 60 s
+  locally.
+- **Refactor:** one implementation of lateral motion, `Vehicle.apply_steering` and `Vehicle.steer_toward`,
+  now used by the engine's merge step and by `update_physics`. The golden fingerprints did not change.
+  The steering test calls the production code.
+- **Found by the tests:** the 6 m pull-in steering is not stable for a sudden target step at speed
+  (BUGS O16).
+- **Constructed scenarios:** v13 never touched a single car placed beside the bay at 302 m. Its contacts
+  need the far end of the bay or real traffic.

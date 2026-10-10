@@ -315,10 +315,7 @@ class Vehicle:
                 pol = getattr(self.params, 'politeness_factor', 0.7)
                 self.lat_target = (MAX_NUDGE * pol) if (self.is_squeezing and bus is not None) else 0.0
     
-            # Geometry constants used by both the steer controller and the bicycle model.
-            wheelbase  = getattr(self.params, 'wheelbase', 2.7)
-            max_steer  = np.radians(getattr(self.params, 'max_steer_angle_deg', 35.0))
-            steer_rate = np.radians(getattr(self.params, 'steer_rate_deg_per_s', 75.0))
+            max_steer  = np.radians(getattr(self.params, 'max_steer_angle_deg', 35.0))   # cars' controller
     
             # BUS ACTIVE LANE-CORRECTION ─────────────────────────────────────────────
             # A small OU process drives _lat_perturb, which is added to lat_target before
@@ -359,29 +356,15 @@ class Vehicle:
                 #   y_rel ≈ −L_PP * sin(ψ) > 0  →  δ_cmd > 0 (counter-steer back to road)
                 look_ahead = (BUS_BAY_LOOKAHEAD_M if self.state == BusState.DECELERATING
                               else BUS_LANE_LOOKAHEAD_M)
-                delta_target = np.clip(pure_pursuit_steer(effective_lat_target - self.lateral_offset,
-                                                          self.heading_angle, wheelbase, look_ahead),
-                                       -max_steer, max_steer)
+                delta_target = self.pure_pursuit_command(effective_lat_target, look_ahead)
             else:
                 # Simple proportional look-ahead for cars.
                 lookahead    = max(self.velocity * 1.0, 5.0)
                 lat_error    = self.lat_target - self.lateral_offset
                 delta_target = np.clip(np.arctan2(lat_error, lookahead), -max_steer, max_steer)
     
-            # 3. MECHANICAL RESPONSE: steering wheel can only rotate at steer_rate (deg/s)
-            steer_change = np.clip(delta_target - self.steer_angle,
-                                   -steer_rate * dt, steer_rate * dt)
-            self.steer_angle += steer_change
-    
-            # 4. BICYCLE MODEL: heading rate = v × tan(δ) / L
-            #    Longer wheelbase → lower yaw rate for the same steering input
-            self.heading_angle += (self.velocity * np.tan(self.steer_angle)
-                                   / max(wheelbase, 0.1)) * dt
-    
-            # 5. POSITION UPDATE: lateral_velocity is now a RESULT of heading, not a cause
-            self.lateral_velocity = self.velocity * np.sin(self.heading_angle)
-            self.lateral_offset  += self.lateral_velocity * dt
-            # No clamp: a vehicle that steers off the road is reported by busmerge.invariants.
+            # 3-5. Steering wheel, bicycle model, lateral position.
+            self.apply_steering(delta_target, dt)
     
             # ── LANE-KEEPING UNCERTAINTY (Ornstein-Uhlenbeck random drift) ─────────────
             # Models the fact that no driver holds exactly the lane centre.
@@ -390,6 +373,33 @@ class Vehicle:
             noise_sig = getattr(self.params, 'lane_keeping_noise', 0.08)
             self.lane_drift = ((1.0 - OU_REVERT * dt) * self.lane_drift
                                + noise_sig * np.sqrt(dt) * np.random.randn())
+
+    def pure_pursuit_command(self, lat_target: float, look_ahead: float) -> float:
+        """Steering angle that brings this vehicle onto the line ``lat_target`` (pure pursuit, bounded
+        by the maximum steering angle)."""
+        max_steer = np.radians(getattr(self.params, 'max_steer_angle_deg', 35.0))
+        return float(np.clip(pure_pursuit_steer(lat_target - self.lateral_offset, self.heading_angle,
+                                                getattr(self.params, 'wheelbase', 2.7), look_ahead),
+                             -max_steer, max_steer))
+
+    def apply_steering(self, delta_target: float, dt: float) -> None:
+        """Turn the wheel toward ``delta_target`` at the steering rate, then move by the bicycle model.
+
+        The one implementation of lateral motion for every vehicle and state: the heading changes at
+        v·tan(δ)/wheelbase and the lateral position follows from the heading. Nothing is clamped; a
+        vehicle that steers off the road is reported by busmerge.invariants.
+        """
+        wheelbase = getattr(self.params, 'wheelbase', 2.7)
+        steer_rate = np.radians(getattr(self.params, 'steer_rate_deg_per_s', 75.0))
+        steer_change = np.clip(delta_target - self.steer_angle, -steer_rate * dt, steer_rate * dt)
+        self.steer_angle += steer_change
+        self.heading_angle += (self.velocity * np.tan(self.steer_angle) / max(wheelbase, 0.1)) * dt
+        self.lateral_velocity = self.velocity * np.sin(self.heading_angle)
+        self.lateral_offset += self.lateral_velocity * dt
+
+    def steer_toward(self, lat_target: float, look_ahead: float, dt: float) -> None:
+        """Pure pursuit toward ``lat_target`` for one step (the bus when merging; used by tests)."""
+        self.apply_steering(self.pure_pursuit_command(lat_target, look_ahead), dt)
 
     @property
     def total_lateral_offset(self):
