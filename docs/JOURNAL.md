@@ -205,3 +205,50 @@ wait after boarding.
 | v11 | 97 / 3 | 4.8 s |
 | v10 | 98 / 2 | 5.7 s |
 | v9 | 93 / 2, plus 5 stuck | 5.9 s |
+
+## 2026-10-10: verification without clamps, honest bus steering
+
+**RL work halted** (user decision): before publishing, check that the 97% is real.
+
+**Verification of v11 on 1,000 unseen seeds (2000-2999)**, with every position and heading clamp removed
+(`7b59caf`) and the road edges checked (`scripts/verify_brain.py`):
+- **Judged on the traffic only:** 97.9% merged (95% CI 96.8-98.6%), 2.1% contact.
+- **Strict success:** 0%.
+  - **Centre line:** the bus crossed it in every run (median 0.84 m, up to 2.34 m).
+  - **Kerb:** it cut the kerb while pulling in in 47% of runs.
+  - **End of the bay:** it stopped past it in 3%.
+
+**Causes and fixes.** The user chose to fix only the bus. Cars crossing the centre line or the kerb is
+driving behaviour, so it is now reported, not failed. Details are in BUGS P11-P15.
+- **Merge steering** had no heading term, so it overshot any target. It is now pure pursuit with the
+  heading term, the same function as for every other bus state.
+- **Pull-in** did not follow the drawn bay. Its target is now read off the drawn road edge under the
+  bus's front.
+- **Stop range and bay-end limit:** the stop range lets the whole bus fit in the flat part with room
+  to steer out, and the stop limit is the real end of the bay.
+- **The checker** could miss a kerb corner inside the body side; it now checks for it.
+- **The drawn bay** was defined in three places. It now comes from a single `geometry.bay_outline()`.
+
+**The physics allows a clean merge.** A scripted exit (steer for the lane at constant throttle,
+ignoring traffic) over 1,500 runs:
+- 0 frames off the road and 0 over the centre line
+- heading ≤ 11°
+- every run merged (median merge distance 33 m)
+
+**Re-measured v11 (same 1,000 seeds):**
+- **Merge outcome:** 0% merged, 99.2% stuck, 0.8% contact.
+- **Road edges:** off the road in 100% (every case while merging, none while pulling in), over the
+  centre line in 0%.
+- **No other physics violation.**
+- **Cars across a road edge:** 13.7% (was 34.6%).
+
+**Why v11 stopped merging.** v11 commands a lateral target of about -1.5 m, half way out of the bay,
+and holds it. In seed 2000, steer 0.06-0.16 maps to a target of -1.46 to -1.69 m. Under the old steering,
+that command overshot into a full merge and on over the centre line; v11 had learned to use the defect.
+The 97.9% measured the brain together with the defect.
+v9 and v10 behave the same way (0/100 merged each, seeds 2000-2099): every brain was trained under
+the overshooting steering. The app's brain table now says so.
+
+**Open (user decision).**
+- A fine-tune under the fixed dynamics (BUGS O8).
+- First, fix the training env's start poses: 14.6% of them put the bus off the road (BUGS O9).

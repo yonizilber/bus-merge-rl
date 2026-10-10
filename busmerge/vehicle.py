@@ -2,7 +2,7 @@ import numpy as np
 
 from busmerge.safe_speed import follower_acceleration
 from busmerge.rl.merge_constants import (
-    BUS_ALIGN_HEADING_DEG, BUS_CRAWL_SPEED_MS, MAX_BRAKE_MS2,
+    BAY_FLAT_END_X, BUS_ALIGN_HEADING_DEG, BUS_BAY_LOOKAHEAD_M, BUS_CRAWL_SPEED_MS, BUS_LANE_LOOKAHEAD_M, MAX_BRAKE_MS2,
 )
 from dataclasses import dataclass
 import random
@@ -31,6 +31,17 @@ class VehicleParams:
     lane_keeping_noise: float = 0.08     # O-U σ for imperfect lane tracking (m)
 
 CAR_PARAMS = VehicleParams()
+
+
+def pure_pursuit_steer(lat_error: float, heading: float, wheelbase: float, look_ahead: float) -> float:
+    """Steering angle that drives a vehicle onto a straight line ``lat_error`` metres to its side.
+
+    Pure pursuit: aim at the point of the target line ``look_ahead`` metres ahead, expressed in the
+    vehicle's own frame. The ``- look_ahead·sin(heading)`` term makes the vehicle counter-steer as its
+    heading approaches the line, so it arrives parallel instead of overshooting it.
+    """
+    y_rel = lat_error * np.cos(heading) - look_ahead * np.sin(heading)
+    return float(np.arctan2(2.0 * wheelbase * y_rel, look_ahead * look_ahead))
 
 # Surprise filter: max |ΔY|/s on merge yield (0.5 → ~2 s from 0→1).
 # Prevents IN_BAY → WAITING_TO_MERGE yield cliffs from becoming emergency brakes.
@@ -346,10 +357,10 @@ class Vehicle:
                 #
                 # When ψ < 0 and lateral error ≈ 0 (bus at bay depth):
                 #   y_rel ≈ −L_PP * sin(ψ) > 0  →  δ_cmd > 0 (counter-steer back to road)
-                L_PP    = 18.0   # look-ahead distance (m) — longer = smoother, less oscillation
-                lat_err = effective_lat_target - self.lateral_offset
-                y_rel   = lat_err * np.cos(self.heading_angle) - L_PP * np.sin(self.heading_angle)
-                delta_target = np.clip(np.arctan2(2.0 * wheelbase * y_rel, L_PP * L_PP),
+                look_ahead = (BUS_BAY_LOOKAHEAD_M if self.state == BusState.DECELERATING
+                              else BUS_LANE_LOOKAHEAD_M)
+                delta_target = np.clip(pure_pursuit_steer(effective_lat_target - self.lateral_offset,
+                                                          self.heading_angle, wheelbase, look_ahead),
                                        -max_steer, max_steer)
             else:
                 # Simple proportional look-ahead for cars.
@@ -625,8 +636,6 @@ class Bus(Vehicle):
         self.wait_time = 0.0
         self._merge_progress = 0.0 
         self.merge_start_x = position
-        self.exit_taper_length = 15.0
-        self.entry_taper_length = 50.0   # matches the 50 m DECELERATING trigger → ramp starts immediately
         self.max_merge_progress_step = 0.02
         # Active lane-correction OU state: perturbation added to lat_target so
         # pure pursuit actively steers back (visible small oscillations around centre).
@@ -653,7 +662,7 @@ class Bus(Vehicle):
         v = max(float(self.velocity), 0.0)
         aligned = abs(self.heading_angle) <= np.radians(BUS_ALIGN_HEADING_DEG)
         to_stop = float(self.target_stop_x) - float(self.position)
-        to_bay_end = float(self.target_stop_x) + float(self.exit_taper_length) - float(self.position)
+        to_bay_end = BAY_FLAT_END_X - float(self.position)
         if to_stop > 0.0:
             # Reach the stop point at rest if already parallel, otherwise at crawl speed
             # (the alignment is then finished while crawling, without stopping first).

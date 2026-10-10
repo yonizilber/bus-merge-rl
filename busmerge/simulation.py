@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from typing import List
 from busmerge.paths import DEFAULT_BRAIN
-from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
+from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, pure_pursuit_steer, sample_vehicle_params
+from busmerge.geometry import bay_pull_in_target
 from busmerge.config import SimConfig
 from busmerge.rl.ppo_agent import PPOAgent
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
@@ -14,7 +15,8 @@ from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
     BAY_DEPTH as _MC_BAY_DEPTH,
     BUS_MAX_SPEED as _MC_BUS_MAX_SPEED,
-    BUS_ALIGN_HEADING_DEG, BUS_STOPPED_SPEED_MS, SPAWN_MIN_SPEED_MS,
+    BAY_FLAT_END_X, BAY_FLAT_START_X, BUS_ALIGN_HEADING_DEG, BUS_EXIT_ROOM_M, BUS_MERGE_LOOKAHEAD_M,
+    BUS_STOP_MARGIN_M, BUS_STOPPED_SPEED_MS, SPAWN_MIN_SPEED_MS,
     MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
 
@@ -98,10 +100,11 @@ class SimulationEngine:
         spawn_speed = np.random.uniform(8.5, 11.5)
         bus = Bus(v_id=999, position=0.0, velocity=spawn_speed, params=CAR_PARAMS)
 
-        # Stop position: nominal 300 m ± Gaussian σ=5 m (professional driver varies
-        # aim point slightly).  Clipped to [BAY_FLAT_X0, BAY_FLAT_X1] = [285, 315] so the
-        # bus always targets the flat section of the bay (never an out-of-bounds taper).
-        stop_x = float(np.clip(np.random.normal(300.0, 5.0), 285.0, 315.0))
+        # Stop position (front bumper): the stop pole (300 m) ± Gaussian σ=5 m (the driver's aim varies),
+        # kept where the whole bus fits in the flat part of the bay with room ahead to steer out.
+        stop_x = float(np.clip(np.random.normal(self.cfg.bus_stop_position, 5.0),
+                               BAY_FLAT_START_X + bus.params.length + BUS_STOP_MARGIN_M,
+                               BAY_FLAT_END_X - BUS_EXIT_ROOM_M))
         bus.set_stop_schedule(stop_x, self.cfg.bus_dwell_time)
         
         self.vehicles.append(bus)
@@ -227,10 +230,10 @@ class SimulationEngine:
                 if isinstance(veh, Bus) and veh.state == BusState.WAITING_TO_MERGE:
                     _max_steer  = np.radians(veh.params.max_steer_angle_deg)
                     _steer_rate = np.radians(veh.params.steer_rate_deg_per_s)
-                    _lookahead  = max(veh.velocity * 1.0, 5.0)
-                    _lat_err    = veh.lat_target - veh.lateral_offset
                     _delta_cmd  = float(np.clip(
-                        np.arctan2(_lat_err, _lookahead), -_max_steer, _max_steer))
+                        pure_pursuit_steer(veh.lat_target - veh.lateral_offset, veh.heading_angle,
+                                           veh.params.wheelbase, BUS_MERGE_LOOKAHEAD_M),
+                        -_max_steer, _max_steer))
                     _d_steer    = float(np.clip(
                         _delta_cmd - veh.steer_angle,
                         -_steer_rate * self.dt, _steer_rate * self.dt))
@@ -279,28 +282,10 @@ class SimulationEngine:
             if self.scenario == "A":
                 # In-lane stop: stay centred — no bay pull-in (Scenario B only).
                 bus.lat_target = 0.0
-            elif 0.0 < dist_to_stop <= bus.entry_taper_length:
-                # PATH LOOK-AHEAD: linear ramp from lat=0 at the taper entry point
-                # (dist = entry_taper_length = 50 m, matching the DECELERATING trigger)
-                # to lat=-3.5 at PATH_LOOK_AHEAD metres before the stop.
-                # This starts the bay approach immediately when DECELERATING begins —
-                # no intermediate re-alignment to lane centre (the S-curve bug).
-                # The bus reaches full bay depth with 18 m to go, giving the 7 m
-                # wheelbase enough road to straighten back to 0° heading.
-                PATH_LOOK_AHEAD = 18.0
-                ramp = bus.entry_taper_length - PATH_LOOK_AHEAD   # 32 m
-                look_frac = (bus.entry_taper_length - dist_to_stop) / ramp
-                bus.lat_target = max(-3.5, -3.5 * look_frac)
-            elif dist_to_stop <= 0.0 and abs(bus.heading_angle) > np.radians(2.0):
-                # PARKING CRAWL: bus has passed the nominal stop but is still
-                # angled more than 2°.  Keep it at bay depth so the pure-pursuit
-                # controller has a lateral target to steer against while the
-                # 7 m wheelbase finishes straightening.
-                bus.lat_target = -3.5
             else:
-                # dist_to_stop <= 0 and heading < 2°: bus aligned in bay,
-                # one transitional frame before IN_BAY takes over.
-                bus.lat_target = -3.5
+                # Follow the drawn bay: the target drops with the road edge under the bus's front,
+                # so the bus turns in along the entry taper and ends at the bay centre.
+                bus.lat_target = bay_pull_in_target(bus.position)
         elif bus.state in (BusState.IN_BAY, BusState.STOPPED_IN_LANE):
             bus.lat_target = bus.lateral_offset       # hold position (v=0 → frozen)
         elif bus.state == BusState.WAITING_TO_MERGE:

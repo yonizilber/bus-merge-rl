@@ -9,6 +9,7 @@ import json
 import os as _os
 from busmerge.paths import MODELS_DIR
 from busmerge.geometry import compute_sat_overlap_area, rect_corners as _geom_rect_corners
+from busmerge.geometry import BAY_WALL_Y, bay_outline
 from busmerge.invariants import OVERLAP_MIN_AREA_M2, check_invariants
 from busmerge.rl.feature_encoding import FEATURE_NAMES, infer_state_dim_from_checkpoint
 from busmerge.config import SimConfig
@@ -220,17 +221,19 @@ if _available_brains:
 
     with st.sidebar.expander("Brain comparison (measured)"):
         st.markdown(
-            "**Setup:** Scenario B, 0.4 cars/s, 50 cars, governor off, 100 fixed seeds (1000-1099) "
-            "that were not used to select any brain, measured with `scripts/acceptance.py` "
-            "(the same code as the Run button). A collision is any contact between the bus and a car. "
-            "Time = seconds from end of boarding to fully merged.\n\n"
-            "| Brain | Merged / collisions (no noise) | Mean / p95 | With noise 0.15 |\n"
-            "|---|---|---|---|\n"
-            "| v11 (default) | 97 / 3 | 4.8 / 5.4 s | 96 / 4 |\n"
-            "| v10 best | 98 / 2 | 5.7 / 6.1 s | 97 / 2 (1 stuck) |\n"
-            "| v9 best | 93 / 2 (5 stuck) | 5.9 / 6.3 s | 94 / 2 (4 stuck) |\n\n"
-            "No physics violations other than these contacts. "
-            "Regenerate with `python scripts/acceptance.py --brain <file> --seed-start 1000`."
+            "**No brain merges under the current physics.** Measured with `scripts/verify_brain.py` "
+            "(the same code as the Run button; Scenario B, 0.4 cars/s, 50 cars, governor off) on seeds "
+            "that were not used to select any brain:\n\n"
+            "| Brain | Seeds | Merged | Stuck half way | Contact |\n"
+            "|---|---|---|---|---|\n"
+            "| v11 (default) | 1,000 | 0% | 99.2% | 0.8% |\n"
+            "| v10 best | 100 | 0 | 100 | 0 |\n"
+            "| v9 best | 100 | 0 | 100 | 0 |\n\n"
+            "All three were trained while the merge steering overshot its target: they ask for a "
+            "lateral target about half way out of the bay, and the overshoot carried the bus into the "
+            "lane and over the centre line. With the steering fixed the bus goes where the brain asks. "
+            "Earlier figures (v11 97/100) measured the brain together with that defect. "
+            "See docs/BUGS.md (P11, O8)."
         )
 
     _smoke = _read_smoke_sidecar(selected_brain_path)
@@ -676,6 +679,12 @@ if st.session_state.sim_complete:
         )
         with st.expander("First example of each physics violation"):
             st.json(_inv.examples)
+    if any(_inv.notes.values()):
+        st.info(
+            "Reported, not a failure: a car's body crossed "
+            + ", ".join(f"{k.replace('car_', '').replace('_', ' ')} in {n} frames" for k, n in _inv.notes.items() if n)
+            + " (cars drift in their lane and move over for the bus)."
+        )
 
     # --- Analytics ---
     analytics = AnalyticsEngine(df, config)
@@ -1094,20 +1103,8 @@ if st.session_state.sim_complete:
         MERGE_X_MAX   = 345.0    # window end
         BUS_STOP_X    = config.bus_stop_position   # 300.0
         LANE_W        = 3.5
-        # Bus bay: flat section from (BUS_STOP_X - 15) to (BUS_STOP_X + 15),
-        # with a 20 m entry taper and a 15 m exit taper.
-        # All tapers are triangles joining the main-lane kerb (y = -LANE_W/2)
-        # to the bay outer kerb (y = -LANE_W - LANE_W/2 = -LANE_W*1.5 ... actually
-        # the bay centre is at y = -LANE_W, so outer edge at y = -LANE_W - LANE_W/2)
-        BAY_OUTER_Y   = -LANE_W - LANE_W / 2   # outer kerb of bay = −5.25 m
-        LANE_INNER_Y  = -LANE_W / 2            #  inner kerb of main lane = −1.75 m
-        BAY_FLAT_X0   = BUS_STOP_X - 15.0      # 285
-        BAY_FLAT_X1   = BUS_STOP_X + 15.0      # 315  (bus sits here when stopped)
-        ENTRY_TAPER_L = 20.0                   # entry taper length (before flat)
-        EXIT_TAPER_L  = 15.0                   # exit taper length  (after flat)
-        # taper start/end x coords
-        ENTRY_TAPER_X0 = BAY_FLAT_X0 - ENTRY_TAPER_L   # 265
-        EXIT_TAPER_X1  = BAY_FLAT_X1 + EXIT_TAPER_L    # 330
+        # The bay is drawn from busmerge.geometry, the same outline the physics checks use.
+        BAY_OUTLINE   = bay_outline()
 
         merge_df_all = df[(df['x'] >= MERGE_X_MIN) & (df['x'] <= MERGE_X_MAX)].copy()
 
@@ -1171,27 +1168,14 @@ if st.session_state.sim_complete:
                 ax.axhline( LANE_W/2,   color='white', ls='--', lw=1.5, zorder=1)
                 ax.axhline(-LANE_W/2,   color='white', ls='-',  lw=2.0, zorder=1)
 
-                # Trapezoidal bus bay (entry taper + flat section + exit taper)
-                # Polygon vertices going clockwise from inner-lane kerb:
-                bay_poly = np.array([
-                    [ENTRY_TAPER_X0,  LANE_INNER_Y],   # entry taper start (on main lane kerb)
-                    [BAY_FLAT_X0,     BAY_OUTER_Y ],   # entry taper end   (bay outer kerb)
-                    [BAY_FLAT_X1,     BAY_OUTER_Y ],   # flat section end
-                    [EXIT_TAPER_X1,   LANE_INNER_Y],   # exit taper end    (back to main)
-                    [EXIT_TAPER_X1,  -LANE_W/2    ],   # follow inner kerb back
-                    [ENTRY_TAPER_X0, -LANE_W/2    ],
-                ])
+                # Bus bay (entry taper, flat section, exit taper), closed along the kerb
                 from matplotlib.patches import Polygon as MplPolygon
-                bay_patch = MplPolygon(bay_poly, closed=True, facecolor='#444444',
-                                       edgecolor='white', linewidth=0.8, zorder=0)
-                ax.add_patch(bay_patch)
-                # Outer bay kerb line
-                ax.plot([BAY_FLAT_X0, BAY_FLAT_X1], [BAY_OUTER_Y, BAY_OUTER_Y],
-                        color='white', ls='-', lw=1.0, zorder=1)
+                ax.add_patch(MplPolygon(BAY_OUTLINE, closed=True, facecolor='#444444',
+                                        edgecolor='white', linewidth=0.8, zorder=0))
 
                 # Bus stop marker
                 ax.axvline(BUS_STOP_X, color='yellow', ls=':', lw=1.2, alpha=0.7, zorder=1)
-                ax.text(BUS_STOP_X, BAY_OUTER_Y + 0.2, 'STOP', color='yellow',
+                ax.text(BUS_STOP_X, BAY_WALL_Y + 0.2, 'STOP', color='yellow',
                         ha='center', va='bottom', fontsize=7, zorder=2)
 
             def _render_frame(t_val):
@@ -1225,7 +1209,7 @@ if st.session_state.sim_complete:
                             fontsize=6.5, zorder=6)
 
                 ax.set_xlim(MERGE_X_MIN, MERGE_X_MAX)
-                ax.set_ylim(BAY_OUTER_Y - 0.4, LANE_W / 2 + 0.5)
+                ax.set_ylim(BAY_WALL_Y - 0.4, LANE_W / 2 + 0.5)
                 ax.set_xlabel("Road position (m)")
                 ax.set_ylabel("Lateral (m)")
                 ax.set_title(
@@ -1375,7 +1359,7 @@ if st.session_state.sim_complete:
                                   f"{int(row['id'])} {angle:.1f}°",
                                   color='white', ha='center', va='center', fontsize=7, zorder=10)
                     ax_d.set_xlim(MERGE_X_MIN, MERGE_X_MAX)
-                    ax_d.set_ylim(BAY_OUTER_Y - 0.4, LANE_W / 2 + 0.5)
+                    ax_d.set_ylim(BAY_WALL_Y - 0.4, LANE_W / 2 + 0.5)
                     ax_d.set_aspect('equal')
                     ax_d.set_title(f"Corner verification  t = {debug_t:.1f} s  |  "
                                    f"{'⚠️ SAT: COLLISION' if debug_t in collision_times else '✅ SAT: clear'}")

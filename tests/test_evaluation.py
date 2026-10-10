@@ -1,9 +1,13 @@
 """The app, the smoke test and the validation demo must judge episodes identically."""
+import random
+
+import numpy as np
 import pandas as pd
 import pytest
 
 from busmerge.config import SimConfig
-from busmerge.evaluation import TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
+from busmerge.evaluation import MAX_SIM_TIME_S, TIMELINE_PHASES, classify_outcome, merge_timeline, run_episode
+from busmerge.simulation import SimulationEngine
 from tests.brains import GOLDEN_BRAIN
 
 
@@ -34,13 +38,21 @@ def test_collision_overrides_merge():
 
 
 @pytest.fixture(scope="module")
-def episode_df():
-    cfg = SimConfig(total_cars_to_spawn=20)
-    return run_episode("B", cfg, str(GOLDEN_BRAIN), governor_disabled=True, seed=0).get_results()
+def scripted_merge_df():
+    """A merge that does not depend on any brain: steer for the lane centre at constant throttle."""
+    random.seed(0)
+    np.random.seed(0)
+    sim = SimulationEngine(scenario="B", config=SimConfig(total_cars_to_spawn=20), governor_disabled=True,
+                           load_brain=False)
+    sim.external_action = (1.0, 0.6)
+    sim.init_scenario()
+    while not sim.all_vehicles_finished() and sim.time < MAX_SIM_TIME_S:
+        sim.step()
+    return sim.get_results()
 
 
-def test_timeline_phases_add_up_to_total(episode_df):
-    tl = merge_timeline(episode_df)
+def test_timeline_phases_add_up_to_total(scripted_merge_df):
+    tl = merge_timeline(scripted_merge_df)
     assert tl is not None
     assert sum(tl[key] for key, _ in TIMELINE_PHASES) == pytest.approx(tl["total_s"], abs=1e-6)
     assert tl["total_s"] > 0

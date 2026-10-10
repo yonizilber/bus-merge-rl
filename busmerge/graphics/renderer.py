@@ -3,18 +3,17 @@ import pandas as pd
 import numpy as np
 import matplotlib.transforms as transforms
 
+from busmerge.geometry import bay_outline
+
 
 class SimulationRenderer:
     def __init__(self, dataframe: pd.DataFrame, config):
         self.df = dataframe
         self.cfg = config
         self.road_length = self.cfg.road_length
-        self.bay_start = self.cfg.bus_stop_position - 15.0
-        self.bay_end = self.cfg.bus_stop_position + 15.0
         
         self.lane_width = 3.5 # REAL LANE WIDTH
         self.y_center = 0.0          
-        self.y_bay = -self.lane_width 
 
         if 'width' in self.df.columns:
             car_rows = self.df[self.df['type'] == 'Car']
@@ -53,18 +52,7 @@ class SimulationRenderer:
         ax.plot([0, self.road_length], [self.lane_width/2, self.lane_width/2], color='white', linestyle='--', linewidth=2, zorder=1)
         ax.plot([0, self.road_length], [-self.lane_width/2, -self.lane_width/2], color='white', linestyle='-', linewidth=2, zorder=1)
 
-        bay_length = self.bay_end - self.bay_start
-        bus_bay = patches.Rectangle(
-            (self.bay_start, self.y_bay - self.lane_width/2), 
-            bay_length, self.lane_width, 
-            facecolor='#444444', zorder=0
-        )
-        ax.add_patch(bus_bay)
-        
-        taper_in = patches.Polygon([[self.bay_start - 10, -self.lane_width/2], [self.bay_start, -self.lane_width/2], [self.bay_start, self.y_bay - self.lane_width/2]], facecolor='#444444', zorder=0)
-        taper_out = patches.Polygon([[self.bay_end, self.y_bay - self.lane_width/2], [self.bay_end, -self.lane_width/2], [self.bay_end + 10, -self.lane_width/2]], facecolor='#444444', zorder=0)
-        ax.add_patch(taper_in)
-        ax.add_patch(taper_out)
+        ax.add_patch(patches.Polygon(bay_outline(), closed=True, facecolor='#444444', zorder=0))
 
     def _draw_vehicle(self, ax, row):
         

@@ -65,6 +65,13 @@ BAY_FLAT_END_X    = 315.0   # m — end of the full-depth bay section
 BAY_ENTRY_TAPER_M = 20.0    # m — kerb slopes from the lane edge down to the bay wall before the flat part
 BAY_EXIT_TAPER_M  = 15.0    # m — and back up after it
 EXTREME_HEADING_DEG = 60.0  # beyond this a vehicle is reported (no longer clamped)
+BUS_STOP_MARGIN_M = 1.0     # m — the stopped bus's rear stays this far into the flat part of the bay
+BUS_EXIT_ROOM_M   = 8.0     # m — and its front this far before the exit taper, room to steer out (measured)
+
+# Bus steering: pure pursuit toward a target line (lane centre, the drawn bay, the brain's target)
+BUS_LANE_LOOKAHEAD_M  = 18.0  # driving in the lane
+BUS_BAY_LOOKAHEAD_M   = 6.0   # pulling into the bay along the kerb (low speed, tight path)
+BUS_MERGE_LOOKAHEAD_M = 12.0  # leaving the bay (WAITING_TO_MERGE)
 
 # Physical limits shared by the vehicle model and the physics checks (busmerge.invariants)
 MAX_BRAKE_MS2 = 9.0          # hardest braking a road vehicle can achieve (dry asphalt)

@@ -13,15 +13,17 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from busmerge.geometry import ROAD_EDGE_Y, compute_sat_overlap_area, road_lower_edge, vehicle_corners  # ROAD_EDGE_Y = centre line
+from busmerge.geometry import (  # ROAD_EDGE_Y = centre line
+    KERB_CORNERS, ROAD_EDGE_Y, compute_sat_overlap_area, road_lower_edge, vehicle_corners,
+)
 from busmerge.rl.merge_constants import EXTREME_HEADING_DEG
 
 MAX_DECEL_MS2 = 9.0        # the limit the vehicle model itself documents (hard braking on dry road)
 DECEL_TOLERANCE = 0.5      # numerical slack on top of the limit
 MAX_ACCEL_MS2 = 5.0        # no vehicle here can accelerate faster than this
 OVERLAP_MIN_AREA_M2 = 0.01  # ignore numerical touching
-POSITION_TOLERANCE_M = 0.5
-OFF_ROAD_TOLERANCE_M = 0.02  # a corner this far past the kerb / bay wall / centre line counts  # |Δx − v·dt| allowed (the position update uses a mix of old and new speed)
+POSITION_TOLERANCE_M = 0.5   # |Δx − v·dt| allowed (the position update uses a mix of old and new speed)
+OFF_ROAD_TOLERANCE_M = 0.02  # a body this far past the kerb / bay wall / centre line counts
 
 
 @dataclass
@@ -34,6 +36,10 @@ class InvariantReport:
     })
     worst_decel: float = 0.0
     examples: dict = field(default_factory=dict)
+    # Reported, not violations: a car's body across the centre line or the kerb. Cars drift in their
+    # lane and move over for the bus; that is driving behaviour, not impossible physics.
+    notes: dict = field(default_factory=lambda: {"car_off_road": 0, "car_over_centre_line": 0})
+    note_examples: dict = field(default_factory=dict)
 
     @property
     def total(self) -> int:
@@ -42,6 +48,10 @@ class InvariantReport:
     def add(self, kind: str, example: dict) -> None:
         self.counts[kind] += 1
         self.examples.setdefault(kind, example)
+
+    def note(self, kind: str, example: dict) -> None:
+        self.notes[kind] += 1
+        self.note_examples.setdefault(kind, example)
 
 
 def check_invariants(df: pd.DataFrame, dt: float = 0.1) -> InvariantReport:
@@ -72,13 +82,18 @@ def check_invariants(df: pd.DataFrame, dt: float = 0.1) -> InvariantReport:
 
     # Off the road (a body corner below the kerb or the bay wall) and over the centre line (a corner in
     # the opposing lane). Positions are never clamped, so both can happen and are reported.
+    # For the bus these are violations; for cars they are reported only (see InvariantReport.notes).
     below, above = edge_masks(df)
-    for kind, mask in (("off_road", below), ("over_centre_line", above)):
+    is_bus = (df["type"] == "Bus").to_numpy()
+    for kind, mask, record in (("off_road", below & is_bus, rep.add),
+                               ("over_centre_line", above & is_bus, rep.add),
+                               ("car_off_road", below & ~is_bus, rep.note),
+                               ("car_over_centre_line", above & ~is_bus, rep.note)):
         for _, row in df[mask].iterrows():
-            rep.add(kind, {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
-                           "state": str(row.get("state", "")), "x": round(float(row["x"]), 2),
-                           "lateral": round(float(row["total_lat"]), 2),
-                           "heading_deg": round(float(row["heading_deg"]), 1)})
+            record(kind, {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
+                          "state": str(row.get("state", "")), "x": round(float(row["x"]), 2),
+                          "lateral": round(float(row["total_lat"]), 2),
+                          "heading_deg": round(float(row["heading_deg"]), 1)})
     steep = df["heading_deg"].abs() > EXTREME_HEADING_DEG
     for _, row in df[steep].iterrows():
         rep.add("extreme_heading", {"time": float(row["time"]), "id": int(row["id"]), "type": row["type"],
@@ -134,25 +149,45 @@ def bus_contact_times(df: pd.DataFrame) -> list[float]:
     return sorted(times)
 
 
-def _corners_xy(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-    """(n, 4) corner x and y of every row's body (front-bumper convention, rotated by the heading)."""
+def _body_frame(df: pd.DataFrame):
+    """Body centre, heading and half sizes of every row (front-bumper convention)."""
     half_l = df["length"].to_numpy(dtype=float) / 2.0
     half_w = df["width"].to_numpy(dtype=float) / 2.0
     cx = df["x"].to_numpy(dtype=float) - half_l
     cy = df["total_lat"].to_numpy(dtype=float)
     th = np.radians(df["heading_deg"].to_numpy(dtype=float))
+    return cx, cy, th, half_l, half_w
+
+
+def _corners_xy(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    """(n, 4) corner x and y of every row's body (front-bumper convention, rotated by the heading)."""
+    cx, cy, th, half_l, half_w = _body_frame(df)
     c, s = np.cos(th)[:, None], np.sin(th)[:, None]
     dx = np.array([1, 1, -1, -1])[None, :] * half_l[:, None]
     dy = np.array([1, -1, -1, 1])[None, :] * half_w[:, None]
     return cx[:, None] + dx * c - dy * s, cy[:, None] + dx * s + dy * c
 
 
+def _kerb_corner_depth(df: pd.DataFrame) -> np.ndarray:
+    """How far the deepest kerb corner (KERB_CORNERS) lies inside each row's body; negative = outside."""
+    cx, cy, th, half_l, half_w = _body_frame(df)
+    c, s = np.cos(th), np.sin(th)
+    depth = np.full(len(cx), -np.inf)
+    for px, py in KERB_CORNERS:
+        u = (px - cx) * c + (py - cy) * s          # the corner in the body frame
+        w = -(px - cx) * s + (py - cy) * c
+        depth = np.maximum(depth, np.minimum(half_l - np.abs(u), half_w - np.abs(w)))
+    return depth
+
+
 def edge_masks(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-    """Rows with a body corner below the kerb / bay wall, and rows with a corner over the centre line."""
+    """Rows whose body is off the road (a corner below the kerb / bay wall, or a kerb corner inside the
+    body), and rows with a corner over the centre line."""
     if df.empty:
         return np.zeros(0, dtype=bool), np.zeros(0, dtype=bool)
     xs, ys = _corners_xy(df)
-    below = (ys < road_lower_edge(xs) - OFF_ROAD_TOLERANCE_M).any(axis=1)
+    below = ((ys < road_lower_edge(xs) - OFF_ROAD_TOLERANCE_M).any(axis=1)
+             | (_kerb_corner_depth(df) > OFF_ROAD_TOLERANCE_M))
     above = (ys > ROAD_EDGE_Y + OFF_ROAD_TOLERANCE_M).any(axis=1)
     return below, above
 

@@ -116,3 +116,15 @@ def test_corner_over_the_centre_line_is_reported():
 def test_heading_beyond_60_degrees_is_reported():
     rep = check_invariants(_log([_car(0.0, 1, 100.0, 5.0)[:8] + (65.0,)]))
     assert rep.counts["extreme_heading"] == 1
+
+
+def test_bus_side_over_the_kerb_corner_is_off_road():
+    # Nose down 5° across the start of the entry taper (x = 265): all four body corners are on the
+    # road, but the kerb corner lies about 0.3 m inside the body side.
+    from busmerge.invariants import _corners_xy, _kerb_corner_depth
+    from busmerge.geometry import road_lower_edge
+    log = _log([_bus(0.0, 270.5, -0.8, heading=-5.0)])
+    xs, ys = _corners_xy(log)
+    assert (ys >= road_lower_edge(xs)).all()
+    assert _kerb_corner_depth(log)[0] == pytest.approx(0.3, abs=0.05)
+    assert check_invariants(log).counts["off_road"] == 1

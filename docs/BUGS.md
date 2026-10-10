@@ -37,6 +37,12 @@ repository. Entries before 2026-10-04 are in the original development repository
 | P7 | Impossible braking (beyond 9 m/s^2) in 68/100 acceptance runs; cars moved backwards or jumped position in 3-6/100 | "Hand of God" corrections kept cars apart by assignment: speed caps (up to 2.4 m/s per frame), position trims, stop-holds, forward-only clamps | One safe-speed law on acceleration for every follower (`busmerge/safe_speed.py`); corrections deleted (`ea0f727`, tag `legacy-hand-of-god`) | 0 physics violations other than contact in 600 acceptance runs |
 | P8 | Two definitions of a safe speed (arrivals: stationary leader; followers: braking leader) | Arrival rule was written to match the old cap | Arrivals use `safe_speed` (`ea0f727`) | Flow past the stop +5% (0.4 cars/s), +12% (0.8 cars/s): arrivals no longer throttled |
 | P9 | Two tests expected a car to stop where no car can: on the bumper line at 8 m/s (3.6 m needed even at 9 m/s^2), or frozen at 0 m/s while alongside | The stop-hold froze cars in place | Tests start from physically possible states and check the behaviour (`ea0f727`) | |
+| P10 | Six clamps hid what the bus and cars did (heading ±60°, bus lateral [-3.5, 0.5], car lateral [-0.05, 0.55], lane drift ±0.4) | Corrections by assignment that the checks could not see | Clamps deleted; the road edges (kerb, bay wall, centre line) and extreme heading are checked instead (`7b59caf`) | Verification of v11 on 1,000 unseen seeds showed what they hid: P11-P13 |
+| P11 | The bus crossed the centre line while merging in 100% of runs (median 0.84 m, up to 2.34 m, for about 5 s) | The merge steering `atan2(lateral error, max(v, 5))` had no heading term: an undamped loop that overshoots any target | Pure pursuit with the heading term, `vehicle.pure_pursuit_steer`, shared by every bus state (12 m look-ahead when merging) | Scripted exits on 800 runs: never over the centre line, heading ≤ 11°. v11 no longer merges, see O8 |
+| P12 | The bus cut the kerb before the bay in 47% of runs (up to 1.32 m) | The pull-in ramp started 50 m before the stop point wherever that was, not where the drawn taper starts | The lateral target is read off the drawn road edge under the bus's front (`geometry.bay_pull_in_target`), 6 m look-ahead | 300 seeds without a brain: 0 off-road frames (exact check, P14), stop at the target, lateral -3.5 ± 0.06 m, parallel, braking ≤ 2.4 m/s² |
+| P13 | The bus stopped past the end of the bay in 3% of runs, could stop with its rear in the entry taper, or too close to the exit to steer out | Stop target N(300, 5) clipped to [285, 315] for the front bumper; the bay-end limit was the stop target + 15 m (up to 330 m) | Stop target clipped so the whole bus is in the flat part (rear ≥ 286 m) with 8 m to the exit taper (front ≤ 307 m; measured: from 308 m some exits touch the taper); the limit is the real bay end (315 m); the aim point is `SimConfig.bus_stop_position` | |
+| P14 | The checker could miss the kerb cutting into the side of the bus | Only the four body corners were compared with the road edge; where a taper meets the plain kerb, the kerb has a corner pointing into the road that can enter a body side with all four body corners on the road (up to about 0.5 m) | `geometry.KERB_CORNERS` tested against the body | `test_bus_side_over_the_kerb_corner_is_off_road` |
+| P15 | The drawn bay was defined in three places; the renderer drew 10 m tapers instead of 20/15 m | Copies of the numbers | App, GIF and renderer draw `geometry.bay_outline()`, the outline the checker uses | |
 
 ### App and tooling (`29a06e0` unless noted)
 
@@ -54,10 +60,12 @@ the physics-check function was 35× faster after vectorisation and had dead code
 | # | Issue | Where | Notes |
 |---|---|---|---|
 | O2 | Bus-car side contact in 3-4/100 runs (v11), 2/100 (v9, v10) | brain behaviour | Real: pulling out while a car is alongside. The old corrections hid it; a 300-epoch fine-tune (v12) did not remove it, see TRAINING.md |
-| O3 | Clamps on the merging bus (lateral to [-4.5, 0.5], heading to ±60°) are corrections the checks do not count | `simulation.py` merge steering step | Count when they bind, then remove |
-| O4 | No check that the bus stays inside the bay geometry | — | Largest stop measured 315.44 m, 0.44 m into the exit taper |
 | O5 | Arrival in the bay still assigns `velocity = 0` (≤ 0.05 m/s) | `simulation.py` arrival | Within the physical limit, but an assignment |
 | O7 | Scenario A (in-lane stop) still resets pose on arrival and at dwell end | `simulation.py` | Baseline scenario only |
+| O8 | **No brain merges under honest steering.** v11 commands a lateral target of about -1.5 m (half way out) and holds it; the old controller's overshoot turned that into a full merge (and into the centre-line crossings of P11). With P11 fixed the bus stops half way and drives on with its side over the kerb | brain behaviour | v11 learned to exploit a controller defect; v9 and v10 too (0/100 merged each, seeds 2000-2099). A fine-tune under the fixed dynamics is the user's decision (RL work is halted) |
+| O9 | The training env starts the bus at 300 ± 2 m, lateral -3.5 ± 0.4 m, heading ±4.6°: 14.6% of those poses put a corner past the bay wall (measured on 20,000 draws), and the range does not cover the app's stop range (297-307 m) | `rl/env.py` reset | Fix before any fine-tune |
+| O10 | Cars cross the centre line (and the kerb, up to 0.35 m) in about 35% of runs | car lane drift and moving over for the bus | Reported, not failed (`InvariantReport.notes`), decision of 2026-10-10 |
+| O11 | The model rotates the bus about the centre of its body; a real bus pivots near its rear axle, so the tail swing is exaggerated | `vehicle.py` bicycle model | Limits how sharp the exit may be: with a merge look-ahead below 12 m the rear corner swings into the bay wall |
 
 ### Training and reward (pre-existing, not yet addressed)
 
@@ -72,7 +80,5 @@ the physics-check function was 35× faster after vectorisation and had dead code
 
 ### Other
 - Nine legacy tests written against an old API are kept as strict `xfail`.
-- `SimConfig.bus_stop_position` is not used by the simulation (stop point drawn around 300 m), and bay
-  taper lengths differ between the renderer, the GIF and the vehicle model.
 - The predictive governor's escape boost (planned "G2") was never finished; the governor is off by default.
 - Under default physics, legacy v9 merges 28/30 since the start-pose reset was removed.

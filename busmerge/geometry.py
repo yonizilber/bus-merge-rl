@@ -15,6 +15,11 @@ from busmerge.rl.merge_constants import (
 ROAD_EDGE_Y = LANE_WIDTH / 2.0             # the dashed centre line; beyond it is the opposing lane
 KERB_Y = -LANE_WIDTH / 2.0                 # kerb between the lane and the pavement / bay
 BAY_WALL_Y = KERB_Y - LANE_WIDTH           # back wall of the bay (one lane width deep)
+# Where a taper meets the plain kerb, the kerb has a corner pointing into the road. A body side can pass
+# over such a corner with all four of its own corners still on the road, so these points are checked
+# against the body as well (busmerge.invariants).
+KERB_CORNERS = np.array([[BAY_FLAT_START_X - BAY_ENTRY_TAPER_M, KERB_Y],
+                         [BAY_FLAT_END_X + BAY_EXIT_TAPER_M, KERB_Y]])
 
 
 def rect_corners(cx: float, cy: float, half_l: float, half_w: float,
@@ -101,3 +106,21 @@ def road_lower_edge(x):
     leaving = (x > BAY_FLAT_END_X) & (x < exit_end)
     edge = np.where(leaving, BAY_WALL_Y + depth * (x - BAY_FLAT_END_X) / BAY_EXIT_TAPER_M, edge)
     return edge
+
+
+def bay_outline() -> np.ndarray:
+    """The bay as drawn and as checked: the road edge from the start of the entry taper, along the bay
+    wall, to the end of the exit taper (the polyline ``road_lower_edge`` follows). Closing it along
+    the kerb gives the bay's area."""
+    return np.array([[BAY_FLAT_START_X - BAY_ENTRY_TAPER_M, KERB_Y], [BAY_FLAT_START_X, BAY_WALL_Y],
+                     [BAY_FLAT_END_X, BAY_WALL_Y], [BAY_FLAT_END_X + BAY_EXIT_TAPER_M, KERB_Y]])
+
+
+def bay_pull_in_target(front_x: float) -> float:
+    """Lateral target of a bus pulling into the bay, read off the drawn road edge.
+
+    The lane centre shifted down by as much as the road edge has dropped under the bus's front
+    bumper: like a driver tracking the kerb with the front corner, the bus keeps the clearance to the
+    edge it had in the lane, turns in along the entry taper and ends at the bay centre (BAY_DEPTH).
+    """
+    return float(road_lower_edge(front_x)) - KERB_Y

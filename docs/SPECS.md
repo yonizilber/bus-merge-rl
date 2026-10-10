@@ -13,9 +13,18 @@ How the simulation, the agent and the evaluation work **today**. Numbers come fr
 
 **Geometry.**
 - Lane width: 3.5 m.
+- The road edge (`busmerge.geometry`): the centre line at y = +1.75, the kerb at y = -1.75, and the
+  bay, one lane deep (bay wall at y = -5.25). Its outline is `geometry.bay_outline()`:
+  - **entry taper:** 265-285 m
+  - **flat part:** 285-315 m
+  - **exit taper:** 315-330 m
+
+  The app, the GIF and the renderer draw that outline, and the checks use the same edge
+  (`road_lower_edge`, `KERB_CORNERS`).
 - Bay centre line: `lateral_offset = -3.5` (one lane-width beside the lane centre, which is 0).
-- Stop point: drawn per run from N(300, 5), clipped to [285, 315].
-- Exit taper: 15 m after the stop point.
+- **Stop point (front bumper):** drawn per run from N(`bus_stop_position` = 300, 5) and clipped to
+  [297, 307]. The whole bus is then in the flat part (rear ≥ 286 m), with 8 m left before the exit
+  taper. The 8 m was measured: from a stop at 308 m, some exits touch the taper.
 
 **Position convention: `Vehicle.position` is the front bumper.** A vehicle of length L occupies
 `[x − L, x]`. Everything that builds a body polygon goes through `busmerge.geometry.vehicle_corners`
@@ -68,7 +77,7 @@ in-lane stop baseline, uses `STOPPED_IN_LANE` instead of the bay.
 
 | State | Lateral | Longitudinal |
 |---|---|---|
-| `DECELERATING` (last 50 m) | ramps from the lane to the bay | comfortable IDM plan toward the stop point, limited by `Bus.bay_stop_acceleration` (below) |
+| `DECELERATING` (last 50 m) | follows the drawn kerb into the bay: target = how far the road edge under the bus's front has dropped (`geometry.bay_pull_in_target`) | comfortable IDM plan toward the stop point, limited by `Bus.bay_stop_acceleration` (below) |
 | `IN_BAY` | held | boarding for `bus_dwell_time` |
 | `WAITING_TO_MERGE` | the PPO agent decides | the PPO agent decides; ends at `lateral_offset ≥ -0.1` |
 
@@ -77,10 +86,20 @@ in-lane stop baseline, uses `STOPPED_IN_LANE` instead of the bay.
   is not yet parallel: `a = min(plan, (v_end² − v²)/2d)`.
 - **Still angled after it:** crawl at 1.5 m/s with bounded acceleration until parallel (within 2°).
 - **Parallel:** stop at comfortable braking.
-- **Always:** never pass the end of the bay, and never exceed `MAX_BRAKE_MS2 = 9`. Arrival in the bay
+- **Always:** never pass the end of the flat part of the bay (315 m), and never exceed `MAX_BRAKE_MS2 = 9`. Arrival in the bay
   is a state change once the bus has come to rest (≤ 0.05 m/s).
 
 The merge starts from the pose the bus actually stopped in.
+
+**Steering.** The bus always steers by pure pursuit (`vehicle.pure_pursuit_steer`). It aims at the
+target line a look-ahead distance ahead, in its own frame, so it counter-steers as its heading
+approaches the line and arrives parallel instead of overshooting.
+- **Look-ahead:** 18 m in the lane, 6 m pulling in (low speed, tight path), 12 m when merging.
+- **Limits:** steering is bounded by the bus's maximum angle (15°) and rate (about 25°/s).
+- **Why not shorter when merging:** the model rotates the bus about the centre of its body, so a
+  shorter merge look-ahead swings the rear corner into the bay wall (BUGS O11).
+- **What the brain controls:** while merging, the lateral target is the brain's command
+  (`steer ∈ [-1, 1]` → [-3.5, 0] m). The bus goes where the brain asks and no further.
 
 ## 4. Follower physics: one safe-speed law
 
@@ -95,8 +114,8 @@ a       = max(min(a_driver, (min(v_safe, v_frame) − v) / dt), −9 m/s²)
 
 Speed and position then follow from the acceleration. Nothing is assigned. If even 9 m/s² is not
 enough, vehicles touch and the contact is recorded as a collision. The only remaining non-physical
-operations are the speed floor at 0 (vehicles do not reverse) and clamps on the merging bus (lateral
-position to [-4.5, 0.5], heading to ±60°), which are not yet counted (BUGS O3).
+operation is the speed floor at 0 (vehicles do not reverse). Positions and headings are never clamped;
+leaving the road is checked instead (section 7).
 
 This law replaced, on 2026-10-10, the "Hand of God" corrections: speed caps of up to 2.4 m/s per frame,
 position trims, frozen stop-holds and forward-only clamps. Under those, 68/100 acceptance runs
@@ -159,6 +178,8 @@ All of them go through `busmerge/evaluation.py`, so a number means the same thin
 
 **`classify_outcome(frame log)`** returns one of:
 - `collision`: any contact between the bus body and a car body (exact polygons), or a rear-end
+- `off_road`: the bus body below the kerb or the bay wall
+- `over_centre_line`: the bus body in the opposing lane
 - `merged`: completion after boarding
 - `stuck_waiting`
 - `never_waited`
@@ -166,7 +187,7 @@ All of them go through `busmerge/evaluation.py`, so a number means the same thin
 **`merge_timeline`** gives the time from the end of boarding to fully merged, split into hesitation,
 leaving the bay, entering the lane and settling, plus the time spent standing still.
 
-**`check_invariants`** counts five kinds of physically impossible moment:
+**`check_invariants`** counts these violations (for the bus, leaving the road too):
 
 | Check | Fails when |
 |---|---|
@@ -176,6 +197,12 @@ leaving the bay, entering the lane and settling, plus the time spent standing st
 | Backward motion | position decreases |
 | Position jump | \|Δx − v·dt\| > 0.5 m |
 | Overlap | any polygon overlap |
+| Off the road | a bus corner below the kerb or bay wall, or a kerb corner inside the bus body |
+| Over the centre line | a bus corner in the opposing lane |
+| Extreme heading | beyond 60° |
+
+The tolerance for the road edges is 0.02 m. A car across the centre line or the kerb is **reported,
+not failed** (`InvariantReport.notes`). Cars drift in their lane and move over for the bus (BUGS O10).
 
 **`traffic_metrics`** reports flow past the stop, cars within 60 m of the bus when boarding ends, and
 car jerk.
@@ -184,6 +211,7 @@ car jerk.
 |---|---|---|
 | `pytest` (CI) | unit + regression tests, golden fingerprints of the engine and the env | all green; 9 legacy tests are strict `xfail` |
 | `scripts/acceptance.py` | 100 episodes × noise 0 and 0.15, app defaults; `--seed-start 1000` for unseen seeds | merged 100/100 (≥ 98 with noise), 0 collisions, mean ≤ 6.0 s, p95 ≤ 7.0 s, **0 physics violations of every kind** |
+| `scripts/verify_brain.py` | 1,000 episodes (seeds 2000-2999), app defaults, in parallel | reports the merge outcome judged on traffic only, the bus's road-edge anomalies by stage, every other violation, car edge crossings, Wilson 95% intervals and up to 10 failure seeds to replay in the app; a strict success is merged with none of them |
 | smoke test / app button | 10 seeds, sidebar traffic settings | ≥ 90% merged, avg merge ≤ 30 s, longest time from end of boarding to merged ≤ 45 s, **0 physics violations** |
 | app banner | every run | shows the outcome, the merge-time breakdown and the physics checks with first examples |
 

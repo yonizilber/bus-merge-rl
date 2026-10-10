@@ -21,10 +21,19 @@ are regenerated.
 - training scenarios in which a moving car beside the bay is rare: add a dedicated scenario
 - the in-training evaluation does not move at all (26-28/30), so measure the reward components first
 
+## 1c. Honest bus steering: done; no brain merges yet (2026-10-10)
+
+The clamps are removed and the road edges are checked. The bus steers by pure pursuit and follows the
+drawn bay (BUGS P10-P15). v11 merged only because the old steering overshot (O8).
+
+**Decision needed (the user's):** fine-tune v11 under the fixed dynamics, or not. If yes:
+1. **Start poses:** make the training env start the bus in poses the pull-in actually produces: on
+   the road, and covering the 297-307 m stop range (O9).
+2. **Fine-tune:** fine-tune v11, select on seeds 1000-1099, and measure with
+   `scripts/verify_brain.py` on seeds 2000-2999.
+
 ## 2. Finish physical correctness
 
-- Count, then remove, the clamps on the merging bus (BUGS O3).
-- Add a bay-geometry check (O4).
 - Remove the remaining arrival assignment (O5) and the scenario A pose resets (O7).
 - Add the checks to the training environment's telemetry, so training runs report physics violations too.
 

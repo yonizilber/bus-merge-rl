@@ -11,7 +11,7 @@ import pandas as pd
 from PIL import Image
 
 from busmerge.config import SimConfig
-from busmerge.geometry import rect_corners
+from busmerge.geometry import BAY_WALL_Y, bay_outline, rect_corners
 
 
 def build_merge_gif(
@@ -28,12 +28,6 @@ def build_merge_gif(
     lane_w = 3.5
     bus_stop_x = float(config.bus_stop_position)
     merge_x_min, merge_x_max = 255.0, 345.0
-    bay_outer_y = -lane_w - lane_w / 2
-    lane_inner_y = -lane_w / 2
-    bay_flat_x0 = bus_stop_x - 15.0
-    bay_flat_x1 = bus_stop_x + 15.0
-    entry_taper_x0 = bay_flat_x0 - 20.0
-    exit_taper_x1 = bay_flat_x1 + 15.0
 
     mz = df[(df["x"] >= merge_x_min - 5) & (df["x"] <= merge_x_max + 5)].copy()
     if mz.empty:
@@ -71,15 +65,7 @@ def build_merge_gif(
         ax.axhspan(-lane_w / 2, lane_w / 2, color="#555555", zorder=0)
         ax.axhline(lane_w / 2, color="white", ls="--", lw=1.5, zorder=1)
         ax.axhline(-lane_w / 2, color="white", ls="-", lw=2.0, zorder=1)
-        bay_poly = np.array([
-            [entry_taper_x0, lane_inner_y],
-            [bay_flat_x0, bay_outer_y],
-            [bay_flat_x1, bay_outer_y],
-            [exit_taper_x1, lane_inner_y],
-            [exit_taper_x1, -lane_w / 2],
-            [entry_taper_x0, -lane_w / 2],
-        ])
-        ax.add_patch(mpatches.Polygon(bay_poly, closed=True, facecolor="#444444",
+        ax.add_patch(mpatches.Polygon(bay_outline(), closed=True, facecolor="#444444",
                                       edgecolor="white", linewidth=0.8, zorder=0))
         ax.axvline(bus_stop_x, color="yellow", ls=":", lw=1.2, alpha=0.7, zorder=1)
 
@@ -103,7 +89,7 @@ def build_merge_gif(
             ax.text(row["x_centre"], row["y_centre"], label, color="white", ha="center", va="center",
                     fontsize=7, zorder=6)
         ax.set_xlim(merge_x_min, merge_x_max)
-        ax.set_ylim(bay_outer_y - 0.4, lane_w / 2 + 0.5)
+        ax.set_ylim(BAY_WALL_Y - 0.4, lane_w / 2 + 0.5)
         ax.set_title(f"Merge zone  t = {t_val:.1f} s", fontsize=11)
         ax.set_aspect("equal")
         buf = io.BytesIO()

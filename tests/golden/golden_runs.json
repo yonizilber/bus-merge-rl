@@ -1,32 +1,32 @@
 {
  "A-0": {
-  "bus_final_x": 1000.461422,
-  "fingerprint": "89755fbd68840711",
-  "rows": 18293,
+  "bus_final_x": 1000.421716,
+  "fingerprint": "ee69142381394b54",
+  "rows": 18088,
   "steps": 1500
  },
  "A-1": {
-  "bus_final_x": 1000.675238,
-  "fingerprint": "e5bf5c62d976cf60",
-  "rows": 19543,
+  "bus_final_x": 1000.421322,
+  "fingerprint": "90ae43f269ce1d02",
+  "rows": 19513,
   "steps": 1500
  },
  "B-0": {
-  "bus_final_x": 1000.522715,
-  "fingerprint": "f84264581e3b7299",
-  "rows": 16843,
+  "bus_final_x": 716.453763,
+  "fingerprint": "64bf989f724f97b5",
+  "rows": 20727,
   "steps": 1500
  },
  "B-1": {
-  "bus_final_x": 1000.099874,
-  "fingerprint": "3e983f40094f609e",
-  "rows": 17055,
+  "bus_final_x": 718.885989,
+  "fingerprint": "480beb13ce0e6fc4",
+  "rows": 21406,
   "steps": 1500
  },
  "B-2": {
-  "bus_final_x": 1000.050583,
-  "fingerprint": "5866608864db4e87",
-  "rows": 17657,
+  "bus_final_x": 718.13901,
+  "fingerprint": "ff831aa4e9dad14d",
+  "rows": 19766,
   "steps": 1500
  }
 }

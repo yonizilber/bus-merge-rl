@@ -63,6 +63,7 @@ def main() -> int:
         results.append(r)
         print(f"\n{args.brain.name}  noise sigma={sigma}  seeds {args.seed_start}..{args.seed_start + SEEDS - 1}")
         print(f"  traffic (report only): {r['traffic']}")
+        print(f"  runs with a car across a road edge (report only): {r['reported_runs']}")
         for name, ok, value in check(r):
             print(f"  [{'PASS' if ok else 'FAIL'}] {name:26} measured {value}")
             passed &= ok

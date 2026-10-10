@@ -205,6 +205,7 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
     outcomes, car_coll = [], 0
     violation_runs: dict[str, int] = {}
     violation_examples: dict[str, dict] = {}
+    reported_runs: dict[str, int] = {}
     worst_decel = 0.0
     traffic: list[dict] = []
     phases: dict[str, list[float]] = {name: [] for name, _ in TIMELINE_PHASES}
@@ -223,6 +224,8 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
             violation_runs[kind] = violation_runs.get(kind, 0) + (n > 0)
             if n and kind not in violation_examples:
                 violation_examples[kind] = {"seed": seed, **inv.examples[kind]}
+        for kind, n in inv.notes.items():
+            reported_runs[kind] = reported_runs.get(kind, 0) + (n > 0)
         timeline = merge_timeline(df) if outcome == "merged" else None
         if timeline:
             for key in phases:
@@ -236,6 +239,8 @@ def evaluate_brain(brain: Path, seeds: int, noise_sigma: float, traffic_rate: fl
         # Physics checks (busmerge.invariants): number of runs with at least one violation of each kind.
         "physics_violation_runs": violation_runs,
         "physics_violation_examples": violation_examples,
+        # Reported, not failed: runs in which a car crossed the centre line or the kerb.
+        "reported_runs": reported_runs,
         "worst_decel_ms2": round(worst_decel, 2),
         # Traffic around the brain (busmerge.traffic_metrics), to show a change did not thin the traffic.
         "traffic": {k: round(float(np.nanmean([m[k] for m in traffic])), 2) for k in traffic[0]} if traffic else {},
