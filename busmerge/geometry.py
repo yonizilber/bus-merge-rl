@@ -9,7 +9,8 @@ from __future__ import annotations
 import numpy as np
 
 from busmerge.rl.merge_constants import (
-    BAY_ENTRY_TAPER_M, BAY_EXIT_TAPER_M, BAY_FLAT_END_X, BAY_FLAT_START_X, LANE_WIDTH,
+    BAY_ENTRY_TAPER_M, BAY_EXIT_TAPER_M, BAY_FLAT_END_X, BAY_FLAT_START_X, BUS_EXIT_ROOM_M,
+    BUS_STOP_MARGIN_M, LANE_WIDTH,
 )
 
 ROAD_EDGE_Y = LANE_WIDTH / 2.0             # the dashed centre line; beyond it is the opposing lane
@@ -106,6 +107,53 @@ def road_lower_edge(x):
     leaving = (x > BAY_FLAT_END_X) & (x < exit_end)
     edge = np.where(leaving, BAY_WALL_Y + depth * (x - BAY_FLAT_END_X) / BAY_EXIT_TAPER_M, edge)
     return edge
+
+
+def body_corners_xy(front_x, lateral, length, width, heading_rad):
+    """(n, 4) corner x and y of n bodies (numpy-aware; front-bumper convention, rotated by the heading)."""
+    front_x, lateral, length, width, heading_rad = np.broadcast_arrays(
+        *(np.atleast_1d(np.asarray(a, dtype=float)) for a in (front_x, lateral, length, width, heading_rad)))
+    half_l, half_w = length / 2.0, width / 2.0
+    cx, cy = front_x - half_l, lateral
+    c, s = np.cos(heading_rad)[:, None], np.sin(heading_rad)[:, None]
+    dx = np.array([1, 1, -1, -1])[None, :] * half_l[:, None]
+    dy = np.array([1, -1, -1, 1])[None, :] * half_w[:, None]
+    return cx[:, None] + dx * c - dy * s, cy[:, None] + dx * s + dy * c
+
+
+def kerb_corner_depth(front_x, lateral, length, width, heading_rad) -> np.ndarray:
+    """How far the deepest kerb corner (KERB_CORNERS) lies inside each body; negative = outside."""
+    front_x, lateral, length, width, heading_rad = np.broadcast_arrays(
+        *(np.atleast_1d(np.asarray(a, dtype=float)) for a in (front_x, lateral, length, width, heading_rad)))
+    half_l, half_w = length / 2.0, width / 2.0
+    cx, cy = front_x - half_l, lateral
+    c, s = np.cos(heading_rad), np.sin(heading_rad)
+    depth = np.full(len(cx), -np.inf)
+    for px, py in KERB_CORNERS:
+        u = (px - cx) * c + (py - cy) * s          # the corner in the body frame
+        w = -(px - cx) * s + (py - cy) * c
+        depth = np.maximum(depth, np.minimum(half_l - np.abs(u), half_w - np.abs(w)))
+    return depth
+
+
+def road_edge_excess(front_x, lateral, length, width, heading_rad) -> tuple[np.ndarray, np.ndarray]:
+    """How far each body reaches past the road edges (numpy-aware; > 0 = past the edge).
+
+    ``below``: a corner below the kerb or the bay wall, or a kerb corner inside the body.
+    ``above``: a corner over the centre line. The physics checks and the training start poses both
+    use this, so "on the road" means one thing everywhere.
+    """
+    xs, ys = body_corners_xy(front_x, lateral, length, width, heading_rad)
+    below = np.maximum((road_lower_edge(xs) - ys).max(axis=1),
+                       kerb_corner_depth(front_x, lateral, length, width, heading_rad))
+    above = (ys - ROAD_EDGE_Y).max(axis=1)
+    return below, above
+
+
+def bus_stop_range(bus_length: float) -> tuple[float, float]:
+    """Front-bumper positions where a stopped bus is wholly in the flat part of the bay with room
+    ahead to steer out (the app's stop targets and the training start poses)."""
+    return (BAY_FLAT_START_X + bus_length + BUS_STOP_MARGIN_M, BAY_FLAT_END_X - BUS_EXIT_ROOM_M)
 
 
 def bay_outline() -> np.ndarray:

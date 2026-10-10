@@ -509,7 +509,8 @@ def train(
         episodes_completed = 0
         
         while steps < batch_size:
-            action_value, action_logprob = agent.choose_action(state)
+            raw_action, action_logprob = agent.choose_action(state)
+            action_value = np.clip(raw_action, -1.0, 1.0)   # the vehicle gets the clipped command
             next_state, reward, done, _ = env.step(action_value)
             
             # --- NEW: Track exact events based on the reward logic in env_wrapper ---
@@ -531,7 +532,7 @@ def train(
                     timeouts += 1
                     window_to_sum += 1
             
-            agent.store_transition(state, action_value, action_logprob, reward, next_state, done)
+            agent.store_transition(state, raw_action, action_logprob, reward, next_state, done)
             
             state = next_state
             epoch_reward += reward

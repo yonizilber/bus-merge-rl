@@ -8,6 +8,14 @@ run scenarios, compare trained agents, and inspect the merge frame by frame.
 > This README is a work in progress. Full documentation (architecture, results, design decisions
 > and known limitations) is being written.
 
+## Case study: an agent that merged by exploiting its steering
+
+The default agent merged in 97.9% of unseen runs, until hidden corrections were removed from the
+simulation. It turned out the agent asked to go only half way out of the bay, and relied on an
+overshooting steering controller to carry it into the lane (and over the centre line in every run).
+With the controller fixed, it merged in 0% of runs. The full investigation, the fixes and the
+retraining are in [docs/CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md).
+
 ## Quickstart
 
 ```bash

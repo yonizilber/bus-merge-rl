@@ -13,9 +13,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from busmerge.geometry import (  # ROAD_EDGE_Y = centre line
-    KERB_CORNERS, ROAD_EDGE_Y, compute_sat_overlap_area, road_lower_edge, vehicle_corners,
-)
+from busmerge.geometry import compute_sat_overlap_area, road_edge_excess, vehicle_corners
 from busmerge.rl.merge_constants import EXTREME_HEADING_DEG
 
 MAX_DECEL_MS2 = 9.0        # the limit the vehicle model itself documents (hard braking on dry road)
@@ -149,47 +147,19 @@ def bus_contact_times(df: pd.DataFrame) -> list[float]:
     return sorted(times)
 
 
-def _body_frame(df: pd.DataFrame):
-    """Body centre, heading and half sizes of every row (front-bumper convention)."""
-    half_l = df["length"].to_numpy(dtype=float) / 2.0
-    half_w = df["width"].to_numpy(dtype=float) / 2.0
-    cx = df["x"].to_numpy(dtype=float) - half_l
-    cy = df["total_lat"].to_numpy(dtype=float)
-    th = np.radians(df["heading_deg"].to_numpy(dtype=float))
-    return cx, cy, th, half_l, half_w
-
-
-def _corners_xy(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-    """(n, 4) corner x and y of every row's body (front-bumper convention, rotated by the heading)."""
-    cx, cy, th, half_l, half_w = _body_frame(df)
-    c, s = np.cos(th)[:, None], np.sin(th)[:, None]
-    dx = np.array([1, 1, -1, -1])[None, :] * half_l[:, None]
-    dy = np.array([1, -1, -1, 1])[None, :] * half_w[:, None]
-    return cx[:, None] + dx * c - dy * s, cy[:, None] + dx * s + dy * c
-
-
-def _kerb_corner_depth(df: pd.DataFrame) -> np.ndarray:
-    """How far the deepest kerb corner (KERB_CORNERS) lies inside each row's body; negative = outside."""
-    cx, cy, th, half_l, half_w = _body_frame(df)
-    c, s = np.cos(th), np.sin(th)
-    depth = np.full(len(cx), -np.inf)
-    for px, py in KERB_CORNERS:
-        u = (px - cx) * c + (py - cy) * s          # the corner in the body frame
-        w = -(px - cx) * s + (py - cy) * c
-        depth = np.maximum(depth, np.minimum(half_l - np.abs(u), half_w - np.abs(w)))
-    return depth
+def _edge_excess(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    return road_edge_excess(df["x"].to_numpy(dtype=float), df["total_lat"].to_numpy(dtype=float),
+                            df["length"].to_numpy(dtype=float), df["width"].to_numpy(dtype=float),
+                            np.radians(df["heading_deg"].to_numpy(dtype=float)))
 
 
 def edge_masks(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
     """Rows whose body is off the road (a corner below the kerb / bay wall, or a kerb corner inside the
-    body), and rows with a corner over the centre line."""
+    body), and rows with a corner over the centre line (``geometry.road_edge_excess``)."""
     if df.empty:
         return np.zeros(0, dtype=bool), np.zeros(0, dtype=bool)
-    xs, ys = _corners_xy(df)
-    below = ((ys < road_lower_edge(xs) - OFF_ROAD_TOLERANCE_M).any(axis=1)
-             | (_kerb_corner_depth(df) > OFF_ROAD_TOLERANCE_M))
-    above = (ys > ROAD_EDGE_Y + OFF_ROAD_TOLERANCE_M).any(axis=1)
-    return below, above
+    below, above = _edge_excess(df)
+    return below > OFF_ROAD_TOLERANCE_M, above > OFF_ROAD_TOLERANCE_M
 
 
 def bus_edge_times(df: pd.DataFrame) -> tuple[list[float], list[float]]:

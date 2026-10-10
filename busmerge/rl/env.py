@@ -5,7 +5,7 @@ import random
 from collections import deque
 
 
-from busmerge.geometry import compute_sat_overlap_area, vehicle_corners
+from busmerge.geometry import bus_stop_range, compute_sat_overlap_area, road_edge_excess, vehicle_corners
 from busmerge.invariants import OVERLAP_MIN_AREA_M2
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, sample_vehicle_params
 from busmerge.rl.observation import build_observation
@@ -218,23 +218,22 @@ class BusMergeEnv:
         # Keep _merge_progress for reward shaping / backward compat with production logs
         self.bus._merge_progress = 0.0
 
-        # Sloppy Bay Entry: domain randomisation of bus spawn position.
-        # Simulates imperfect bay entry by a real driver (training only).
+        # Sloppy bay entry (training only): the bus starts anywhere in the app's stop range, a little off
+        # the bay centre line and a little angled. A pose is used only if the whole body is on the road,
+        # judged by the same function as the physics checks (geometry.road_edge_excess).
         if not self.eval_mode:
-            _lon_noise  = random.uniform(-2.0,  2.0)   # ±2 m longitudinal
-            _lat_noise  = random.uniform(-0.4,  0.4)   # ±0.4 m lateral
-            _hdg_noise  = random.uniform(-0.08, 0.08)  # ±0.08 rad (~4.6°)
-            # Longitudinal: keep bus clearly inside flat bay section [285, 315]
-            self.bus.position = float(np.clip(
-                self.bus.position + _lon_noise, 285.0, 315.0))
-            # Lateral: keep bus entirely inside the bay.
-            #   Bus half-width ≈ 1.25 m; inner lane edge ≈ -1.75 m
-            #   → centre must stay ≤ -3.0 m; outer bay wall ≈ -5.25 m
-            #   → centre must stay ≥ -4.0 m
-            self.bus.lateral_offset = float(np.clip(
-                BAY_DEPTH + _lat_noise, -4.0, -3.0))
-            # Heading: small initial misalignment, clipped symmetrically
-            self.bus.heading_angle = float(np.clip(_hdg_noise, -0.08, 0.08))
+            lo, hi = bus_stop_range(self.bus.params.length)
+            for _ in range(100):
+                x = random.uniform(lo, hi)
+                lat = BAY_DEPTH + random.uniform(-0.4, 0.4)
+                hdg = random.uniform(-0.08, 0.08)           # ±4.6°
+                below, above = road_edge_excess(x, lat, self.bus.params.length, self.bus.params.width, hdg)
+                if below[0] <= 0.0 and above[0] <= 0.0:
+                    break
+            else:
+                raise RuntimeError("no start pose on the road in 100 draws")
+            self.bus.position, self.bus.lateral_offset, self.bus.heading_angle = x, lat, hdg
+            self.bus.merge_start_x = x
 
         # Bus power variance (training only): ±20% on max merge speed authority.
         if not self.eval_mode:

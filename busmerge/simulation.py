@@ -6,7 +6,7 @@ import torch
 from typing import List
 from busmerge.paths import DEFAULT_BRAIN
 from busmerge.vehicle import Vehicle, Bus, BusState, CAR_PARAMS, pure_pursuit_steer, sample_vehicle_params
-from busmerge.geometry import bay_pull_in_target
+from busmerge.geometry import bay_pull_in_target, bus_stop_range
 from busmerge.config import SimConfig
 from busmerge.rl.ppo_agent import PPOAgent
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
@@ -15,8 +15,7 @@ from busmerge.rl.observation import build_observation
 from busmerge.rl.merge_constants import (
     BAY_DEPTH as _MC_BAY_DEPTH,
     BUS_MAX_SPEED as _MC_BUS_MAX_SPEED,
-    BAY_FLAT_END_X, BAY_FLAT_START_X, BUS_ALIGN_HEADING_DEG, BUS_EXIT_ROOM_M, BUS_MERGE_LOOKAHEAD_M,
-    BUS_STOP_MARGIN_M, BUS_STOPPED_SPEED_MS, SPAWN_MIN_SPEED_MS,
+    BUS_ALIGN_HEADING_DEG, BUS_MERGE_LOOKAHEAD_M, BUS_STOPPED_SPEED_MS, SPAWN_MIN_SPEED_MS,
     MERGE_ACCEL_MAX as _MC_MERGE_ACCEL_MAX,
 )
 
@@ -103,8 +102,7 @@ class SimulationEngine:
         # Stop position (front bumper): the stop pole (300 m) ± Gaussian σ=5 m (the driver's aim varies),
         # kept where the whole bus fits in the flat part of the bay with room ahead to steer out.
         stop_x = float(np.clip(np.random.normal(self.cfg.bus_stop_position, 5.0),
-                               BAY_FLAT_START_X + bus.params.length + BUS_STOP_MARGIN_M,
-                               BAY_FLAT_END_X - BUS_EXIT_ROOM_M))
+                               *bus_stop_range(bus.params.length)))
         bus.set_stop_schedule(stop_x, self.cfg.bus_dwell_time)
         
         self.vehicles.append(bus)

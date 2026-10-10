@@ -21,8 +21,6 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-from busmerge.geometry import ROAD_EDGE_Y
-
 BRAIN_FAILURES = ("collision", "stuck_waiting", "never_waited")
 
 
@@ -68,7 +66,7 @@ def _run(args: tuple[str, int]) -> dict:
         "car_off_road": int(car_below.any() or car_above.any()),
         "car_edge": ("kerb" if car_below.any() else "") + ("+" if car_below.any() and car_above.any() else "")
                     + ("centre line" if car_above.any() else ""),
-        "car_max_over_centre_m": _max_over(cars, ROAD_EDGE_Y) if car_above.any() else 0.0,
+        "car_max_over_centre_m": _max_over_centre(cars) if car_above.any() else 0.0,
         "other_violations": other,
         "first_contact_s": meta.get("first_contact_s"),
     }
@@ -85,10 +83,9 @@ def _where(df, t: float) -> str:
     return str(b["state"])
 
 
-def _max_over(cars, edge_y: float) -> float:
-    from busmerge.invariants import _corners_xy
-    _, ys = _corners_xy(cars)
-    return round(float((ys.max(axis=1) - edge_y).max()), 2)
+def _max_over_centre(cars) -> float:
+    from busmerge.invariants import _edge_excess
+    return round(float(_edge_excess(cars)[1].max()), 2)
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:

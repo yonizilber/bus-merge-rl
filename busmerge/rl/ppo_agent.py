@@ -93,17 +93,11 @@ class PPOAgent:
         # Sample a point from the Bell Curve
         action = dist.sample()
 
-        # Compute log_prob on the RAW (unclamped) sample — BEFORE clamping.
-        # If we clamped first, log_prob(1.0) would be the density at 1.0
-        # instead of the correct tail probability P(X ≥ 1.0), corrupting
-        # the PPO importance ratio for all boundary actions.
+        # The raw sample and its log-probability go to the PPO buffer together; only the command sent
+        # to the vehicle is clipped to [-1, 1] (by the caller). Storing the clipped action with the raw
+        # sample's log-probability made the PPO ratio differ from 1 for every boundary action before
+        # any update, which cut the gradient of good full-steer actions and amplified bad ones.
         action_logprob = dist.log_prob(action)
-
-        # Now clamp to valid range for the physics engine
-        action = torch.clamp(action, -1.0, 1.0)
-        # action[0] = steer_intent, action[1] = gas_intent (both in [-1, 1])
-
-        # Return as numpy array (shape [2]) and summed logprob scalar
         return action.squeeze(0).numpy(), action_logprob.sum().item()
 
     def store_transition(self, state, action, action_logprob, reward, next_state, done):
