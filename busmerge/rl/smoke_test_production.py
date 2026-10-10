@@ -11,7 +11,7 @@ Usage:
 Acceptance criteria (exit 0 = PASS, exit 1 = FAIL):
     success_rate  >= 90 %
     avg_merge_s   <= 30 s
-    max_wait_s    <= 45 s
+    max_wait_s    <= 45 s   (longest time from end of boarding to merged)
 
 No brain should be deployed to Streamlit unless this passes.
 """
@@ -90,9 +90,9 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
         if outcome == "merged":
             successes += 1
             merge_times.append(meta["merge_s"])
-            wait_times.append(meta["wait_before_merge_s"])
+            wait_times.append(meta["merge_s"])  # time from end of boarding to merged
             print(f"  [seed {seed:3d}] SUCCESS  merge={meta['merge_s']:.1f}s  "
-                  f"wait_start={meta['wait_before_merge_s']:.1f}s")
+                  f"boarding ended at {meta['boarding_ended_at_s']:.1f}s")
         elif outcome == "collision":
             crashes += 1
             print(f"  [seed {seed:3d}] CRASH")
@@ -115,7 +115,7 @@ def run_smoke_test(ckpt_path: str, n_seeds: int, max_steps: int,
     print(f"  Crashes    : {crashes}")
     print(f"  Timeouts   : {timeouts}")
     print(f"  Avg merge  : {avg_merge_s:.1f}s  (target ≤{max_avg_merge_s}s)")
-    print(f"  Max wait   : {max_wait_s_obs:.1f}s  (target ≤{max_wait_s}s)")
+    print(f"  Max wait   : {max_wait_s_obs:.1f}s after boarding  (target ≤{max_wait_s}s)")
 
     pass_rate  = success_rate  >= min_success_rate
     pass_merge = avg_merge_s   <= max_avg_merge_s
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("--max-avg-merge", type=float, default=30.0,
                         help="Max average merge time in seconds (default 30).")
     parser.add_argument("--max-wait", type=float, default=45.0,
-                        help="Max worst-case wait in seconds (default 45).")
+                        help="Max time from end of boarding to merged, worst seed (default 45 s).")
     parser.add_argument("--scenario", type=str, default="B",
                         help="Scenario letter (default B = bay merge).")
     parser.add_argument("--disable-governor", action="store_true", default=False,

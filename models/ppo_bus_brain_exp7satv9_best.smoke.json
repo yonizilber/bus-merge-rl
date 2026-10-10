@@ -1,20 +1,16 @@
 {
   "checkpoint": "ppo_bus_brain_exp7satv9_best.pth",
-  "passed": false,
+  "passed": true,
   "success_rate": 1.0,
   "successes": 10,
   "total": 10,
   "crashes": 0,
   "timeouts": 0,
-  "avg_merge_s": 5.240000000000075,
-  "max_wait_s": 40.2000000000003,
-  "physics_violation_runs": 10,
-  "physics_violation_kinds": [
-    "decel_over_limit",
-    "overlap",
-    "position_jump"
-  ],
+  "avg_merge_s": 5.60000000000008,
+  "max_wait_s": 5.900000000000084,
+  "physics_violation_runs": 0,
+  "physics_violation_kinds": [],
   "n_seeds": 10,
   "scenario": "B",
-  "tested_at": "2026-10-08T12:49:21.420753+00:00"
+  "tested_at": "2026-10-10T09:41:41.576393+00:00"
 }

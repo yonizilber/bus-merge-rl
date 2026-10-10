@@ -99,7 +99,7 @@ def classify_outcome(df: pd.DataFrame) -> tuple[str, dict]:
     )
     if done.any():
         done_t = float(after.loc[done, "time"].min())
-        return "merged", {"merge_s": done_t - wait_t, "wait_before_merge_s": wait_t}
+        return "merged", {"merge_s": done_t - wait_t, "boarding_ended_at_s": wait_t}
 
     meta = {"wait_s": float(bus["time"].max()) - wait_t}
     if "merge_progress" in after.columns:
