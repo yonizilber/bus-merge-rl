@@ -70,7 +70,10 @@ models/              versioned checkpoints (default: ppo_bus_brain_v11_engine.pt
   only while the entry is clear (0.5 s since the last car and 15 m to the nearest car).
   - **Speed:** a car enters at `min(desired, safe_speed(room, v_leader))`, the same law every
     follower obeys (section 4).
-  - **No room:** if that is below 2 m/s, the arrival waits. Arrivals are delayed, never dropped.
+  - **No room:** if that is below 2 m/s, the arrival waits (at most one is held).
+  - **Lost arrivals:** while the entry is not clear, no arrival is drawn, so those arrivals are lost
+    rather than delayed. Each car blocks the entry for about 1.5 s, so the delivered rate is about
+    λ / (1 + 1.5·λ): 0.28 cars/s at the app default of 0.4 (BUGS O20).
 
 **Bus states:** `MOVING → DECELERATING → IN_BAY → WAITING_TO_MERGE → MOVING`. Scenario A, the
 in-lane stop baseline, uses `STOPPED_IN_LANE` instead of the bay.
@@ -251,6 +254,9 @@ study or in the app differs from them.
 | 0.6 | 3.02 | 19.3 | 98.0% | 2.0% | 0.0% | 88.0% | 11.0% | 13.2 / 15.5 s |
 | 0.8 | 3.43 | 20.6 | 98.0% | 2.0% | 0.0% | 85.0% | 13.0% | 13.2 / 16.1 s |
 <!-- /results:stress_table -->
+
+The inflow is the *requested* rate. The generator delivers less (about λ / (1 + 1.5·λ), BUGS O20), which
+is why the cars present grow so little between 0.4 and 0.8.
 
 - **No density has a centre-line crossing, a stuck run or any other physics violation.**
 - **The differences between densities are within the 95% intervals** (about ±6 points at 100 seeds).

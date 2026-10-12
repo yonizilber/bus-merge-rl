@@ -55,6 +55,41 @@ Menu numbers refer to Part 2.
   15 s limit, and a 3,000-point reward gap against a measured 6,900.
 - **Cost:** about 50 s locally for all the new tests.
 
+## Phase 2 (2026-10-12)
+
+- **#10, invariant sweep:** `tests/test_traffic_density.py`. Two seeds at each of 0.2, 0.4, 0.6 and
+  0.8 cars/s: no physically impossible moment, no car-car overlap. The nightly gate covers 400 seeds.
+- **#11, property-based safe-speed law:** `tests/test_safe_speed_properties.py` (`hypothesis`).
+  - The law never brakes beyond the limit or above the driver, the safe speed grows with room, and one
+    step never closes more than the gap when the brakes suffice.
+  - A follower starting safe never touches a leader that brakes comfortably.
+  - **Found:** the follower can get up to about 0.55 m into its own 2 m minimum gap. Strict `xfail`,
+    BUGS O19.
+- **#14, road-edge reference:** `tests/test_road_edge_reference.py`. 3,000 random poses at the tapers
+  agree with a 1 cm outline walk; the sample includes cases a four-corner check misses.
+- **#15, determinism:** `tests/test_determinism.py`. The app run and the training env are identical
+  for the same seed with perception noise 0.15; a different seed differs.
+- **#7, policy sanity:** `tests/test_policy_sanity.py`. v13, v11 and v9 on 7 unusual scenes built by
+  the production observation builder, plus wildly out-of-range inputs: finite, deterministic, inside
+  the action range.
+- **#17, arrivals:** `tests/test_traffic_density.py`, strict `xfail` at every density.
+  - **Found:** the generator delivers about λ / (1 + 1.5·λ), 71% at the app default (BUGS O20).
+  - The single-strict-`xfail` plan could not hold at 0.2 cars/s with an 80% requirement, because it
+    sits exactly on the edge (80.0%). The requirement is 90%, which every density fails clearly.
+- **#18, reward terms:** `tests/test_reward_terms.py`. Each core term checked by its formula:
+  - the time penalty and lateral progress, including the halving when the gap is tight;
+  - closing risk;
+  - safe steering, in the bay and once out of it with the commit weight;
+  - patience;
+  - crash, scaled by progress, and below the gate threshold;
+  - success, and contact on the same step;
+  - timeout, scaled by passivity.
+- **#23, checkpoints:** `tests/test_checkpoints.py`.
+  - Save and load are identical for 4, 7 and 11 features.
+  - A checkpoint of the wrong shape or a missing file is refused when loading strictly; the lenient
+    training load says that it starts fresh.
+  - The app engine sizes the brain from the checkpoint.
+
 ## Phase 1 of the owner's master plan (2026-10-12)
 
 Implemented in this round:
