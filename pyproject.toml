@@ -29,7 +29,10 @@ include = ["busmerge*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-markers = ["slow: long-running simulation tests"]
+markers = [
+    "slow: long-running simulation tests",
+    "nightly: brain-quality gates over many seeds; skipped unless pytest --nightly",
+]
 
 [tool.ruff]
 line-length = 110

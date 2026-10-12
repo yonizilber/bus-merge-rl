@@ -55,6 +55,38 @@ Menu numbers refer to Part 2.
   15 s limit, and a 3,000-point reward gap against a measured 6,900.
 - **Cost:** about 50 s locally for all the new tests.
 
+## Phase 1 of the owner's master plan (2026-10-12)
+
+Implemented in this round:
+- **#12, bicycle model:** `tests/test_physics_limits.py`.
+  - Every steering update in a real run (more than 5,000, every vehicle and controller) respects the
+    steering rate and angle limits, heading = v·tan(δ)/L, and lateral motion from the heading.
+  - Nothing moves while standing still.
+  - Asked to reach a line 100 m away, the wheel reaches its maximum angle and goes no further.
+- **Speed continuity:** `tests/test_physics_limits.py`. Speed changes only within the braking and
+  acceleration limits; no step changes.
+- **Jerk limit:** strict `xfail`, BUGS O18. Peaks of about 90-107 m/s³ at braking onset and release,
+  against a stated actuation limit of 50 m/s³; coming to rest is excluded.
+- **Mass and braking:** strict `xfail`, BUGS O17. The bus brakes exactly like a compact car (9 m/s²,
+  same stopping distance), because the model has no mass and no vehicle-specific braking.
+- **#16, state assignment:** `tests/test_no_state_assignment.py`. The strict `xfail` documents the
+  leftovers (O5, O7). A passing companion test pins them exactly, so a new one fails CI.
+- **#24, env equals engine:** `tests/test_env_engine_parity.py`.
+  - The env and an independent copy of its engine stay bit-identical for 150 steps on 4 seeds.
+  - A drift of 1e-9 m/s is caught.
+  - The env's engine uses the app's physics settings.
+  - Inputs are float32, because the env reads actions as float32, as a policy produces them.
+- **#22, PPO ratio:** `tests/test_ppo_ratio.py`. The ratio is 1 for a batch in which more than 20% of
+  actions are beyond the limit, computed by training's own `policy_distribution` and `ppo_ratios`. The
+  old clipped-action buffer fails it.
+- **#2, empty road:** extended to every metre of the stop range (297-307 m).
+- **#27, #28, nightly:** `tests/test_nightly.py`, skipped unless `pytest --nightly`, run by
+  `.github/workflows/nightly.yml` every night and on demand.
+  - Seeds 3000-3399, used nowhere else.
+  - The per-seed run is now `busmerge.verification`, shared with `scripts/verify_brain.py`.
+- **Done earlier:** #21, #29 and #26 were already in place. #26 passes, so it is not marked `xfail`.
+- **Phase 2:** waiting for the owner's go-ahead.
+
 ## 1. Current coverage
 
 ### Runs automatically on every push (CI: `ruff check .` and `pytest`, about 171 test cases, 1-6 minutes)

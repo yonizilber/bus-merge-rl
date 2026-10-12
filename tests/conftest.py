@@ -17,7 +17,15 @@ LEGACY_API_TESTS = {
 }
 
 
-def pytest_collection_modifyitems(items):
+def pytest_addoption(parser):
+    parser.addoption("--nightly", action="store_true", default=False,
+                     help="also run the nightly gates (many seeds; .github/workflows/nightly.yml)")
+
+
+def pytest_collection_modifyitems(config, items):
+    skip_nightly = pytest.mark.skip(reason="nightly gate: run with --nightly")
     for item in items:
+        if "nightly" in item.keywords and not config.getoption("--nightly"):
+            item.add_marker(skip_nightly)
         if item.nodeid in LEGACY_API_TESTS:
             item.add_marker(pytest.mark.xfail(reason="written against the legacy API; needs rewrite", strict=True))

@@ -272,6 +272,22 @@ def evaluate_policy_multi_seed(agent, episodes=40, seeds=(123, 456, 777), verbos
     }
 
 
+def policy_distribution(policy, states):
+    """The policy's action distribution and state values for a batch of states."""
+    action_mean, action_std, state_values = policy(states)
+    return torch.distributions.Normal(action_mean, action_std), state_values
+
+
+def ppo_ratios(dist, actions, old_logprobs):
+    """PPO importance ratios: probability of each stored action now / when it was sampled.
+
+    The log-probability is summed over the action dimensions (steer, gas). Before the first update
+    every ratio must be exactly 1, including actions sampled beyond the action limit (BUGS P17).
+    """
+    new_logprobs = dist.log_prob(actions).sum(dim=-1, keepdim=True)  # [batch, 1]
+    return torch.exp(new_logprobs - old_logprobs)
+
+
 def rollback_due(no_improve_windows: int, patience: int, best_eval_success: int) -> bool:
     """Restore the best checkpoint now?
 
@@ -591,12 +607,8 @@ def train(
         advantages = (gae_adv - gae_adv.mean()) / (gae_adv.std() + 1e-7)
 
         for _ in range(ppo_updates):
-            action_mean, action_std, current_state_values = agent.policy(states)
-            dist = torch.distributions.Normal(action_mean, action_std)
-            # new_logprobs: [batch, 2] — sum across action dims to get per-step logprob
-            new_logprobs = dist.log_prob(actions).sum(dim=-1, keepdim=True)  # [batch, 1]
-            
-            ratios = torch.exp(new_logprobs - old_logprobs)
+            dist, current_state_values = policy_distribution(agent.policy, states)
+            ratios = ppo_ratios(dist, actions, old_logprobs)
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1 - agent.clip_ratio, 1 + agent.clip_ratio) * advantages
             actor_loss = -torch.min(surr1, surr2).mean()

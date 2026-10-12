@@ -5,6 +5,7 @@ situation that reproduces them, and turn red the day the behaviour changes, for 
 """
 import pytest
 
+from busmerge.geometry import bus_stop_range
 from busmerge.invariants import bus_contact_times, bus_edge_times
 from busmerge.paths import MODELS_DIR
 from tests.scenarios import lateral_while_car_alongside, merge_time, run_merge_scenario, stalled
@@ -12,10 +13,12 @@ from tests.scenarios import lateral_while_car_alongside, merge_time, run_merge_s
 V13 = MODELS_DIR / "ppo_bus_brain_v13.pth"
 V11 = MODELS_DIR / "ppo_bus_brain_v11_engine.pth"   # learned to stop half way (case study)
 IN_BAY_M = -3.0          # bus centre at or below this: still in the bay
+STOP_RANGE = bus_stop_range(11.0)       # (297, 307)
 
 
-@pytest.mark.parametrize("stop_x", [297.0, 302.0, 307.0])
+@pytest.mark.parametrize("stop_x", [float(x) for x in range(int(STOP_RANGE[0]), int(STOP_RANGE[1]) + 1)])
 def test_empty_road_merge_completes_without_a_half_way_stall(stop_x):
+    # Every metre of the stop range (#2): merged within 15 s, no stall, on the road, no contact.
     df, t0 = run_merge_scenario(V13, stop_x)
     t = merge_time(df, t0)
     assert t is not None and t <= 15.0, f"merge took {t} s"

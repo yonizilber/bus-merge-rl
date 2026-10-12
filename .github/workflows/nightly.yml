@@ -1,0 +1,31 @@
+name: Nightly gates
+
+# The default brain on 400 unseen seeds (tests/test_nightly.py): quality gate and stress sweep.
+# Too slow for every push (about 10-20 minutes); runs every night and on demand.
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install CPU-only PyTorch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Install package
+        run: pip install -e ".[dev]"
+      - name: Nightly gates
+        run: pytest --nightly -m nightly -v
+      - name: Upload the measured summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-summaries
+          path: outputs/nightly/
