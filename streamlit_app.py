@@ -11,6 +11,7 @@ from busmerge.paths import MODELS_DIR
 from busmerge.geometry import compute_sat_overlap_area, rect_corners as _geom_rect_corners
 from busmerge import results
 from busmerge.geometry import BAY_WALL_Y, bay_outline
+from busmerge.graphics.merge_gif import MERGE_X_MAX, MERGE_X_MIN, merge_view_window
 from busmerge.invariants import OVERLAP_MIN_AREA_M2, check_invariants
 from busmerge.rl.feature_encoding import FEATURE_NAMES, infer_state_dim_from_checkpoint
 from busmerge.config import SimConfig
@@ -68,6 +69,54 @@ def _summarize_follower_brakes(ft: pd.DataFrame) -> dict:
 
 
 
+
+
+def _legend_chip(bg: str, fg: str, text: str) -> str:
+    return (f'<span style="background-color:{bg};color:{fg};padding:2px 8px;border-radius:4px;'
+            f'margin-right:6px;white-space:nowrap">{text}</span>')
+
+
+def _follower_flag_title(ft) -> str:
+    """Title suffix for the follower panel: what is unusual in the merge phase, if anything."""
+    if ft is None or ft.empty:
+        return ""
+    merge = _follower_merge_phase(ft)
+    if merge is None or merge.empty:
+        return " — nothing unusual"
+    notes = merge["brake_note"].astype(str)
+    emergency = int(notes.str.startswith("emergency").sum())
+    hard = int(notes.str.startswith("hard").sum())
+    paradox = int(merge["accel_paradox"].fillna(False).astype(bool).sum()) if "accel_paradox" in merge else 0
+    warn = [f"{n} {what}" for n, what in ((emergency, "emergency-brake frame(s)"), (paradox, "accel paradox frame(s)")) if n]
+    if warn:
+        return " — ⚠️ " + ", ".join(warn) + (f", {hard} hard-brake frame(s)" if hard else "")
+    return f" — ℹ️ {hard} hard-brake frame(s)" if hard else " — nothing unusual"
+
+
+def _governor_shield_log(df):
+    """Frames in which the governor vetoed or the shield intervened (None before any run)."""
+    if df is None or df.empty:
+        return None
+    bus = df[df["type"] == "Bus"]
+    decided = bus["governor_reason"].astype(str).str.startswith("governor_") | (bus["shield_condition"].astype(str) != "")
+    return bus[decided][["time", "merge_progress", "v", "governor_reason", "shield_condition"]].rename(columns={
+        "time": "Time (s)", "merge_progress": "Merge P", "v": "Bus vel (m/s)",
+        "governor_reason": "Governor reason", "shield_condition": "Shield condition",
+    })
+
+
+def _governor_flag_title(log) -> str:
+    if log is None:
+        return ""
+    if log.empty:
+        return " — none"
+    is_emergency = log["Shield condition"].astype(str).str.startswith("emergency")
+    is_veto = log["Governor reason"].astype(str).str.startswith("governor_")
+    emergency, vetoes, others = int(is_emergency.sum()), int(is_veto.sum()), int((~is_emergency & ~is_veto).sum())
+    parts = ([f"{emergency} shield emergency frame(s)"] if emergency else []) + ([f"{vetoes} veto(es)"] if vetoes else [])
+    if parts:
+        return " — ⚠️ " + ", ".join(parts) + (f", {others} other intervention(s)" if others else "")
+    return f" — ℹ️ {len(log)} shield intervention(s)"
 
 # --- Page Config ---
 st.set_page_config(page_title="Bus Traffic Sim", layout="wide")
@@ -931,178 +980,6 @@ if st.session_state.sim_complete:
                     hide_index=True,
                 )
 
-    # --- Car Following Bus Telemetry (optional) ---
-    if show_follower_telemetry:
-        _follower_df = st.session_state.get("follower_df")
-        with st.expander("🚗 Car Behind Bus — Merge Telemetry", expanded=True):
-            st.markdown(
-                "One row every **0.1 s** from **IN_BAY** through **merge complete** (progress → 100%). "
-                "Tracks the same car behind the bus (sticky ID). "
-                "**Car accel** is the physics deceleration (m/s²) — use this to judge brake severity. "
-                "**Car Δv** is speed change this step; divide by 0.1 s to get implied m/s² (can spike when follower ID switches). "
-                "**Brake note:** `comfort` / `hard` / `emergency` = braking class, `stopped` = at rest. "
-                "Every speed change comes from the logged acceleration (no corrections exist)."
-            )
-            if _follower_df is None or _follower_df.empty:
-                st.info("No follower trace — use Scenario B and run a simulation.")
-            else:
-                ft = _follower_df.copy()
-                merge_ft = _follower_merge_phase(ft)
-                _fb = _summarize_follower_brakes(ft)
-                st.caption(
-                    f"{len(ft)} total frames  |  "
-                    f"{len(merge_ft)} merge-phase frames  |  "
-                    f"t = {ft['time'].min():.1f} → {ft['time'].max():.1f} s"
-                )
-                if _fb:
-                    c1, c2, c3, c4 = st.columns(4)
-                    c1.metric("Follower ID", f"#{_fb['car_id']}")
-                    c2.metric("Hard brake frames", _fb["hard_events"])
-                    c3.metric("Hold-lock frames", _fb["hold_frames"])
-                    c4.metric(
-                        "Peak decel (accel)",
-                        f"{_fb['worst_accel']:.1f} m/s²" if _fb["worst_accel"] is not None else "—",
-                    )
-
-                view_mode = st.radio(
-                    "Show frames",
-                    ["Merge phase only", "Full trace (dwell + merge)"],
-                    horizontal=True,
-                    key="follower_view_mode",
-                )
-                display_ft = merge_ft if view_mode == "Merge phase only" else ft
-
-                ft = display_ft.rename(columns={
-                    "frame": "Frame",
-                    "time": "Time (s)",
-                    "dt": "Δt (s)",
-                    "bus_state": "Bus state",
-                    "bus_x": "Bus pos (m)",
-                    "bus_dx": "Bus Δx (m)",
-                    "bus_v": "Bus vel (m/s)",
-                    "bus_max_front": "Bus max front (m)",
-                    "bus_merge_progress": "Bus merge P",
-                    "car_id": "Car ID",
-                    "x": "Car pos (m)",
-                    "v": "Car vel (m/s)",
-                    "accel": "Car accel (m/s²)",
-                    "car_dx": "Car Δx (m)",
-                    "car_dv": "Car Δv (m/s)",
-                    "comfort_brake": "Comfort brake (m/s²)",
-                    "reaction_timer": "Reaction (s)",
-                    "brake_note": "Brake note",
-                    "follower_switched": "Follower switched",
-                    "front_gap": "Front gap (m)",
-                    "rear_gap_to_bus": "Rear gap (m)",
-                    "max_front_allowed": "Car max front (m)",
-                    "yield_eff": "Yield Y",
-                    "yield_raw": "Yield Raw",
-                    "leader_id": "Leader ID",
-                    "bus_is_leader": "Bus is leader",
-                    "leader_presence": "Leader presence",
-                    "leader_info": "Sees (leader)",
-                    "bus_visibility": "Bus presence seen",
-                    "car_state": "Car state",
-                    "accel_paradox": "Accel paradox",
-                    "blinker_presence": "Blinker pres.",
-                    "signaling_merge": "Signaling",
-                })
-                _lead_cols = [
-                    "Frame", "Time (s)", "Bus state", "Bus merge P",
-                    "Car ID", "Car vel (m/s)", "Car accel (m/s²)", "Car Δv (m/s)",
-                    "Brake note", "Rear gap (m)", "Yield Y", "Yield Raw",
-                    "Bus is leader", "Accel paradox",
-                    "Blinker pres.", "Signaling",
-                ]
-                _rest = [c for c in ft.columns if c not in _lead_cols]
-                ft = ft[[c for c in _lead_cols if c in ft.columns] + _rest]
-
-                def _highlight_brake_rows(row):
-                    """Readable highlights on dark Streamlit theme (avoid pale yellow)."""
-                    note = str(row.get("Brake note", "") or "")
-                    if row.get("Accel paradox"):
-                        # Slate blue — readable white text, not yellow-on-yellow
-                        return ["background-color: #2b4c6f; color: #e8f1fa"] * len(row)
-                    if note == "emergency" or note.startswith("emergency"):
-                        return ["background-color: #6b2b2b; color: #ffe8e8"] * len(row)
-                    if note == "hard" or note.startswith("hard"):
-                        return ["background-color: #6b4a22; color: #fff0dd"] * len(row)
-                    if note == "stopped":
-                        return ["background-color: #2a3f5c; color: #dce8f5"] * len(row)
-                    return [""] * len(row)
-
-                st.dataframe(
-                    ft.style.format({
-                        "Frame": "{:.0f}",
-                        "Time (s)": "{:.2f}",
-                        "Δt (s)": "{:.1f}",
-                        "Bus pos (m)": "{:.3f}",
-                        "Bus Δx (m)": "{:+.3f}",
-                        "Bus vel (m/s)": "{:.3f}",
-                        "Bus max front (m)": "{:.3f}",
-                        "Car pos (m)": "{:.3f}",
-                        "Car Δx (m)": "{:+.3f}",
-                        "Car vel (m/s)": "{:.3f}",
-                        "Car accel (m/s²)": "{:.3f}",
-                        "Car Δv (m/s)": "{:+.3f}",
-                        "Comfort brake (m/s²)": "{:.2f}",
-                        "Reaction (s)": "{:.2f}",
-                        "Front gap (m)": "{:.2f}",
-                        "Rear gap (m)": "{:.2f}",
-                        "Car max front (m)": "{:.3f}",
-                        "Yield Y": "{:.3f}",
-                        "Hold X (m)": "{:.3f}",
-                        "Leader presence": "{:.3f}",
-                        "Bus merge P": "{:.3f}",
-                    }, na_rep="—").apply(_highlight_brake_rows, axis=1),
-                    width="stretch",
-                    height=450,
-                )
-                _plot = ft[ft["Car ID"].notna()].copy()
-                if not _plot.empty:
-                    st.caption("Follower speed & acceleration during merge (orange = hard, red = emergency)")
-                    _speed_chart = _plot[["Time (s)", "Car vel (m/s)", "Car accel (m/s²)"]].set_index("Time (s)")
-                    st.line_chart(_speed_chart, height=200)
-                    _pos_chart = _plot[
-                        ["Time (s)", "Bus pos (m)", "Car pos (m)", "Rear gap (m)", "Yield Y"]
-                    ].set_index("Time (s)")
-                    st.caption("Position & gap (watch Car Δx for backward snaps)")
-                    st.line_chart(_pos_chart, height=200)
-
-    # --- Governor / Shield decision log (optional) ---
-    if show_governor_shield_log:
-        _gov_df = st.session_state.get("df")
-        with st.expander("🚦 Governor / Shield Decisions", expanded=True):
-            st.markdown(
-                "Every frame the **predictive governor** vetoed the bus's requested action, or the "
-                "**reactive safety shield** modified it, with the reason string for each. Only "
-                "recorded while the bus is `WAITING_TO_MERGE` (the only state either system is "
-                "active in). Empty table = neither ever intervened this run."
-            )
-            if _gov_df is None or _gov_df.empty:
-                st.info("No run yet — click Run Simulation.")
-            else:
-                _bus_rows = _gov_df[_gov_df["type"] == "Bus"].copy()
-                _log = _bus_rows[
-                    (_bus_rows["governor_reason"] != "") | (_bus_rows["shield_condition"] != "")
-                ][["time", "merge_progress", "v", "governor_reason", "shield_condition"]].rename(columns={
-                    "time": "Time (s)",
-                    "merge_progress": "Merge P",
-                    "v": "Bus vel (m/s)",
-                    "governor_reason": "Governor reason",
-                    "shield_condition": "Shield condition",
-                })
-                if _log.empty:
-                    st.success("No governor vetoes or shield interventions this run.")
-                else:
-                    st.caption(f"{len(_log)} frame(s) with a governor/shield decision, out of "
-                               f"{len(_bus_rows[_bus_rows['state'] == 'WAITING_TO_MERGE'])} WAITING_TO_MERGE frames.")
-                    st.dataframe(
-                        _log.style.format({"Time (s)": "{:.2f}", "Merge P": "{:.3f}", "Bus vel (m/s)": "{:.3f}"}),
-                        width="stretch",
-                        hide_index=True,
-                    )
-
     # --- Merge Zone 2D View (Scenario B only — no bay merge in A) ---
     _run_scenario = st.session_state.get("run_scenario", scenario_code)
     if _run_scenario == "B":
@@ -1119,8 +996,6 @@ if st.session_state.sim_complete:
         import io
 
         # ── Geometry constants (must match simulation.py / vehicle.py) ───────────
-        MERGE_X_MIN   = 255.0    # window start
-        MERGE_X_MAX   = 345.0    # window end
         BUS_STOP_X    = config.bus_stop_position   # 300.0
         LANE_W        = 3.5
         # The bay is drawn from busmerge.geometry, the same outline the physics checks use.
@@ -1255,23 +1130,9 @@ if st.session_state.sim_complete:
 
             all_times_full = sorted(merge_df_all['time'].unique())
 
-            # ── Narrow render window to the relevant merge phase ─────────────────
-            # Start: 2 s before the bus first starts moving (v > 0.1) during merge.
-            # End:   bus front position exits MERGE_X_MAX
-            bus_merge_rows = merge_df_all[
-                (merge_df_all['type'] == 'Bus') & (merge_df_all['state'] == 'WAITING_TO_MERGE')]
-            bus_exit_rows  = merge_df_all[
-                (merge_df_all['type'] == 'Bus') & (merge_df_all['x_centre'] > MERGE_X_MAX)]
-            bus_moving_rows = bus_merge_rows[bus_merge_rows['v'] > 0.1]
-            if not bus_moving_rows.empty:
-                _t_bus_active = bus_moving_rows['time'].min()
-            elif not bus_merge_rows.empty:
-                _t_bus_active = bus_merge_rows['time'].min()
-            else:
-                _t_bus_active = merge_df_all['time'].min()
-            t_window_start = max(merge_df_all['time'].min(), _t_bus_active - 2.0)
-            t_window_end = bus_exit_rows['time'].min() if not bus_exit_rows.empty \
-                           else merge_df_all['time'].max()
+            # ── Render window: from shortly before boarding ends until the bus has left the view ──
+            _window = merge_view_window(df)
+            t_window_start, t_window_end = _window if _window else (all_times_full[0], all_times_full[-1])
             all_times = [t for t in all_times_full if t_window_start <= t <= t_window_end]
             if not all_times:
                 all_times = all_times_full
@@ -1491,6 +1352,192 @@ if st.session_state.sim_complete:
     c1.metric("Total Time", f"{df['time'].max():.1f} s")
     c2.metric("Avg Speed", f"{kpis['avg_person_speed']:.1f} km/h")
     c3.metric("Throughput", f"{kpis['throughput_people']} pax")
+
+    # --- Diagnostics under the merge-zone view (collapsed; the title flags anything unusual) ---
+    # --- Car Following Bus Telemetry (optional) ---
+    if show_follower_telemetry:
+        _follower_df = st.session_state.get("follower_df")
+        with st.expander("🚗 Car Behind Bus — Merge Telemetry" + _follower_flag_title(_follower_df), expanded=False):
+            st.markdown(
+                "Row colours: "
+                + _legend_chip("#6b2b2b", "#ffe8e8", "emergency braking (≤ -5 m/s²)")
+                + _legend_chip("#6b4a22", "#fff0dd", "hard braking (≤ -3.5 m/s²)")
+                + _legend_chip("#2a3f5c", "#dce8f5", "stopped")
+                + _legend_chip("#2b4c6f", "#e8f1fa", "accel paradox (should never happen)"),
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "One row every **0.1 s** from **IN_BAY** through **merge complete** (progress → 100%). "
+                "Tracks the same car behind the bus (sticky ID). "
+                "**Car accel** is the physics deceleration (m/s²) — use this to judge brake severity. "
+                "**Car Δv** is speed change this step; divide by 0.1 s to get implied m/s² (can spike when follower ID switches). "
+                "**Brake note:** `comfort` / `hard` / `emergency` = braking class, `stopped` = at rest. "
+                "Every speed change comes from the logged acceleration (no corrections exist)."
+            )
+            if _follower_df is None or _follower_df.empty:
+                st.info("No follower trace — use Scenario B and run a simulation.")
+            else:
+                ft = _follower_df.copy()
+                merge_ft = _follower_merge_phase(ft)
+                _fb = _summarize_follower_brakes(ft)
+                st.caption(
+                    f"{len(ft)} total frames  |  "
+                    f"{len(merge_ft)} merge-phase frames  |  "
+                    f"t = {ft['time'].min():.1f} → {ft['time'].max():.1f} s"
+                )
+                if _fb:
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("Follower ID", f"#{_fb['car_id']}")
+                    c2.metric("Hard brake frames", _fb["hard_events"])
+                    c3.metric("Hold-lock frames", _fb["hold_frames"])
+                    c4.metric(
+                        "Peak decel (accel)",
+                        f"{_fb['worst_accel']:.1f} m/s²" if _fb["worst_accel"] is not None else "—",
+                    )
+
+                view_mode = st.radio(
+                    "Show frames",
+                    ["Merge phase only", "Full trace (dwell + merge)"],
+                    horizontal=True,
+                    key="follower_view_mode",
+                )
+                display_ft = merge_ft if view_mode == "Merge phase only" else ft
+
+                ft = display_ft.rename(columns={
+                    "frame": "Frame",
+                    "time": "Time (s)",
+                    "dt": "Δt (s)",
+                    "bus_state": "Bus state",
+                    "bus_x": "Bus pos (m)",
+                    "bus_dx": "Bus Δx (m)",
+                    "bus_v": "Bus vel (m/s)",
+                    "bus_max_front": "Bus max front (m)",
+                    "bus_merge_progress": "Bus merge P",
+                    "car_id": "Car ID",
+                    "x": "Car pos (m)",
+                    "v": "Car vel (m/s)",
+                    "accel": "Car accel (m/s²)",
+                    "car_dx": "Car Δx (m)",
+                    "car_dv": "Car Δv (m/s)",
+                    "comfort_brake": "Comfort brake (m/s²)",
+                    "reaction_timer": "Reaction (s)",
+                    "brake_note": "Brake note",
+                    "follower_switched": "Follower switched",
+                    "front_gap": "Front gap (m)",
+                    "rear_gap_to_bus": "Rear gap (m)",
+                    "max_front_allowed": "Car max front (m)",
+                    "yield_eff": "Yield Y",
+                    "yield_raw": "Yield Raw",
+                    "leader_id": "Leader ID",
+                    "bus_is_leader": "Bus is leader",
+                    "leader_presence": "Leader presence",
+                    "leader_info": "Sees (leader)",
+                    "bus_visibility": "Bus presence seen",
+                    "car_state": "Car state",
+                    "accel_paradox": "Accel paradox",
+                    "blinker_presence": "Blinker pres.",
+                    "signaling_merge": "Signaling",
+                })
+                _lead_cols = [
+                    "Frame", "Time (s)", "Bus state", "Bus merge P",
+                    "Car ID", "Car vel (m/s)", "Car accel (m/s²)", "Car Δv (m/s)",
+                    "Brake note", "Rear gap (m)", "Yield Y", "Yield Raw",
+                    "Bus is leader", "Accel paradox",
+                    "Blinker pres.", "Signaling",
+                ]
+                _rest = [c for c in ft.columns if c not in _lead_cols]
+                ft = ft[[c for c in _lead_cols if c in ft.columns] + _rest]
+
+                def _highlight_brake_rows(row):
+                    """Readable highlights on dark Streamlit theme (avoid pale yellow)."""
+                    note = str(row.get("Brake note", "") or "")
+                    if row.get("Accel paradox"):
+                        # Slate blue — readable white text, not yellow-on-yellow
+                        return ["background-color: #2b4c6f; color: #e8f1fa"] * len(row)
+                    if note == "emergency" or note.startswith("emergency"):
+                        return ["background-color: #6b2b2b; color: #ffe8e8"] * len(row)
+                    if note == "hard" or note.startswith("hard"):
+                        return ["background-color: #6b4a22; color: #fff0dd"] * len(row)
+                    if note == "stopped":
+                        return ["background-color: #2a3f5c; color: #dce8f5"] * len(row)
+                    return [""] * len(row)
+
+                st.dataframe(
+                    ft.style.format({
+                        "Frame": "{:.0f}",
+                        "Time (s)": "{:.2f}",
+                        "Δt (s)": "{:.1f}",
+                        "Bus pos (m)": "{:.3f}",
+                        "Bus Δx (m)": "{:+.3f}",
+                        "Bus vel (m/s)": "{:.3f}",
+                        "Bus max front (m)": "{:.3f}",
+                        "Car pos (m)": "{:.3f}",
+                        "Car Δx (m)": "{:+.3f}",
+                        "Car vel (m/s)": "{:.3f}",
+                        "Car accel (m/s²)": "{:.3f}",
+                        "Car Δv (m/s)": "{:+.3f}",
+                        "Comfort brake (m/s²)": "{:.2f}",
+                        "Reaction (s)": "{:.2f}",
+                        "Front gap (m)": "{:.2f}",
+                        "Rear gap (m)": "{:.2f}",
+                        "Car max front (m)": "{:.3f}",
+                        "Yield Y": "{:.3f}",
+                        "Hold X (m)": "{:.3f}",
+                        "Leader presence": "{:.3f}",
+                        "Bus merge P": "{:.3f}",
+                    }, na_rep="—").apply(_highlight_brake_rows, axis=1),
+                    width="stretch",
+                    height=450,
+                )
+                _plot = ft[ft["Car ID"].notna()].copy()
+                if not _plot.empty:
+                    st.caption("Follower speed & acceleration during merge (orange = hard, red = emergency)")
+                    _speed_chart = _plot[["Time (s)", "Car vel (m/s)", "Car accel (m/s²)"]].set_index("Time (s)")
+                    st.line_chart(_speed_chart, height=200)
+                    _pos_chart = _plot[
+                        ["Time (s)", "Bus pos (m)", "Car pos (m)", "Rear gap (m)", "Yield Y"]
+                    ].set_index("Time (s)")
+                    st.caption("Position & gap (watch Car Δx for backward snaps)")
+                    st.line_chart(_pos_chart, height=200)
+
+    # --- Governor / Shield decision log (optional) ---
+    if show_governor_shield_log:
+        _gov_df = st.session_state.get("df")
+        _gov_log = _governor_shield_log(_gov_df)
+        with st.expander("🚦 Governor / Shield Decisions" + _governor_flag_title(_gov_log), expanded=False):
+            st.markdown(
+                "Frames in which the **predictive governor** vetoed the brain's action (it is off by default, "
+                "and then never vetoes) or the **reactive safety shield** changed it (always on, in training too), "
+                "with the reason for each. Only while the bus is `WAITING_TO_MERGE`.\n\n"
+                "Row colours: "
+                + _legend_chip("#6b2b2b", "#ffe8e8", "shield emergency (emergency_stop / emergency_forward)")
+                + _legend_chip("#6b5a22", "#fff3d6", "other shield intervention")
+                + _legend_chip("#4b2b6b", "#f0e6ff", "governor veto"),
+                unsafe_allow_html=True,
+            )
+            if _gov_log is None:
+                st.info("No run yet — click Run Simulation.")
+            elif _gov_log.empty:
+                st.success("No governor vetoes or shield interventions this run.")
+            else:
+                _waiting = int(((_gov_df["type"] == "Bus") & (_gov_df["state"] == "WAITING_TO_MERGE")).sum())
+                st.caption(f"{len(_gov_log)} frame(s) with a governor/shield decision, out of {_waiting} "
+                           "WAITING_TO_MERGE frames.")
+
+                def _colour_decision(row):
+                    shield, gov = str(row["Shield condition"]), str(row["Governor reason"])
+                    if shield.startswith("emergency"):
+                        return ["background-color: #6b2b2b; color: #ffe8e8"] * len(row)
+                    if gov.startswith("governor_"):
+                        return ["background-color: #4b2b6b; color: #f0e6ff"] * len(row)
+                    return ["background-color: #6b5a22; color: #fff3d6"] * len(row)
+
+                st.dataframe(
+                    _gov_log.style.format({"Time (s)": "{:.2f}", "Merge P": "{:.3f}", "Bus vel (m/s)": "{:.3f}"})
+                    .apply(_colour_decision, axis=1),
+                    width="stretch",
+                    hide_index=True,
+                )
 
     # --- 4. 2D ANIMATION VISUALIZER ---
     st.divider()

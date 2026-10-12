@@ -14,6 +14,24 @@ from busmerge.config import SimConfig
 from busmerge.geometry import BAY_WALL_Y, bay_outline, rect_corners
 
 
+MERGE_X_MIN, MERGE_X_MAX = 255.0, 345.0   # road span (m) of the merge-zone view
+LEAD_IN_S = 2.0                            # the view starts this long before boarding ends
+
+
+def merge_view_window(df: pd.DataFrame) -> Optional[tuple[float, float]]:
+    """Time span of the merge-zone view: from shortly before boarding ends until the whole bus has
+    left the view (its rear bumper passes MERGE_X_MAX), or the end of the run if it never does.
+    None when the bus never finished boarding. Used by the app's 2D view and by the GIF."""
+    bus = df[df["type"] == "Bus"].sort_values("time")
+    waiting = bus[bus["state"].astype(str) == "WAITING_TO_MERGE"]
+    if waiting.empty:
+        return None
+    t0 = max(float(bus["time"].min()), float(waiting["time"].min()) - LEAD_IN_S)
+    gone = bus[(bus["time"] >= t0) & (bus["x"] - bus["length"] > MERGE_X_MAX)]
+    t1 = float(gone["time"].min()) if not gone.empty else float(df["time"].max())
+    return t0, t1
+
+
 def build_merge_gif(
     df: pd.DataFrame,
     config: SimConfig,
@@ -27,7 +45,7 @@ def build_merge_gif(
 
     lane_w = 3.5
     bus_stop_x = float(config.bus_stop_position)
-    merge_x_min, merge_x_max = 255.0, 345.0
+    merge_x_min, merge_x_max = MERGE_X_MIN, MERGE_X_MAX
 
     mz = df[(df["x"] >= merge_x_min - 5) & (df["x"] <= merge_x_max + 5)].copy()
     if mz.empty:
@@ -43,17 +61,8 @@ def build_merge_gif(
     mz["x_centre"] = mz["x"] - mz["half_l"]  # x is the front bumper (physics convention)
     mz["heading"] = mz["heading_deg"].fillna(0.0) if "heading_deg" in mz.columns else 0.0
 
-    bus_m = mz[(mz["type"] == "Bus") & (mz["state"] == "WAITING_TO_MERGE")]
-    bus_mov = bus_m[bus_m["v"] > 0.1] if not bus_m.empty else bus_m
-    if not bus_mov.empty:
-        t0 = float(bus_mov["time"].min()) - 2.0
-    elif not bus_m.empty:
-        t0 = float(bus_m["time"].min())
-    else:
-        t0 = float(mz["time"].min())
-    t0 = max(float(mz["time"].min()), t0)
-    bus_exit = mz[(mz["type"] == "Bus") & (mz["x_centre"] > merge_x_max)]
-    t1 = float(bus_exit["time"].min()) if not bus_exit.empty else float(mz["time"].max())
+    window = merge_view_window(df)
+    t0, t1 = window if window else (float(mz["time"].min()), float(mz["time"].max()))
     times = [t for t in sorted(mz["time"].unique()) if t0 <= t <= t1]
     if len(times) > max_frames:
         step = max(1, len(times) // max_frames)

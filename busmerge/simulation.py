@@ -663,7 +663,12 @@ class SimulationEngine:
             _bus_control = ""
             if isinstance(v, Bus):
                 if v.state == BusState.WAITING_TO_MERGE:
-                    _bus_control = "PPO+Governor"
+                    # Who actually decided this frame: the brain, plus the governor only when it vetoed
+                    # (it is off by default) and the safety shield only when it intervened (always on).
+                    _gov = str(getattr(v, "last_governor_reason", ""))
+                    _shield = str(getattr(v, "last_shield_condition", ""))
+                    _bus_control = ("PPO" + (" + governor veto" if _gov.startswith("governor_") else "")
+                                    + (f" + safety shield ({_shield})" if _shield else ""))
                 elif v.state == BusState.DECELERATING:
                     _bus_control = "IDM→stop"
                 elif v.state == BusState.MOVING:
