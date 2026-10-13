@@ -139,6 +139,9 @@ Measured, documented and tracked by tests ([docs/BUGS.md](docs/BUGS.md), "Open")
 | [JOURNAL.md](docs/JOURNAL.md) | The dated engineering journal |
 | [ROADMAP.md](docs/ROADMAP.md) | What comes next |
 
+For a styled HTML version of all of these (navigation, light and dark themes, right-to-left Hebrew), run
+`python scripts/build_docs_html.py` and open `docs/html/index.html`.
+
 ## Reproducing the numbers
 
 ```bash
