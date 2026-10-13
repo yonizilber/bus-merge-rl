@@ -51,7 +51,7 @@ busmerge/
     feature_encoding.py, merge_success.py, merge_yield.py, traffic_leaders.py,
     governor_logic.py, merge_constants.py, ...
 streamlit_app.py     dashboard (runs SimulationEngine through busmerge.evaluation)
-scripts/             train.py, acceptance.py, evaluate_brains.py, gate_production.py, diagnostics
+scripts/             train.py, verify_brain.py, acceptance.py, evaluate_brains.py, publish_results.py, diagnostics/
 tests/               pytest suite incl. golden fingerprints (tests/golden/)
 models/              versioned checkpoints (default: ppo_bus_brain_v11_engine.pth)
 ```

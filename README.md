@@ -1,21 +1,30 @@
 # bus-merge-rl
 
-A microscopic traffic simulation of a city bus pulling out of a bus bay and merging back into
-traffic. The merge decision is made by a PPO (reinforcement learning) agent; surrounding cars
-follow an Intelligent Driver Model with per-driver personalities. A Streamlit dashboard lets you
-run scenarios, compare trained agents, and inspect the merge frame by frame.
+[![CI](https://github.com/yonizilber/bus-merge-rl/actions/workflows/ci.yml/badge.svg)](https://github.com/yonizilber/bus-merge-rl/actions/workflows/ci.yml)
+[![Nightly gates](https://github.com/yonizilber/bus-merge-rl/actions/workflows/nightly.yml/badge.svg)](https://github.com/yonizilber/bus-merge-rl/actions/workflows/nightly.yml)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 
-> This README is a work in progress. Full documentation (architecture, results, design decisions
-> and known limitations) is being written.
+**A city bus learns, with reinforcement learning, when and how to pull out of a bus bay into live traffic,
+in a microscopic traffic simulation where every physical moment is checked and nothing is hidden.**
 
-## Case study: an agent that merged by exploiting its steering
+<p align="center">
+  <img src="docs/media/merge_v13_seed2000.gif" alt="The v13 agent pulling out of the bay behind waiting cars (seed 2000)" width="100%">
+</p>
+<p align="center"><sub>The default agent (v13) on unseen seed 2000: it waits for the gap, then steers out of the bay
+and merges. Top-down view of the merge zone, with the bay drawn from the same geometry the physics
+checks use.</sub></p>
 
-The default agent merged in 97.9% of unseen runs, until hidden corrections were removed from the
-simulation. It turned out the agent asked to go only half way out of the bay, and relied on an
-overshooting steering controller to carry it into the lane (and over the centre line in every run).
-With the controller fixed, it merged in 0% of runs. The agent was then retrained under honest
-steering. The full investigation, the fixes and the retraining are in
-[docs/CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md).
+<!-- A longer video of the Streamlit dashboard can go here. -->
+
+## Quickstart
+
+```bash
+git clone https://github.com/yonizilber/bus-merge-rl.git && cd bus-merge-rl
+pip install -e ".[dev]"
+streamlit run streamlit_app.py
+```
+
+Click **Run Simulation**. Tick **Fixed random seed** to replay any seed quoted in the docs.
 
 ## Results
 
@@ -32,41 +41,127 @@ The default agent (v13) merges in 97.8% of 1,000 unseen runs without ever crossi
 | v9 best | 2000-2099 | 0.0% | 0.0% | 100.0% | 0.0% | 0.0% | 100.0% | – |
 <!-- /results:brain_table -->
 
-*Merged* is judged on the traffic only. *Strict* also requires the bus to stay on the road and out of
-the opposing lane, with no other physics violation. Every number is generated from the measurements
-in [results/](results/) and checked by `tests/test_published_numbers.py`.
+How to read the table:
+- **Merged:** judged on the traffic only.
+- **Strict:** also requires the bus to stay on the road and out of the opposing lane, with no other
+  physics violation.
+- **Seeds:** never used for training or selection.
+- **Where the numbers come from:** every number above is generated from the measurements in
+  [results/](results/), and `tests/test_published_numbers.py` fails if it drifts from them.
 
-## Quickstart
+## The case study: an agent that cheated its steering
+
+> **[Read the case study](docs/CASE_STUDY_REWARD_HACKING.md)**: the investigation, the fixes and the
+> retraining, with every number measured.
+
+**The cheat.** The first agent merged in **97.9%** of unseen runs. Once every hidden correction was
+removed from the simulation, the same runs showed the bus **crossing the centre line in 100% of them**.
+The agent had never asked to leave the bay all the way. It asked to go half way, and let an
+overshooting steering controller carry it into the lane. That was reward hacking against a defect in
+its own plant. With the controller fixed, it merged in **0%** of runs.
+
+**Getting it back.** Retraining needed more than a reward tweak. It took fixing:
+- training start poses, 14.6% of which were off the road;
+- a PPO buffer bias against the one action the fix required;
+- a rollback rule that silently reset every attempt to its starting weights.
+
+**Learning from it.** Each failure was found by measuring, and each is now guarded by a test.
+
+## How it works
+
+**The traffic: a microscopic simulation at 0.1 s.**
+- **Cars:** follow the **Intelligent Driver Model (IDM)**, with five driver personalities (compact,
+  mid, large, SUV, aggressive) that differ in size, acceleration, comfortable braking, headway,
+  reaction time and steering.
+- **Safe-speed law:** every follower's acceleration is bounded by one law in the style of Gipps and
+  Krauss (as in SUMO): `v_safe = sqrt(v_leader² + 2·b·gap)`, capped at the physical 9 m/s². Speed and
+  position only ever follow from acceleration; nothing is assigned.
+- **Steering:** vehicles move laterally with a **kinematic bicycle model** steered by **pure pursuit**
+  (with a heading term), limited by steering rate and angle, with Ornstein-Uhlenbeck lane drift.
+- **The bay:** the bus follows the drawn kerb into the bay, stops by physics, boards passengers, and
+  then hands control to the agent.
+
+**The agent: PPO.**
+- **Observation:** 11 features with perception noise.
+  - The merge state: progress and heading.
+  - The nearest relevant car: gap, lateral clearance, speed, acceleration, width, length, relative
+    speed and acceleration, heading.
+- **Action:** `steer` sets the lateral target between the bay and the lane centre, and `gas` sets the
+  speed target.
+- **Network:** an actor-critic with a 64-64 tanh trunk, a tanh mean head and a state-dependent
+  exploration width.
+- **Training:** PPO with clipping (0.2), GAE (λ 0.95, γ 0.995), Adam (5e-5), 2,000-step batches.
+- **One world:** the training environment steps the same engine the app runs, bit for bit, which a
+  test enforces.
+- **Reward:** a time penalty, lateral progress, closing risk, safe steering, a terminal +5,000 on
+  merging, and −2,500 or worse on any contact.
+
+**Measurement: one harness for every number.**
+- The app, the tests, `scripts/verify_brain.py` and the nightly gates all run the same episode and
+  judge it the same way.
+- Every run is checked by `busmerge/invariants.py` for physically impossible moments: braking or
+  accelerating beyond the limits, backward motion, position jumps, overlaps, leaving the road (exact
+  polygons, including kerb corners), the centre line and extreme headings.
+
+## Testing
+
+- **On every push (CI):** about 360 test cases, in about 2 minutes. They cover physics constraints,
+  the bicycle model, property-based tests of the safe-speed law (`hypothesis`), env/engine parity,
+  determinism, every reward term, PPO and training-loop safety, a headless run of the app, and the
+  published numbers.
+- **Nightly:** the default agent on 400 seeds that are used nowhere else.
+- **Known limitations:** documented as **strict `xfail`** tests. They do not hide a failure, and they
+  turn red the day the behaviour changes. See [docs/QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md)
+  (English and Hebrew).
+
+## Known limitations
+
+Measured, documented and tracked by tests ([docs/BUGS.md](docs/BUGS.md), "Open"):
+- **Contact with a car alongside (about 2%).** The agent sometimes pulls out while a car is beside the
+  bay.
+- **Exit kerb (about 9%).** From the far end of the bay, after letting a car pass, the agent steers out
+  too slowly and the exit-taper kerb corner cuts into the bus's side.
+- **Model simplifications.** No vehicle mass (a bus brakes as hard as a car), no brake actuation lag,
+  and the bus turns about its body centre.
+- **Traffic generator.** Arrivals during a blocked entry are lost, so the delivered inflow is about
+  λ / (1 + 1.5·λ): the "0.4 cars/s" setting delivers about 0.28.
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md) | The investigation, from 97.9% to 0% and back, with what was learned |
+| [SPECS.md](docs/SPECS.md) | The system: geometry, vehicles, physics, agent, training, evaluation and gates, brains |
+| [TRAINING.md](docs/TRAINING.md) | How each shipped brain was produced, with exact commands and the failed attempts |
+| [BUGS.md](docs/BUGS.md) | Every bug found and fixed (with evidence), and every open issue |
+| [TEST_STRATEGY.md](docs/TEST_STRATEGY.md) | Test coverage and the menu the suite was built from |
+| [QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md) | The testing and QA strategy, in English and Hebrew |
+| [JOURNAL.md](docs/JOURNAL.md) | The dated engineering journal |
+| [ROADMAP.md](docs/ROADMAP.md) | What comes next |
+
+## Reproducing the numbers
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-streamlit run streamlit_app.py
+python scripts/verify_brain.py --brain models/ppo_bus_brain_v13.pth --seeds 1000 --seed-start 2000 --save v13 --label v13
+python scripts/publish_results.py          # regenerate the tables above from results/
+pytest --nightly -m nightly                # the nightly gates
 ```
 
-The app opens at http://localhost:8501.
+To train, see [docs/TRAINING.md](docs/TRAINING.md). v13 is v11 fine-tuned for 300 epochs, about 45
+minutes on a CPU.
 
 ## Project layout
 
 ```
-busmerge/            core package
-  simulation.py      simulation engine: traffic spawner, bus state machine, telemetry
-  vehicle.py         vehicle and bus dynamics (IDM, steering-first bicycle model)
-  config.py          simulation configuration
-  rl/                PPO agent, training environment, safety governor/shield, shared constants
-  graphics/          frame renderer and merge-zone GIF builder
-streamlit_app.py     interactive dashboard
-models/              trained policy checkpoints used by the dashboard
-scripts/             training, production gate, diagnostics and benchmarks
-tests/               pytest suite, including a fixed-seed golden-run regression test
-```
-
-## Common tasks
-
-```bash
-pytest                                   # run the test suite
-python scripts/train.py --help           # train a new policy
-python scripts/gate_production.py        # acceptance gate for a checkpoint
+busmerge/              simulation engine, vehicles, geometry, physics checks, evaluation, results
+  rl/                  training env, PPO agent, observation, reward, governor and safety shield
+  graphics/            top-down renderer and merge GIF
+streamlit_app.py       interactive dashboard
+models/                shipped brains (v13 default; v9-v11 kept for the case study)
+results/               published measurements (per-seed rows + provenance)
+scripts/               verify_brain, acceptance, train, publish_results, diagnostics
+tests/                 pytest suite (CI) and nightly gates
+docs/                  the documents above
 ```
 
 ## License

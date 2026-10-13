@@ -1,6 +1,6 @@
 """
-Lateral model debug tool — run with:  python test_lateral.py
-Produces lateral_debug.png with 4 panels that let you inspect
+Lateral model debug tool — run with:  python scripts/diagnostics/lateral_debug.py
+Produces outputs/lateral_debug.png with 4 panels that let you inspect
 the steering-first model and O-U lane drift for each car class.
 """
 
@@ -74,8 +74,10 @@ for col, cls in enumerate(CLASSES):
         ax.axhline(0, color='k', linewidth=0.5)
 
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-plt.savefig("lateral_debug.png", dpi=120)
-print("Saved: lateral_debug.png")
+from busmerge.paths import OUTPUTS_DIR  # noqa: E402
+OUTPUTS_DIR.mkdir(exist_ok=True)
+plt.savefig(OUTPUTS_DIR / "lateral_debug.png", dpi=120)
+print(f"Saved: {OUTPUTS_DIR / 'lateral_debug.png'}")
 
 # ── Print distribution summary ───────────────────────────────────────────────
 print("\n=== Per-class distribution (N=200 samples each) ===")

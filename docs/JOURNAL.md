@@ -44,7 +44,7 @@ before the bus entered the bay, and the bus starts in the lane at progress 1.0.
 
 ## 2026-10-05: one harness for every number
 
-**The rule.** The user ruled that test/app inconsistencies are bugs. The investigation found that the
+**The rule.** The project owner ruled that test/app inconsistencies are bugs. The investigation found that the
 smoke test, the smoke button, the validation demo and the app each had their own episode loop, their
 own traffic settings and their own definition of "merged" and "collision".
 - **One harness:** `busmerge/evaluation.py` (`run_episode`, `classify_outcome`) became the only
@@ -91,7 +91,7 @@ current sidebar instead of the run's settings.
 
 ## 2026-10-07: "Accel Paradox" → physical-invariant checks
 
-**The user saw an "Accel Paradox" warning in the app.**
+**The project owner saw an "Accel Paradox" warning in the app.**
 - **The detector:** it flagged the frame in which a braking car comes to rest. That was a false positive,
   fixed.
 - **The real problem:** a follower speed cap (the "Hand of God") cut speeds by up to 2.4 m/s per frame
@@ -180,7 +180,7 @@ acceptance**, and was no better than v11 measured on the same code.
 
 ## 2026-10-10: strict physics adopted
 
-**Decision.** The user chose to adopt strict physics with v11 rather than invest first in training
+**Decision.** The project owner chose to adopt strict physics with v11 rather than invest first in training
 research. A brain that visibly makes 3 contacts in 100 runs is preferred to a simulation that hides them.
 
 **What changed.**
@@ -208,7 +208,7 @@ wait after boarding.
 
 ## 2026-10-10: verification without clamps, honest bus steering
 
-**RL work halted** (user decision): before publishing, check that the 97% is real.
+**RL work halted** (project owner's decision): before publishing, check that the 97% is real.
 
 **Verification of v11 on 1,000 unseen seeds (2000-2999)**, with every position and heading clamp removed
 (`7b59caf`) and the road edges checked (`scripts/verify_brain.py`):
@@ -218,7 +218,7 @@ wait after boarding.
   - **Kerb:** it cut the kerb while pulling in in 47% of runs.
   - **End of the bay:** it stopped past it in 3%.
 
-**Causes and fixes.** The user chose to fix only the bus. Cars crossing the centre line or the kerb is
+**Causes and fixes.** The project owner chose to fix only the bus. Cars crossing the centre line or the kerb is
 driving behaviour, so it is now reported, not failed. Details are in BUGS P11-P15.
 - **Merge steering** had no heading term, so it overshot any target. It is now pure pursuit with the
   heading term, the same function as for every other bus state.
@@ -249,13 +249,13 @@ The 97.9% measured the brain together with the defect.
 v9 and v10 behave the same way (0/100 merged each, seeds 2000-2099): every brain was trained under
 the overshooting steering. The app's brain table now says so.
 
-**Open (user decision).**
+**Open (project owner's decision).**
 - A fine-tune under the fixed dynamics (BUGS O8).
 - First, fix the training env's start poses: 14.6% of them put the bus off the road (BUGS O9).
 
 ## 2026-10-10 (evening): fine-tune under honest steering, v13
 
-The user chose a time-boxed fine-tune, kept off `main`, with a fallback to documenting the result if it
+The project owner chose a time-boxed fine-tune, kept off `main`, with a fallback to documenting the result if it
 failed.
 
 **Before training.**
@@ -276,7 +276,7 @@ safe-steer term once out of the bay.
 - **Weight 8:** stayed half way.
 - **Weight 60:** stopped at about -0.3 m.
 
-**Threshold, the user's decision:** -0.25 m, the bus wholly inside the lane. It is one constant used
+**Threshold, the project owner's decision:** -0.25 m, the bus wholly inside the lane. It is one constant used
 by the engine, the evaluation and training.
 
 **Selection**, seeds 1000-1099: weight 30 at epoch 300 had 100 merged, 0 contact, 91 strict.
@@ -294,15 +294,15 @@ counted as a physics violation.
 **Next:** development frozen; QA and documentation (ROADMAP 1c).
 
 **Later the same evening.**
-- **Acceptance limits:** mean 15.0 s and p95 20.0 s (the user's decision).
+- **Acceptance limits:** mean 15.0 s and p95 20.0 s (the project owner's decision).
 - **`verify_brain`:** takes `--traffic-rate` and `--cars`, and reports the traffic actually present.
 - **Stress test of v13:** 100 unseen seeds at 0.2, 0.4, 0.6 and 0.8 cars/s. Merged 97-99, contact 1-3,
   never stuck, never over the centre line, strict 84-90; the differences are within noise.
 - **The arrivals saturate:** at 0.8 cars/s there are only 3.4 cars near the bus, against 2.6 at 0.4.
 - **Test strategy:** a coverage summary and a menu of 29 proposed tests are in
-  [TEST_STRATEGY.md](TEST_STRATEGY.md), for the user to choose from.
+  [TEST_STRATEGY.md](TEST_STRATEGY.md), for the project owner to choose from.
 
-**Automated tests (the user's selection from TEST_STRATEGY.md).**
+**Automated tests (the project owner's selection from TEST_STRATEGY.md).**
 - **New tests:** 74 cases, plus 3 strict `xfail`. The suite is 235 passed, 12 xfailed, about 60 s
   locally.
 - **Refactor:** one implementation of lateral motion, `Vehicle.apply_steering` and `Vehicle.steer_toward`,

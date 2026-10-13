@@ -71,7 +71,7 @@ brake.
 - Choose which of the original project notes to publish.
 - Create the public repository, push, and confirm CI is green.
 - Point Streamlit Community Cloud at it.
-- Make the old repository private (the user's decision).
+- Make the old repository private (the project owner's decision).
 
 ## Ideas carried over from the original project (not scheduled)
 
