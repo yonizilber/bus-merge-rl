@@ -1,5 +1,7 @@
 # bus-merge-rl
 
+**English** · [עברית](README.he.md)
+
 [![CI](https://github.com/yonizilber/bus-merge-rl/actions/workflows/ci.yml/badge.svg)](https://github.com/yonizilber/bus-merge-rl/actions/workflows/ci.yml)
 [![Nightly gates](https://github.com/yonizilber/bus-merge-rl/actions/workflows/nightly.yml/badge.svg)](https://github.com/yonizilber/bus-merge-rl/actions/workflows/nightly.yml)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)

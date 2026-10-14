@@ -83,16 +83,21 @@ def _time(s: dict) -> str:
     return f"{s['time_mean_s']:.1f} / {s['time_p95_s']:.1f} s" if s["time_mean_s"] is not None else "–"
 
 
-def brain_table() -> str:
-    lines = ["| Brain | Seeds | Merged | Contact | Stuck | Strict | Over centre line | Off road | Mean / p95 time |",
-             "|---|---|---|---|---|---|---|---|---|"]
+def brain_table(lang: str = "en") -> str:
+    if lang == "he":
+        head = ("| מוח | Seeds | השתלב | מגע | תקוע | הצלחה מחמירה | חצה קו אמצע | ירד מהכביש | זמן ממוצע / p95 |", " (ברירת מחדל)")
+    else:
+        head = ("| Brain | Seeds | Merged | Contact | Stuck | Strict | Over centre line | Off road | Mean / p95 time |",
+                " (default)")
+    lines = [head[0], "|---|---|---|---|---|---|---|---|---|"]
     for name in BRAINS:
         m = load(name)
         s = m["summary"]
-        label = m["label"] + (" (default)" if name == DEFAULT else "")
+        label = m["label"] + (head[1] if name == DEFAULT else "")
+        time = _time(s).replace(" s", " שנ׳") if lang == "he" else _time(s)
         lines.append(f"| {label} | {m['seeds'][0]}-{m['seeds'][1]} | {_pct(s['merged_pct'])} | {_pct(s['contact_pct'])} | "
                      f"{_pct(s['stuck_pct'])} | {_pct(s['strict_pct'])} | {_pct(s['over_centre_pct'])} | "
-                     f"{_pct(s['off_road_pct'])} | {_time(s)} |")
+                     f"{_pct(s['off_road_pct'])} | {time} |")
     return "\n".join(lines)
 
 
@@ -122,9 +127,15 @@ def case_study_table() -> str:
     return "\n".join(lines)
 
 
-def headline() -> str:
+def headline(lang: str = "en") -> str:
     m = load(DEFAULT)
     s = m["summary"]
+    if lang == "he":
+        centre = ("בלי לחצות אף פעם את קו האמצע" if s["over_centre_pct"] == 0
+                  else f"וחוצה את קו האמצע ב-{_pct(s['over_centre_pct'])} מהן")
+        return (f"הסוכן ברירת המחדל ({m['label']}) משתלב ב-{_pct(s['merged_pct'])} מתוך {s['n']:,} הרצות שלא נראו "
+                f"באימון, {centre}; {_pct(s['strict_pct'])} מהן נקיות בכל בדיקה פיזיקלית "
+                f"({_pct(s['contact_pct'])} מגע עם רכב, {_pct(s['off_road_pct'])} יציאה מהכביש).")
     centre = ("without ever crossing the centre line" if s["over_centre_pct"] == 0
               else f"crossing the centre line in {_pct(s['over_centre_pct'])} of them")
     return (f"The default agent ({m['label']}) merges in {_pct(s['merged_pct'])} of {s['n']:,} unseen runs "
@@ -133,8 +144,10 @@ def headline() -> str:
 
 
 RENDERERS = {"headline": headline, "brain_table": brain_table, "stress_table": stress_table,
-             "case_study_table": case_study_table}
+             "case_study_table": case_study_table,
+             "headline_he": lambda: headline("he"), "brain_table_he": lambda: brain_table("he")}
 PUBLISHED = {"README.md": ["headline", "brain_table"],
+             "README.he.md": ["headline_he", "brain_table_he"],
              "docs/SPECS.md": ["brain_table", "stress_table"],
              "docs/CASE_STUDY_REWARD_HACKING.md": ["case_study_table"]}
 

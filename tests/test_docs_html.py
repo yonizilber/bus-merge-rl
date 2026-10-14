@@ -1,7 +1,6 @@
 """The HTML version of the docs builds, covers every document, and has no broken links."""
 import importlib.util
 import re
-from pathlib import Path
 
 from busmerge.paths import REPO_ROOT
 
@@ -33,9 +32,12 @@ def test_html_docs_build_with_no_broken_links(tmp_path):
 
 
 def test_hebrew_sections_are_rendered_right_to_left(tmp_path):
-    qa = Path(build_docs_html.build(tmp_path)[2]).read_text(encoding="utf-8")
+    pages = {p.name: p for p in build_docs_html.build(tmp_path)}
+    qa = pages["QA_TEST_SUMMARY.html"].read_text(encoding="utf-8")
     blocks = re.findall(r'<div dir="rtl">(.*?)</div>', qa, flags=re.S)
     assert blocks and any("<table>" in b or "<strong>" in b for b in blocks)   # Markdown inside was converted
+    he = pages["README.he.html"].read_text(encoding="utf-8")
+    assert '<html lang="he" dir="rtl">' in he and "<h2" in he and "<table>" in he
 
 
 _spec2 = importlib.util.spec_from_file_location("build_test_report", REPO_ROOT / "scripts" / "build_test_report.py")

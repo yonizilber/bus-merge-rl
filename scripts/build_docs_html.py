@@ -29,6 +29,7 @@ REPO = Path(__file__).resolve().parent.parent
 # (source, output page, title in the navigation)
 PAGES = [
     ("README.md", "index.html", "Overview"),
+    ("README.he.md", "README.he.html", "סקירה בעברית"),
     ("docs/CASE_STUDY_REWARD_HACKING.md", "CASE_STUDY_REWARD_HACKING.html", "Case study"),
     ("docs/QA_TEST_SUMMARY.md", "QA_TEST_SUMMARY.html", "QA summary"),
     ("docs/SPECS.md", "SPECS.html", "Specification"),
@@ -129,7 +130,7 @@ pre code { background: none; padding: 0; font-size: 13.5px; }
 table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
 th, td { padding: 9px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border);
   min-width: 8.5rem; }
-th:first-child, td:first-child { min-width: 3rem; }
+th:first-child, td:first-child { min-width: 3rem; overflow-wrap: normal; }
 td { overflow-wrap: anywhere; }
 td code { white-space: normal; overflow-wrap: anywhere; }
 th { background: var(--row-alt); font-weight: 600; white-space: nowrap; }
@@ -140,7 +141,8 @@ tbody tr:last-child td { border-bottom: 0; }
 [dir="rtl"] { text-align: right; }
 div[dir="rtl"] { border-right: 3px solid var(--accent); padding-right: 16px; margin: 1.2em 0; }
 [dir="rtl"] th, [dir="rtl"] td { text-align: right; }
-[dir="rtl"] code, [dir="rtl"] pre { direction: ltr; unicode-bidi: embed; }
+[dir="rtl"] code, [dir="rtl"] pre { direction: ltr; unicode-bidi: isolate; }
+html[dir="rtl"] div[dir="rtl"] { border-right: 0; padding-right: 0; margin: 0; }
 [dir="rtl"] blockquote { border-left: 0; border-right: 4px solid var(--accent); border-radius: 10px 0 0 10px; }
 
 footer.site { max-width: 1240px; margin: 0 auto; padding: 0 16px 40px; color: var(--muted); font-size: 13px; }
@@ -169,8 +171,22 @@ def _rewrite_links(body: str, source: Path, out_dir: Path) -> str:
     return re.sub(r'\b(href|src)="([^"]+)"', fix, body)
 
 
+def _blank_line_before_lists(text: str) -> str:
+    """GitHub starts a list right after a paragraph line; python-markdown needs a blank line first."""
+    out, fenced = [], False
+    for line in text.split("\n"):
+        if line.startswith("```"):
+            fenced = not fenced
+        prev = out[-1] if out else ""
+        if (not fenced and re.match(r"\s*([-*]|\d+\.) ", line) and prev.strip()
+                and not re.match(r"\s*([-*]|\d+\.) ", prev) and not prev.startswith((" ", "\t", ">", "|"))):
+            out.append("")
+        out.append(line)
+    return "\n".join(out)
+
+
 def _page(source: Path, out_name: str, title: str, out_dir: Path) -> str:
-    text = source.read_text(encoding="utf-8")
+    text = _blank_line_before_lists(source.read_text(encoding="utf-8"))
     text = re.sub(r'<div dir="rtl">', '<div dir="rtl" markdown="1">', text)
     md = markdown.Markdown(extensions=["tables", "fenced_code", "codehilite", "sane_lists", "md_in_html",
                                        "attr_list", "toc"],
@@ -184,6 +200,10 @@ def _page(source: Path, out_name: str, title: str, out_dir: Path) -> str:
                   lambda m: f'<img {m.group(1)} onerror="this.style.display=&quot;none&quot;">', body)
     toc = md.toc if md.toc_tokens and sum(1 + len(t["children"]) for t in md.toc_tokens) >= 3 else ""
     rel_source = source.relative_to(REPO).as_posix()
+    if source.name.endswith(".he.md"):   # a page written entirely in Hebrew
+        footer = (f"נוצר מתוך <code>{rel_source}</code> על ידי <code>scripts/build_docs_html.py</code>. "
+                  "קובץ ה-Markdown הוא המקור.")
+        return shell(title, out_name, body, toc, footer, lang="he")
     footer = (f"Generated from <code>{rel_source}</code> by <code>scripts/build_docs_html.py</code>. "
               "The Markdown file is the source.")
     return shell(title, out_name, body, toc, footer)
@@ -194,9 +214,10 @@ def shell(title: str, out_name: str, body: str, toc: str = "", footer: str = "",
     """A full page in the site's design: navigation bar, content, optional table of contents, footer."""
     current = ' class="current"'
     nav = "".join(f'<a href="{o}"{current if o == out_name else ""}>{t}</a>' for o, t in NAV)
-    toc_html = f'<aside class="toc"><div class="label">On this page</div>{toc}</aside>' if toc else ""
+    label = "בעמוד זה" if lang == "he" else "On this page"
+    toc_html = f'<aside class="toc"><div class="label">{label}</div>{toc}</aside>' if toc else ""
     return f"""<!doctype html>
-<html lang="{lang}">
+<html lang="{lang}"{' dir="rtl"' if lang == "he" else ""}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
