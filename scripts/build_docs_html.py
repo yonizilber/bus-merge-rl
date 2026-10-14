@@ -17,10 +17,13 @@ import argparse
 import html
 import os
 import re
+import sys
 from pathlib import Path
 
 import markdown
 from pygments.formatters import HtmlFormatter
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # sibling script build_test_report
 
 REPO = Path(__file__).resolve().parent.parent
 # (source, output page, title in the navigation)
@@ -36,6 +39,7 @@ PAGES = [
     ("docs/ROADMAP.md", "ROADMAP.html", "Roadmap"),
 ]
 PAGE_OF = {(REPO / src).resolve(): out for src, out, _ in PAGES}
+NAV = [(out, title) for _, out, title in PAGES] + [("TEST_REPORT.html", "Test report")]
 
 CSS = """
 :root {
@@ -179,18 +183,27 @@ def _page(source: Path, out_name: str, title: str, out_dir: Path) -> str:
     body = re.sub(r"<img ([^>]*?badge\.svg[^>]*?)\s*/?>",
                   lambda m: f'<img {m.group(1)} onerror="this.style.display=&quot;none&quot;">', body)
     toc = md.toc if md.toc_tokens and sum(1 + len(t["children"]) for t in md.toc_tokens) >= 3 else ""
-    current = ' class="current"'
-    nav = "".join(f'<a href="{o}"{current if o == out_name else ""}>{t}</a>' for _, o, t in PAGES)
-    toc_html = f'<aside class="toc"><div class="label">On this page</div>{toc}</aside>' if toc else ""
     rel_source = source.relative_to(REPO).as_posix()
+    footer = (f"Generated from <code>{rel_source}</code> by <code>scripts/build_docs_html.py</code>. "
+              "The Markdown file is the source.")
+    return shell(title, out_name, body, toc, footer)
+
+
+def shell(title: str, out_name: str, body: str, toc: str = "", footer: str = "", extra_css: str = "",
+          lang: str = "en") -> str:
+    """A full page in the site's design: navigation bar, content, optional table of contents, footer."""
+    current = ' class="current"'
+    nav = "".join(f'<a href="{o}"{current if o == out_name else ""}>{t}</a>' for o, t in NAV)
+    toc_html = f'<aside class="toc"><div class="label">On this page</div>{toc}</aside>' if toc else ""
     return f"""<!doctype html>
-<html lang="en">
+<html lang="{lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)} · bus-merge-rl</title>
 <style>{CSS}
-{_pygments_css()}</style>
+{_pygments_css()}
+{extra_css}</style>
 </head>
 <body>
 <header class="site"><div class="bar"><a class="brand" href="index.html">bus-merge-rl</a>
@@ -201,8 +214,7 @@ def _page(source: Path, out_name: str, title: str, out_dir: Path) -> str:
 </main>
 {toc_html}
 </div>
-<footer class="site">Generated from <code>{rel_source}</code> by <code>scripts/build_docs_html.py</code>.
-The Markdown file is the source.</footer>
+<footer class="site">{footer}</footer>
 </body>
 </html>
 """
@@ -216,6 +228,9 @@ def build(out_dir: Path) -> list[Path]:
         target = out_dir / out
         target.write_text(_page((REPO / src).resolve(), out, title, out_dir), encoding="utf-8")
         written.append(target)
+    # The test report is built from the last recorded test run (scripts/build_test_report.py).
+    import build_test_report
+    written.append(build_test_report.write(out_dir))
     return written
 
 

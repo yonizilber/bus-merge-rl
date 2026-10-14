@@ -141,6 +141,8 @@ Measured, documented and tracked by tests ([docs/BUGS.md](docs/BUGS.md), "Open")
 
 For a styled HTML version of all of these (navigation, light and dark themes, right-to-left Hebrew), run
 `python scripts/build_docs_html.py` and open `docs/html/index.html`.
+`python scripts/build_test_report.py` runs the whole suite and adds a test report in English and Hebrew
+(`docs/html/TEST_REPORT.html`): every test case with its result, the known limitations, and the latest nightly gates.
 
 ## Reproducing the numbers
 
