@@ -21,7 +21,7 @@ pip install -e ".[dev]"
 streamlit run streamlit_app.py
 ```
 
-Click **Run Simulation**. Tick **Fixed random seed** to replay any [[seed|seed]] quoted in these pages.
+Click **Run Simulation**. Tick **Fixed random seed** to replay any seed quoted in these pages.
 
 ## Results
 
@@ -42,7 +42,7 @@ How to read the table:
 - **Merged:** the bus ended wholly in the lane, judged on [[merged|the traffic only]].
 - **Strict:** also requires the bus to stay on the road and out of the opposing lane, with no other physics
   violation ([[strict|strict success]]).
-- **Seeds:** [[seed|unseen]]: never used for training or for choosing a brain.
+- **Seeds:** unseen: never used for training or for choosing a brain.
 - **Where the numbers come from:** every number is generated from the measurements in `results/`, and a test
   fails if a page drifts from them.
 - **v9 to v11 show 0% on purpose.** They were trained while a steering defect carried the bus into the lane. The
@@ -53,7 +53,7 @@ How to read the table:
 The first agent merged in **97.9%** of unseen runs. Once every hidden correction was removed from the simulation,
 the same runs showed the bus **crossing the centre line in 100% of them**: the agent had never asked to leave the
 bay all the way. It asked to go half way and let an [[overshoot|overshooting]] steering controller carry it into the
-lane. That was [[reward_hacking|reward hacking]] against a defect in its own [[plant|plant]]. With the controller
+lane. That was reward hacking against a defect in its own [[plant|plant]]. With the controller
 fixed, the same agent merged in **0%** of runs. Getting a working agent back took fixing the training start
 poses, a bias in the PPO buffer, and a [[rollback|rollback rule]] that silently reset every attempt. Read the
 [case study](CASE_STUDY.md), and the longer [history of problems](HISTORY.md) for the other cases that shaped
@@ -61,17 +61,22 @@ the project.
 
 ## How it works, in short
 
-- **Cars** follow the [[idm|Intelligent Driver Model]]; one [[safe_speed|safe-speed law]] limits every
-  follower's acceleration, and nothing is assigned directly.
-- **Steering** uses a [[bicycle|kinematic bicycle model]] steered by [[pure_pursuit|pure pursuit]], with
-  [[ou|Ornstein-Uhlenbeck]] lane drift.
-- **The agent** is a [[ppo|PPO]] [[actor_critic|actor-critic network]] that sees 11 numbers
-  ([[observation|its observation]]) and outputs two: where to be sideways, and how fast to go.
-- **Every run is judged by one harness**, and checked by [[invariants|physics checks]] for moments that cannot
-  happen in reality.
+Four things make up the system. Hover over a term for a one-line explanation, and click it, then press *Expand*, for the
+equations and exactly how this project implements them.
 
-The [How it works](HOW_IT_WORKS.md) page explains each of these, with the full list of the agent's inputs and
-every term of its [[reward|reward]].
+- **The traffic.** Every car is an [[idm|IDM]] driver with its own parameters (five classes). While the bus merges, cars
+  leave it more room and yield through a blend that ramps up smoothly. One [[safe_speed|safe-speed law]] limits every
+  follower's acceleration; positions and speeds are never assigned.
+- **The vehicles' motion.** Sideways motion follows a [[bicycle|kinematic bicycle model]], steered by
+  [[pure_pursuit|pure pursuit]]. Every vehicle wobbles in its lane as an [[ou|Ornstein-Uhlenbeck]] process.
+- **The agent.** A [[ppo|PPO]]-trained [[actor_critic|actor-critic network]] sees 11 numbers ([[observation|the
+  observation]], optionally with [[noise|perception noise]]) and outputs two: where to be sideways, and how fast to go.
+  Two rule layers can override it: the [[governor|governor]] (off by default) and the [[shield|safety shield]].
+- **The judging.** Every run is judged by one harness and checked by [[invariants|physics checks]] for moments that
+  cannot happen in reality.
+
+The [How it works](HOW_IT_WORKS.md) page puts these together: the full list of the agent's inputs, every term of its
+reward, and how a run is judged.
 
 ## Testing
 
@@ -113,7 +118,7 @@ python scripts/publish_results.py          # regenerate the tables above from re
 pytest --nightly -m nightly                # the nightly gates
 ```
 
-v13 is v11 [[fine_tune|fine-tuned]] for 300 epochs, about 45 minutes on a CPU.
+v13 is v11 fine-tuned for 300 epochs, about 45 minutes on a CPU.
 
 ## Project layout
 

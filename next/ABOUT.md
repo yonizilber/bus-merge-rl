@@ -35,10 +35,19 @@ python scripts/build_test_report.py            # runs the suite and refreshes bo
 
 ## How terms work
 
-A source writes `[[idm]]` or `[[idm|the IDM model]]`. In the page, hovering over (or tabbing to) the term shows a
-one-line explanation; clicking it jumps to a note at the bottom of the same page, and the note has a link back to the
-exact place in the text. The entries are in `GLOSSARY.md`: `## Title {#key}`, a one-line `> tooltip`, then the
-explanation (its first paragraph is the note). An unknown key fails the build.
+A source writes `[[idm]]` or `[[idm|the IDM model]]`.
+
+- **Hover or focus** shows a popup with a one-line explanation. **Click** pins it. A technical term also has an
+  **Expand** button in the popup: the equations (set as MathML at build time, so nothing is loaded when the page
+  opens) and how this project implements the model. The popup also has a **Note** link.
+- **The notes** at the bottom of each page have the same text. The title of a note leads back to the exact place in the
+  text; after you came through a popup's Note link it leads back to *that* place, and each use also has its own arrow.
+- **A term used twice.** Only the first use in each `##` section is linked (a paragraph full of underlines is hard to
+  read); a repeat in the same section is plain text. A term linked again in a later section gets its own anchor, `↩1`,
+  `↩2`, and so on, in the note.
+- **The entries** are in `GLOSSARY.md`: `## Title {#key}`, a one-line `> tooltip`, a paragraph (the note), and
+  optionally `<!-- details -->` followed by Markdown with `$...$` and `$$...$$` math. An unknown key fails the build.
+- **Common terms** (reinforcement learning, reward, seed, and so on) are deliberately not defined.
 
 ## What is generated, not typed
 

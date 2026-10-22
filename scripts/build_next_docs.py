@@ -20,11 +20,13 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import shutil
 import sys
 from pathlib import Path
 
+import latex2mathml.converter
 import markdown
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -52,7 +54,8 @@ LANGS = {
                 ("HISTORY.html", "History of problems"), ("TESTING.html", "Testing"),
                 ("LIMITATIONS.html", "Limitations"), ("TEST_REPORT.html", "Test report"),
                 ("GLOSSARY.html", "Glossary")],
-        "notes": "Notes", "more": "in the glossary", "back": "back to the text",
+        "notes": "Notes", "more": "in the glossary", "back": "back to the text", "expand": "Expand",
+        "collapse": "Collapse", "note": "Note ↓", "details": "In detail",
         "toc": "On this page", "footer": "Generated from <code>next/en/{src}</code> by "
                                          "<code>scripts/build_next_docs.py</code>. The Markdown file is the source.",
         "totals": "The last full run recorded {n} test cases: {passed} passed, {xfailed} expected failures "
@@ -63,7 +66,8 @@ LANGS = {
         "nav": [("index.html", "סקירה"), ("HOW_IT_WORKS.html", "איך זה עובד"), ("CASE_STUDY.html", "חקר מקרה"),
                 ("HISTORY.html", "היסטוריית בעיות"), ("TESTING.html", "בדיקות"), ("LIMITATIONS.html", "מגבלות"),
                 ("TEST_REPORT.html", "דוח בדיקות"), ("GLOSSARY.html", "מילון מונחים")],
-        "notes": "הערות", "more": "במילון המונחים", "back": "חזרה לטקסט",
+        "notes": "הערות", "more": "במילון המונחים", "back": "חזרה לטקסט", "expand": "הרחב",
+        "collapse": "צמצם", "note": "להערה ↓", "details": "בפירוט",
         "toc": "בעמוד זה", "footer": "נוצר מתוך <code>next/he/{src}</code> על ידי "
                                       "<code>scripts/build_next_docs.py</code>. קובץ ה-Markdown הוא המקור.",
         "totals": "ההרצה המלאה האחרונה כללה {n} מקרי בדיקה: {passed} עברו, {xfailed} כישלונות צפויים "
@@ -181,10 +185,45 @@ def test_totals(lang: str) -> str:
 # ---------------------------------------------------------------------------------------------- glossary
 
 _ENTRY = re.compile(r"^## (.+?) \{#([a-z0-9_-]+)\}\s*$", re.M)
+DETAILS_MARK = "<!-- details -->"
+_MATH = re.compile(r"\$\$(.+?)\$\$|\$([^$\n]+?)\$", re.S)
+
+
+def _extract_math(text: str) -> tuple[str, list[tuple[bool, str]]]:
+    """Take ``$..$`` and ``$$..$$`` out before Markdown sees them (it would mangle ``_`` and ``*``)."""
+    items: list[tuple[bool, str]] = []
+
+    def take(m: re.Match) -> str:
+        items.append((m.group(1) is not None, (m.group(1) or m.group(2)).strip()))
+        return f"@@M{len(items) - 1}@@"
+    return _MATH.sub(take, text), items
+
+
+def _restore_math(fragment: str, items: list[tuple[bool, str]]) -> str:
+    for i, (display, tex) in enumerate(items):
+        ml = latex2mathml.converter.convert(tex, display="block" if display else "inline")
+        ml = ml.replace("<math ", '<math dir="ltr" ', 1)
+        # A one-letter identifier is italic. Left to itself the browser swaps in the "mathematical italic"
+        # code points, which many systems have no font for (empty boxes); plain italic letters always draw.
+        ml = re.sub(r"<mi>(&#x[0-9A-Fa-f]+;|[A-Za-z])</mi>", r'<mi class="v">\1</mi>', ml)
+        fragment = fragment.replace(f"@@M{i}@@", f'<div class="math-block">{ml}</div>' if display else ml)
+    return fragment
+
+
+def render_fragment(md_text: str, *, inline: bool = False) -> str:
+    """Markdown with math to HTML (MathML, built here: nothing to load when the page opens).
+
+    ``[[key|shown]]`` becomes an ordinary link to the glossary entry: inside popups and notes there is no popup.
+    """
+    text, items = _extract_math(build_docs_html._blank_line_before_lists(_plain_links(md_text, "GLOSSARY.html")))
+    out = markdown.markdown(text, extensions=["tables", "sane_lists", "fenced_code"])
+    out = _restore_math(out, items)
+    out = re.sub(r"<p>(<div class=\"math-block\">.*?</div>)</p>", r"\1", out, flags=re.S)
+    return re.sub(r"^<p>(.*)</p>$", r"\1", out, flags=re.S) if inline else out
 
 
 def parse_glossary(path: Path) -> dict[str, dict]:
-    """key -> title, tooltip (one line), note (the first paragraph of the entry)."""
+    """key -> title, tip (one line), note (first paragraph), details (optional, Markdown with math)."""
     text = path.read_text(encoding="utf-8")
     matches = list(_ENTRY.finditer(text))
     entries = {}
@@ -193,10 +232,12 @@ def parse_glossary(path: Path) -> dict[str, dict]:
         tip, _, rest = body.partition("\n")
         if not tip.startswith(">"):
             raise ValueError(f"{path.name}: entry '{m.group(2)}' must start with a '> one-line tooltip'")
-        paragraphs = [p.strip() for p in rest.strip().split("\n\n") if p.strip()]
+        main, _, details = rest.partition(DETAILS_MARK)
+        paragraphs = [p.strip() for p in main.strip().split("\n\n") if p.strip()]
         if not paragraphs:
             raise ValueError(f"{path.name}: entry '{m.group(2)}' has no explanation")
-        entries[m.group(2)] = {"title": m.group(1), "tip": tip.lstrip("> ").strip(), "note": paragraphs[0]}
+        entries[m.group(2)] = {"title": m.group(1), "tip": tip.lstrip("> ").strip(), "note": paragraphs[0],
+                               "details": details.strip() or None}
     return entries
 
 
@@ -204,54 +245,83 @@ _TERM = re.compile(r"\[\[([a-z0-9_-]+)(?:\|([^\]]+))?\]\]")
 
 
 def _plain_links(text: str, prefix: str) -> str:
-    """[[key|shown]] as an ordinary link (inside the glossary and inside notes, where there is no popup)."""
+    """[[key|shown]] as an ordinary link (inside the glossary, popups and notes, where there is no popup)."""
     return _TERM.sub(lambda m: f"[{m.group(2) or m.group(1)}]({prefix}#{m.group(1)})", text)
 
 
-def _inline(md_text: str) -> str:
-    out = markdown.markdown(_plain_links(md_text, "GLOSSARY.html"))
-    return re.sub(r"^<p>(.*)</p>$", r"\1", out, flags=re.S)
-
-
 def link_terms(text: str, glossary: dict[str, dict], used: dict[str, int], page: str) -> str:
-    """Replace [[key|shown]] with a term link; count how often each term is used on this page.
+    """Replace [[key|shown]] with a term link; count how often each term is linked on this page.
 
-    A term may span a line break. Fenced code blocks are left alone.
+    Only the first use of a term in each ``##`` section is a link; a repeat in the same section is plain
+    text, so a paragraph is not full of underlines. Every linked use has its own anchor, and the note at
+    the bottom links back to each of them. A term may span a line break; fenced code is left alone.
     """
-    def repl(m: re.Match) -> str:
-        key, shown = m.group(1), m.group(2)
-        if key not in glossary:
-            raise KeyError(f"{page}: term [[{key}]] is not in the glossary")
-        used[key] = used.get(key, 0) + 1
-        entry = glossary[key]
-        return (f'<a class="term" id="ref-{key}-{used[key]}" href="#note-{key}" '
-                f'data-tip="{html.escape(entry["tip"], quote=True)}">'
-                f'{html.escape(" ".join((shown or entry["title"]).split()))}</a>')
+    def convert(section: str) -> str:
+        seen: set[str] = set()
 
-    parts = re.split(r"(```.*?```)", text, flags=re.S)
-    return "".join(part if part.startswith("```") else _TERM.sub(repl, part) for part in parts)
+        def repl(m: re.Match) -> str:
+            key, shown = m.group(1), m.group(2)
+            if key not in glossary:
+                raise KeyError(f"{page}: term [[{key}]] is not in the glossary")
+            entry = glossary[key]
+            label = html.escape(" ".join((shown or entry["title"]).split()))
+            if key in seen:
+                return label
+            seen.add(key)
+            used[key] = used.get(key, 0) + 1
+            return (f'<a class="term" data-key="{key}" id="ref-{key}-{used[key]}" href="#note-{key}">{label}</a>')
+
+        parts = re.split(r"(```.*?```)", section, flags=re.S)
+        return "".join(part if part.startswith("```") else _TERM.sub(repl, part) for part in parts)
+
+    return "".join(convert(section) for section in re.split(r"(?m)^(?=## )", text))
 
 
 def notes_html(used: dict[str, int], glossary: dict[str, dict], cfg: dict) -> str:
+    """The notes at the bottom of a page, and the (inert) templates the popups are filled from."""
     if not used:
         return ""
-    items = []
+    items, templates = [], []
     for key, n in used.items():
         entry = glossary[key]
+        details = render_fragment(entry["details"]) if entry["details"] else ""
         backs = " ".join(f'<a class="back" href="#ref-{key}-{i}" title="{cfg["back"]}">↩{"" if n == 1 else i}</a>'
                          for i in range(1, n + 1))
-        items.append(f'<li id="note-{key}"><strong>{html.escape(entry["title"])}.</strong> '
-                     f'{_inline(entry["tip"] + " " + entry["note"])} {backs} · <a href="GLOSSARY.html#{key}">{cfg["more"]}</a></li>')
-    return f'<section class="notes"><h2 id="notes">{cfg["notes"]}</h2><ol>{"".join(items)}</ol></section>'
+        more = (f'<details class="note-more"><summary>{cfg["expand"]}</summary>{details}</details>'
+                if details else "")
+        items.append(f'<li id="note-{key}"><strong><a class="note-title" href="#ref-{key}-1" '
+                     f'title="{cfg["back"]}">{html.escape(entry["title"])}</a>.</strong> '
+                     f'{render_fragment(entry["tip"] + " " + entry["note"], inline=True)} {backs} · '
+                     f'<a href="GLOSSARY.html#{key}">{cfg["more"]}</a>{more}</li>')
+        templates.append(f'<template id="tpl-{key}"><div class="tip-short">'
+                         f'{render_fragment(entry["tip"], inline=True)}</div>'
+                         + (f'<div class="tip-more">{details}</div>' if details else "") + "</template>")
+    return (f'<section class="notes"><h2 id="notes">{cfg["notes"]}</h2><ol>{"".join(items)}</ol></section>'
+            + "".join(templates))
 
 
 EXTRA_CSS = """
 a.term { color: inherit; text-decoration: none; border-bottom: 1.5px dotted var(--accent); cursor: help; }
-a.term:hover, a.term:focus { background: var(--accent-soft); outline: none; border-radius: 3px; }
-#tip { position: fixed; z-index: 50; max-width: min(24rem, calc(100vw - 16px)); padding: 9px 12px;
-  border-radius: 10px; background: var(--surface); border: 1px solid var(--border); font-size: 14px;
-  line-height: 1.5; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); pointer-events: none; }
-#tip[hidden] { display: none; }
+a.term:hover, a.term:focus, a.term.open { background: var(--accent-soft); outline: none; border-radius: 3px; }
+#pop { position: fixed; z-index: 60; width: min(27rem, calc(100vw - 16px)); max-height: calc(100vh - 16px);
+  overflow: auto; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .22); font-size: 14.5px; line-height: 1.55; }
+#pop[hidden] { display: none; }
+#pop.expanded { width: min(46rem, calc(100vw - 16px)); }
+#pop .tip-more { display: none; border-top: 1px solid var(--border); margin-top: 10px; padding-top: 6px; }
+#pop.expanded .tip-more { display: block; }
+#pop .acts { display: flex; gap: 14px; align-items: center; margin-top: 10px; font-size: 13.5px; position: sticky;
+  bottom: -12px; background: var(--surface); padding: 8px 0 2px; }
+#pop button { font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--accent-soft);
+  color: var(--accent); border-radius: 8px; padding: 3px 12px; font-weight: 600; }
+#pop a { color: var(--accent); }
+#pop h3, #pop h4 { font-size: 15px; margin: .9em 0 .3em; }
+.math-block { overflow-x: auto; text-align: center; margin: .6em 0; direction: ltr; }
+math { font-size: 1.1em; font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", "Noto Serif", "DejaVu Serif", serif; }
+math mi.v { text-transform: none; font-style: italic; }
+.note-more { margin-top: 6px; }
+.note-more summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.note-more[open] { border-inline-start: 3px solid var(--border); padding-inline-start: 12px; margin-inline-start: 4px; }
 .cards { display: grid; gap: 14px; margin: 1.2em 0; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px;
   box-shadow: var(--shadow); }
@@ -267,25 +337,77 @@ a.term:hover, a.term:focus { background: var(--accent-soft); outline: none; bord
 .notes li { margin: .5em 0; padding: 2px 6px; }
 .notes li:target { background: var(--accent-soft); border-radius: 6px; }
 .notes a.back { text-decoration: none; font-weight: 600; margin-inline-start: .15rem; }
+.notes a.note-title { color: inherit; text-decoration: none; border-bottom: 1px solid var(--border); }
 """
 
-TIP_JS = """<div id="tip" role="tooltip" hidden></div>
+POP_JS = """<div id="pop" role="dialog" aria-live="polite" hidden>
+  <div class="body"></div>
+  <div class="acts"><button type="button" class="expand"></button><a class="tonote" href="#"></a></div>
+</div>
 <script>
 (function () {
-  var tip = document.getElementById('tip');
-  function place(a) {
-    var r = a.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
-    var x = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
-    var y = r.top - h - 8; if (y < 8) { y = r.bottom + 8; }
-    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  var pop = document.getElementById('pop'), body = pop.querySelector('.body');
+  var btn = pop.querySelector('.expand'), toNote = pop.querySelector('.tonote');
+  var L = JSON.parse(document.getElementById('pop-labels').textContent);
+  var cur = null, pinned = false, timer = null;
+  toNote.textContent = L.note;
+
+  function place() {
+    var r = cur.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, m = 8;
+    var x = Math.max(m, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - m));
+    var y = r.bottom + 6;
+    if (y + h > window.innerHeight - m) { y = r.top - h - 6; }
+    y = Math.max(m, Math.min(y, window.innerHeight - h - m));
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
   }
-  function show(e) { var a = e.currentTarget; tip.textContent = a.getAttribute('data-tip'); tip.hidden = false; place(a); }
-  function hide() { tip.hidden = true; }
+  function setExpanded(on) {
+    pop.classList.toggle('expanded', on);
+    btn.textContent = on ? L.collapse : L.expand;
+    if (cur) { place(); }
+  }
+  function show(a) {
+    clearTimeout(timer);
+    if (cur && cur !== a) { cur.classList.remove('open'); }
+    cur = a; a.classList.add('open');
+    var tpl = document.getElementById('tpl-' + a.dataset.key);
+    body.innerHTML = '';
+    body.appendChild(tpl.content.cloneNode(true));
+    var more = !!body.querySelector('.tip-more');
+    btn.style.display = more ? '' : 'none';
+    toNote.setAttribute('href', '#note-' + a.dataset.key);
+    pop.hidden = false; setExpanded(false);
+  }
+  function hide() {
+    pop.hidden = true; pinned = false;
+    if (cur) { cur.classList.remove('open'); cur = null; }
+  }
+  function later() { clearTimeout(timer); timer = setTimeout(function () { if (!pinned) { hide(); } }, 260); }
+
   document.querySelectorAll('a.term').forEach(function (a) {
-    a.addEventListener('mouseenter', show); a.addEventListener('focus', show);
-    a.addEventListener('mouseleave', hide); a.addEventListener('blur', hide);
+    a.addEventListener('mouseenter', function () { if (!pinned) { show(a); } });
+    a.addEventListener('focus', function () { if (!pinned) { show(a); } });
+    a.addEventListener('mouseleave', later);
+    a.addEventListener('blur', later);
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (pinned && cur === a) { hide(); } else { show(a); pinned = true; }
+    });
   });
-  window.addEventListener('scroll', hide, { passive: true });
+  pop.addEventListener('mouseenter', function () { clearTimeout(timer); });
+  pop.addEventListener('mouseleave', later);
+  btn.addEventListener('click', function () { pinned = true; setExpanded(!pop.classList.contains('expanded')); });
+  toNote.addEventListener('click', function () {
+    // Remember where the reader came from: the note's title then leads back to this very place.
+    var title = document.querySelector('#note-' + cur.dataset.key + ' .note-title');
+    if (title) { title.setAttribute('href', '#' + cur.id); }
+    hide();
+  });
+  document.addEventListener('click', function (e) {
+    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('a.term')) { hide(); }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { hide(); } });
+  window.addEventListener('scroll', function () { if (!pinned && !pop.hidden) { hide(); } }, { passive: true });
+  window.addEventListener('resize', function () { if (cur) { place(); } });
 })();
 </script>"""
 
@@ -328,6 +450,11 @@ def _links_to_pages(body: str) -> str:
     return re.sub(r'href="(?!https?:|mailto:|#)([A-Za-z0-9_]+)\.md(#[^"]*)?"', fix, body)
 
 
+def _pop(cfg: dict) -> str:
+    labels = json.dumps({k: cfg[k] for k in ("expand", "collapse", "note")}, ensure_ascii=False)
+    return f'<script type="application/json" id="pop-labels">{labels}</script>\n{POP_JS}'
+
+
 def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dict]) -> str:
     cfg = LANGS[lang]
     source = NEXT / lang / src_name
@@ -335,15 +462,16 @@ def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dic
     text = text.replace("{{features_table}}", features_table(lang)).replace("{{test_totals}}", test_totals(lang))
     used: dict[str, int] = {}
     if src_name == "GLOSSARY.md":
-        text = _plain_links(text, "")
+        text = _plain_links(text, "").replace(DETAILS_MARK, f"**{cfg['details']}**")
     else:
         text = link_terms(text, glossary, used, source.name)
+    text, math_items = _extract_math(text)
     text = build_docs_html._blank_line_before_lists(text)
     md = markdown.Markdown(extensions=["tables", "fenced_code", "codehilite", "sane_lists", "md_in_html",
                                        "attr_list", "toc"],
                            extension_configs={"codehilite": {"guess_lang": False},
                                               "toc": {"permalink": "#", "toc_depth": "2-3"}})
-    body = md.convert(text)
+    body = _restore_math(md.convert(text), math_items)
     body = cards(body)
     body = body.replace("<table>", '<div class="table-wrap"><table>').replace("</table>", "</table></div>")
     body += notes_html(used, glossary, cfg)
@@ -353,7 +481,7 @@ def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dic
     toc = md.toc if md.toc_tokens and sum(1 + len(t["children"]) for t in md.toc_tokens) >= 3 else ""
     title = next((label for out, label in cfg["nav"] if out == out_name), out_name)
     return build_docs_html.shell(title, out_name, body, toc, cfg["footer"].format(src=src_name), EXTRA_CSS,
-                                 lang=lang, nav=cfg["nav"], toc_label=cfg["toc"], extra_body=TIP_JS)
+                                 lang=lang, nav=cfg["nav"], toc_label=cfg["toc"], extra_body=_pop(cfg) if used else "")
 
 
 def build_language(lang: str, out_dir: Path) -> list[Path]:

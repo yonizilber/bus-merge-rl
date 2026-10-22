@@ -6,9 +6,9 @@ were. The [glossary](GLOSSARY.md) lists them all.
 
 ## 1. The world
 
-- A single-lane urban road, 1000 m long, simulated in steps of [[dt|0.1 s]].
-- A city bus (11.0 m × 2.5 m) drives in, pulls into a [[bay|bus bay]] at about 300 m, and stands there for
-  [[boarding|boarding]] (15 s by default).
+- A single-lane urban road, 1000 m long, simulated in steps of 0.1 s.
+- A city bus (11.0 m × 2.5 m) drives in, pulls into a bus bay at about 300 m, and stands there for
+  boarding (15 s by default).
 - When boarding ends, the **agent** takes over. It decides when and how to pull out and merge into the traffic
   lane. The merge is done when the bus is wholly in the lane.
 - Cars arrive from the start of the road and follow each other. They yield to the bus once it is clearly
@@ -112,13 +112,13 @@ Two numbers, each in [-1, 1], at every step:
 
 ### The network
 
-An [[actor_critic|actor-critic network]]: a shared trunk of two 64-unit layers (tanh), an actor head with a mean
-for each action and a spread that depends on the state, and a critic head. In the app and in every
-measurement the agent uses the mean, so it is deterministic.
+An [[actor_critic|actor-critic network]]: the actor is two 64-unit tanh layers followed by a mean for each action
+and a spread that depends on the state; a separate critic of the same shape estimates the value of a situation and is
+used only in training. In the app and in every measurement the agent uses the mean, so it is deterministic.
 
 ### How it learns
 
-The agent is trained with [[ppo|PPO]]: 2,000-step batches, ratio clip 0.2, [[gae|GAE]] (λ 0.95, γ 0.995) and
+The agent is trained with [[ppo|PPO]]: 2,000-step batches, ratio clip 0.2, GAE (λ 0.95, γ 0.995) and
 Adam with a learning rate of 5e-5. The training environment adds only what is specific to training (scenario
 generators, the reward, telemetry); every physics step is run by the same engine as the app. The scenarios vary the
 traffic: a jam, slow city traffic, a merge already under way, fast flow, a platoon, dense traffic, and a production-like
@@ -126,7 +126,7 @@ queue. Training also randomises the start pose, the bus power and driver distrac
 
 ### The reward
 
-The [[reward|reward]] is what the agent tries to maximise. Every term, as in `busmerge/rl/env.py`:
+The reward is what the agent tries to maximise. Every term, as in `busmerge/rl/env.py`:
 
 | Term | Value | Why |
 |---|---|---|
@@ -172,7 +172,7 @@ outcome, [[invariants|physics checks]] look for every impossible moment: braking
 headings. Cars that cross the centre line or the kerb (they do it when they move over for the bus) are reported but
 not failed.
 
-Results are measured on [[seed|unseen seeds]], with [[wilson|confidence intervals]]: at 100 runs, differences
+Results are measured on unseen seeds, with [[wilson|confidence intervals]]: at 100 runs, differences
 of a few points are not significant.
 
 ## 6. Where things live in the code

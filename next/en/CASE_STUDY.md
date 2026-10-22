@@ -6,7 +6,7 @@ them. The cause was a steering controller that [[overshoot|overshot]] every targ
 on that overshoot: it asked to go only half way out of the bay and let the defect carry it into the
 lane. With the controller fixed, the agent merged in 0% of runs. Retraining also required fixing two
 bugs in the training loop. The retrained agent, v13, merges in 97.8% of runs with no centre-line
-crossing; 89.4% of runs are clean by every physical check. This is a case of [[reward_hacking|reward hacking]]. This document records how all of this was found, fixed and measured.
+crossing; 89.4% of runs are clean by every physical check. This is a case of reward hacking. This document records how all of this was found, fixed and measured.
 
 All numbers come from the same code the Streamlit app runs (`busmerge/evaluation.py`), on seeds
 2000-2999 that were never used for training or selection, unless stated otherwise.

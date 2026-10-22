@@ -81,24 +81,74 @@ def test_neither_site_links_to_the_other(sites):
                 assert f"/{other}/" not in url and not url.startswith(f"{other}/"), (lang, page.name, url)
 
 
-def test_every_term_has_a_tooltip_a_note_and_a_link_back(sites):
+def test_every_term_has_a_popup_a_note_and_a_link_back(sites):
     _, built = sites
     for lang, pages in built.items():
         for page in pages:
             text = _text(page)
-            refs = re.findall(r'<a class="term" id="(ref-[^"]+)" href="#(note-[^"]+)" data-tip="([^"]+)"', text)
-            for ref_id, note_id, tip in refs:
-                assert tip.strip(), (lang, page.name, ref_id)
+            refs = re.findall(r'<a class="term" data-key="([a-z0-9_-]+)" id="(ref-[^"]+)" href="#(note-[^"]+)"', text)
+            for key, ref_id, note_id in refs:
+                assert f'<template id="tpl-{key}">' in text, (lang, page.name, key)
                 assert f'<li id="{note_id}">' in text, (lang, page.name, note_id)
-                assert f'href="#{ref_id}"' in text, f"{lang}/{page.name}: no link back to {ref_id}"
-            assert "[[" not in text and "{{" not in text, f"unresolved markup in {lang}/{page.name}"
+                assert f'class="back" href="#{ref_id}"' in text, f"{lang}/{page.name}: no link back to {ref_id}"
+            if refs:
+                assert 'id="pop"' in text and 'id="pop-labels"' in text, (lang, page.name)
+                # the title of every note leads back to the text too
+                assert len(re.findall(r'class="note-title" href="#ref-', text)) == len({k for k, *_ in refs})
+            assert "[[" not in text and "{{" not in text and "@@M" not in text, f"unresolved markup in {lang}/{page.name}"
+
+
+def test_ids_are_unique_on_every_page(sites):
+    _, built = sites
+    for lang, pages in built.items():
+        for page in pages:
+            ids = re.findall(r'\bid="([^"]+)"', _text(page))
+            assert len(ids) == len(set(ids)), (lang, page.name, sorted({i for i in ids if ids.count(i) > 1}))
+
+
+def test_a_term_is_linked_once_per_section_but_every_link_has_its_own_anchor():
+    glossary = {"idm": {"title": "IDM", "tip": "t", "note": "n", "details": None}}
+    used: dict = {}
+    text = "intro [[idm]]\n\n## One\n[[idm]] and [[idm|again]]\n\n## Two\n[[idm|later]]\n"
+    out = build_next_docs.link_terms(text, glossary, used, "x")
+    assert used == {"idm": 3}                                    # intro, section One (once), section Two
+    assert out.count('class="term"') == 3 and "again" in out and 'id="ref-idm-3"' in out
+    assert 'data-key="idm" id="ref-idm-2"' in out and "<a class=\"term\" data-key=\"idm\" id=\"ref-idm-2\" href=\"#note-idm\">IDM</a> and again" in out
+
+
+def test_unknown_terms_fail_the_build():
+    with pytest.raises(KeyError):
+        build_next_docs.link_terms("[[nope]]", {}, {}, "x")
+
+
+def test_the_technical_terms_have_expandable_details_with_equations_in_both_languages(sites):
+    _, built = sites
+    entries = {lang: build_next_docs.parse_glossary(REPO_ROOT / "next" / lang / "GLOSSARY.md") for lang in ("en", "he")}
+    with_details = {lang: {k for k, v in e.items() if v["details"]} for lang, e in entries.items()}
+    assert with_details["en"] == with_details["he"]
+    assert {"idm", "safe_speed", "bicycle", "pure_pursuit", "ou", "noise", "ppo", "actor_critic"} <= with_details["en"]
+    for lang in ("en", "he"):
+        glossary = _text(next(p for p in built[lang] if p.name == "GLOSSARY.html"))
+        assert glossary.count("<math") >= 25 and 'class="math-block"' in glossary
+        assert "$" not in re.sub(r"<math.*?</math>", "", glossary, flags=re.S)   # no formula was left as source text
+        how = _text(next(p for p in built[lang] if p.name == "HOW_IT_WORKS.html"))
+        for key in ("idm", "bicycle", "ou", "ppo"):
+            template = re.search(rf'<template id="tpl-{key}">(.*?)</template>', how, flags=re.S)
+            assert template and 'class="tip-more"' in template.group(1) and "<math" in template.group(1), (lang, key)
+            assert re.search(rf'<li id="note-{key}">.*?<details class="note-more">', how, flags=re.S), (lang, key)
+
+
+def test_common_terms_are_not_defined():
+    for lang in ("en", "he"):
+        entries = build_next_docs.parse_glossary(REPO_ROOT / "next" / lang / "GLOSSARY.md")
+        assert not {"seed", "reward", "reward_hacking", "fine_tune", "ci", "dt", "bay", "boarding", "gae"} & set(entries)
 
 
 def test_the_pages_with_terms_actually_use_them(sites):
     _, built = sites
     for lang in ("en", "he"):
         counts = {p.name: len(re.findall(r'class="term"', _text(p))) for p in built[lang]}
-        assert counts["index.html"] >= 10 and counts["HOW_IT_WORKS.html"] >= 20, (lang, counts)
+        assert counts["index.html"] >= 10 and counts["HOW_IT_WORKS.html"] >= 10, (lang, counts)
         assert counts["GLOSSARY.html"] == 0 and counts["TEST_REPORT.html"] == 0
 
 

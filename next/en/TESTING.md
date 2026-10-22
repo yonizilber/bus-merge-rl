@@ -46,7 +46,7 @@ run.
 | Verification | When a result is published | 1,000 episodes on seeds 2000-2999, with [[wilson|confidence intervals]] |
 | In the app | Manually | The banner shows the outcome, the merge-time breakdown and the physics checks of each run |
 
-The [[seed|seed]] ranges never overlap: 1000-1099 to choose between candidates, 2000-2999 for the published
+The seed ranges never overlap: 1000-1099 to choose between candidates, 2000-2999 for the published
 numbers, 3000-3249 for the nightly gates.
 
 ## Known limitations as tests
