@@ -210,11 +210,15 @@ def _page(source: Path, out_name: str, title: str, out_dir: Path) -> str:
 
 
 def shell(title: str, out_name: str, body: str, toc: str = "", footer: str = "", extra_css: str = "",
-          lang: str = "en") -> str:
-    """A full page in the site's design: navigation bar, content, optional table of contents, footer."""
+          lang: str = "en", nav: list[tuple[str, str]] | None = None, toc_label: str | None = None,
+          extra_head: str = "", extra_body: str = "") -> str:
+    """A full page in the site's design: navigation bar, content, optional table of contents, footer.
+
+    ``nav`` replaces the default navigation (a separate site, for example one language only).
+    """
     current = ' class="current"'
-    nav = "".join(f'<a href="{o}"{current if o == out_name else ""}>{t}</a>' for o, t in NAV)
-    label = "בעמוד זה" if lang == "he" else "On this page"
+    nav = "".join(f'<a href="{o}"{current if o == out_name else ""}>{t}</a>' for o, t in (nav or NAV))
+    label = toc_label or ("בעמוד זה" if lang == "he" else "On this page")
     toc_html = f'<aside class="toc"><div class="label">{label}</div>{toc}</aside>' if toc else ""
     return f"""<!doctype html>
 <html lang="{lang}"{' dir="rtl"' if lang == "he" else ""}>
@@ -225,6 +229,7 @@ def shell(title: str, out_name: str, body: str, toc: str = "", footer: str = "",
 <style>{CSS}
 {_pygments_css()}
 {extra_css}</style>
+{extra_head}
 </head>
 <body>
 <header class="site"><div class="bar"><a class="brand" href="index.html">bus-merge-rl</a>
@@ -236,6 +241,7 @@ def shell(title: str, out_name: str, body: str, toc: str = "", footer: str = "",
 {toc_html}
 </div>
 <footer class="site">{footer}</footer>
+{extra_body}
 </body>
 </html>
 """

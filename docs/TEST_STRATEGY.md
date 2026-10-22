@@ -58,7 +58,7 @@ Menu numbers refer to Part 2.
 ## Phase 2 (2026-10-12)
 
 - **#10, invariant sweep:** `tests/test_traffic_density.py`. Two seeds at each of 0.2, 0.4, 0.6 and
-  0.8 cars/s: no physically impossible moment, no car-car overlap. The nightly gate covers 400 seeds.
+  0.8 cars/s: no physically impossible moment, no car-car overlap. The nightly gate covers 400 runs on 250 seeds.
 - **#11, property-based safe-speed law:** `tests/test_safe_speed_properties.py` (`hypothesis`).
   - The law never brakes beyond the limit or above the driver, the safe speed grows with room, and one
     step never closes more than the gap when the brakes suffice.
@@ -117,7 +117,7 @@ Implemented in this round:
 - **#2, empty road:** extended to every metre of the stop range (297-307 m).
 - **#27, #28, nightly:** `tests/test_nightly.py`, skipped unless `pytest --nightly`, run by
   `.github/workflows/nightly.yml` every night and on demand.
-  - Seeds 3000-3399, used nowhere else.
+  - Seeds 3000-3399 are reserved for it and used nowhere else (3000-3249 are in use).
   - The per-seed run is now `busmerge.verification`, shared with `scripts/verify_brain.py`.
 - **Done earlier:** #21, #29 and #26 were already in place. #26 passes, so it is not marked `xfail`.
 - **Phase 2:** waiting for the owner's go-ahead.

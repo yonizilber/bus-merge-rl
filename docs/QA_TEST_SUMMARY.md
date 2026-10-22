@@ -41,7 +41,7 @@ English first, Hebrew below each section. Status on 2026-10-13: default agent v1
 | **Behaviour** | The default agent in forced situations | Merges within 15 s from every metre of the stop range; never stalls half way (v11's reward hack is caught) |
 | **App** | Headless Streamlit run | Loads, offers exactly the existing brains, shows the published table, and for a fixed seed shows the outcome the harness measured |
 | **Published numbers** | Summaries recomputed from per-seed rows; every generated block checked | A one-point change is caught |
-| **CI/CD** | GitHub Actions: `ruff` + `pytest` on every push; nightly gates on 400 unused seeds | The workflow was reproduced locally in a clean virtual environment |
+| **CI/CD** | GitHub Actions: `ruff` + `pytest` on every push; nightly gates on 250 unused seeds (400 runs) | The workflow was reproduced locally in a clean virtual environment |
 
 Every guard is accompanied by a check that it **can fail**. For example, the overshoot test is run
 against the old controller, the stall test against v11, the parity test against an injected drift, and
@@ -61,7 +61,7 @@ the single-source scan against a planted copy.
 | **התנהגות** | הסוכן ברירת המחדל במצבים כפויים | משתלב תוך 15 שניות מכל מטר בטווח העצירה; לעולם לא נתקע באמצע הדרך (ה-reward hacking של v11 נתפס) |
 | **אפליקציה** | הרצת Streamlit ללא ממשק | נטענת, מציעה בדיוק את המוחות הקיימים, מציגה את הטבלה המפורסמת, ועבור seed קבוע מציגה את התוצאה שהרתמה מדדה |
 | **מספרים מפורסמים** | הסיכומים מחושבים מחדש משורות ה-seed; כל בלוק שנוצר נבדק | שינוי של נקודה אחת נתפס |
-| **CI/CD** | GitHub Actions: `ruff` ו-`pytest` בכל push; בדיקות ליליות על 400 seeds שאינם בשימוש | ה-workflow שוחזר מקומית בסביבה וירטואלית נקייה |
+| **CI/CD** | GitHub Actions: `ruff` ו-`pytest` בכל push; בדיקות ליליות על 250 seeds שאינם בשימוש (400 הרצות) | ה-workflow שוחזר מקומית בסביבה וירטואלית נקייה |
 
 לכל שומר מצורפת בדיקה שמוכיחה שהוא **מסוגל להיכשל**. למשל, בדיקת החריגה מורצת מול הבקר הישן, בדיקת התקיעה מול v11, בדיקת הזהות מול סטייה מוזרקת, וסריקת "מקור יחיד" מול עותק שהושתל.
 
@@ -158,10 +158,10 @@ Writing the tests found real problems, each now fixed or documented:
 
 ## 5. Stability achieved
 
-- **Push CI:** 335 passed, 20 strict `xfail`, 6 skipped (the 5 nightly gates and 1 conditional skip), in
+- **Push CI:** 340 passed, 20 strict `xfail`, 6 skipped (the 5 nightly gates and 1 conditional skip), in
   about 2 minutes. The result is identical in a clean virtual environment installed exactly as the
   workflow installs it (current PyTorch and NumPy).
-- **Nightly gates:** 5 of 5 pass on 400 seeds used nowhere else. The default agent merges in 98.0% of
+- **Nightly gates:** 5 of 5 pass on 250 seeds used nowhere else (400 runs). The default agent merges in 98.0% of
   runs and 89.5% are strict successes, in line with the published 89.4% on 1,000 other seeds.
 - **Reproducibility:** re-running every published measurement on the current code gave identical
   results.
@@ -170,8 +170,8 @@ Writing the tests found real problems, each now fixed or documented:
 
 ## 5. היציבות שהושגה
 
-- **CI בכל push:** ‏335 עוברות, 20 ‏`xfail` קשיחות, 6 מדולגות (5 הבדיקות הליליות ודילוג מותנה אחד), בכ-2 דקות. התוצאה זהה בסביבה וירטואלית נקייה שהותקנה בדיוק כמו ב-workflow (גרסאות עדכניות של PyTorch ו-NumPy).
-- **בדיקות ליליות:** 5 מתוך 5 עוברות על 400 seeds שלא משמשים בשום מקום אחר. הסוכן ברירת המחדל משתלב ב-98.0% מההרצות ו-89.5% הן הצלחות קפדניות, בהתאמה ל-89.4% שפורסמו על 1,000 seeds אחרים.
+- **CI בכל push:** ‏340 עוברות, 20 ‏`xfail` קשיחות, 6 מדולגות (5 הבדיקות הליליות ודילוג מותנה אחד), בכ-2 דקות. התוצאה זהה בסביבה וירטואלית נקייה שהותקנה בדיוק כמו ב-workflow (גרסאות עדכניות של PyTorch ו-NumPy).
+- **בדיקות ליליות:** 5 מתוך 5 עוברות על 250 seeds שלא משמשים בשום מקום אחר (400 הרצות). הסוכן ברירת המחדל משתלב ב-98.0% מההרצות ו-89.5% הן הצלחות קפדניות, בהתאמה ל-89.4% שפורסמו על 1,000 seeds אחרים.
 - **שחזוריות:** הרצה מחדש של כל מדידה שפורסמה על הקוד הנוכחי נתנה תוצאות זהות.
 
 </div>

@@ -114,16 +114,24 @@ def stress_table() -> str:
     return "\n".join(lines)
 
 
-def case_study_table() -> str:
+def case_study_table(lang: str = "en") -> str:
+    he = lang == "he"
     cols = [load(n) for n in CASE_STUDY]
-    head = "| | " + " | ".join(CASE_STUDY.values()) + " |"
-    rows = [("Merged (judged on traffic)", "merged_pct"), ("Contact with a car", "contact_pct"),
-            ("Stuck", "stuck_pct"), ("Bus over the centre line", "over_centre_pct"),
-            ("Bus off the road", "off_road_pct"), ("**Strict success**", "strict_pct")]
+    labels = ({"v11_old_steering": "v11, היגוי ישן", "v11": "v11, היגוי כנה", "v13": "**v13**, היגוי כנה"}
+              if he else CASE_STUDY)
+    head = "| | " + " | ".join(labels[n] for n in CASE_STUDY) + " |"
+    rows = ([("השתלב (נשפט לפי התנועה)", "merged_pct"), ("מגע עם מכונית", "contact_pct"), ("תקוע", "stuck_pct"),
+             ("האוטובוס חצה את קו האמצע", "over_centre_pct"), ("האוטובוס ירד מהכביש", "off_road_pct"),
+             ("**הצלחה מחמירה**", "strict_pct")] if he else
+            [("Merged (judged on traffic)", "merged_pct"), ("Contact with a car", "contact_pct"),
+             ("Stuck", "stuck_pct"), ("Bus over the centre line", "over_centre_pct"),
+             ("Bus off the road", "off_road_pct"), ("**Strict success**", "strict_pct")])
     lines = [head, "|---" * (len(cols) + 1) + "|"]
     for title, key in rows:
         lines.append(f"| {title} | " + " | ".join(_pct(m["summary"][key]) for m in cols) + " |")
-    lines.append("| Mean / p95 time from end of boarding to merged | " + " | ".join(_time(m["summary"]) for m in cols) + " |")
+    last = "זמן ממוצע / p95 מסוף העלאת הנוסעים עד השתלבות" if he else "Mean / p95 time from end of boarding to merged"
+    unit = (lambda s: _time(s).replace(" s", " שנ׳")) if he else _time
+    lines.append(f"| {last} | " + " | ".join(unit(m["summary"]) for m in cols) + " |")
     return "\n".join(lines)
 
 
@@ -145,9 +153,14 @@ def headline(lang: str = "en") -> str:
 
 RENDERERS = {"headline": headline, "brain_table": brain_table, "stress_table": stress_table,
              "case_study_table": case_study_table,
-             "headline_he": lambda: headline("he"), "brain_table_he": lambda: brain_table("he")}
+             "headline_he": lambda: headline("he"), "brain_table_he": lambda: brain_table("he"),
+             "case_study_table_he": lambda: case_study_table("he")}
 PUBLISHED = {"README.md": ["headline", "brain_table"],
              "README.he.md": ["headline_he", "brain_table_he"],
+             "next/en/README.md": ["headline", "brain_table"],
+             "next/en/CASE_STUDY.md": ["case_study_table"],
+             "next/he/README.md": ["headline_he", "brain_table_he"],
+             "next/he/CASE_STUDY.md": ["case_study_table_he"],
              "docs/SPECS.md": ["brain_table", "stress_table"],
              "docs/CASE_STUDY_REWARD_HACKING.md": ["case_study_table"]}
 

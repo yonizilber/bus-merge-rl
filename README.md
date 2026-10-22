@@ -111,7 +111,8 @@ its own plant. With the controller fixed, it merged in **0%** of runs.
   the bicycle model, property-based tests of the safe-speed law (`hypothesis`), env/engine parity,
   determinism, every reward term, PPO and training-loop safety, a headless run of the app, and the
   published numbers.
-- **Nightly:** the default agent on 400 seeds that are used nowhere else.
+- **Nightly:** the default agent on unseen seeds used nowhere else: 200 at the app defaults, plus 50 at each of four
+  traffic inflows (400 runs on 250 seeds).
 - **Known limitations:** documented as **strict `xfail`** tests. They do not hide a failure, and they
   turn red the day the behaviour changes. See [docs/QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md)
   (English and Hebrew).

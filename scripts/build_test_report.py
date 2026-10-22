@@ -202,11 +202,18 @@ FILES = {
     "test_docs_html.py": ("app",
         "The HTML docs build, cover every document, and have no broken links.",
         "מסמכי ה-HTML נבנים, מכסים כל מסמך, ואין בהם קישורים שבורים."),
+    "test_next_docs.py": ("app",
+        "The next documentation version: an English and a Hebrew site that never mix (no Hebrew in the English "
+        "pages, right-to-left Hebrew pages, no link from one to the other), no broken link, every term with a "
+        "tooltip, a note and a link back, and the table of the agent's 11 inputs checked against the code.",
+        "גרסת התיעוד הבאה: אתר באנגלית ואתר בעברית שאינם מתערבבים (בלי עברית בעמודים האנגליים, עמודים עבריים "
+        "מימין לשמאל, בלי קישור מאחד לשני), בלי קישורים שבורים, לכל מונח הסבר צץ, הערה וקישור חזרה, וטבלת 11 הקלטים "
+        "של הסוכן נבדקת מול הקוד."),
     "test_nightly.py": ("nightly",
-        "The default brain on 400 seeds used nowhere else; runs only with --nightly (GitHub Actions, "
-        "nightly).",
-        "המוח ברירת המחדל על 400 seeds שלא משמשים בשום מקום אחר; רץ רק עם ‎--nightly (GitHub Actions, "
-        "בכל לילה)."),
+        "The default brain on unseen seeds used nowhere else (200 at the app defaults, then 50 at each of four "
+        "traffic inflows); runs only with --nightly (GitHub Actions, nightly).",
+        "המוח ברירת המחדל על seeds שלא משמשים בשום מקום אחר (200 בהגדרות האפליקציה, ואז 50 בכל אחת מארבע עוצמות "
+        "תנועה); רץ רק עם ‎--nightly (GitHub Actions, בכל לילה)."),
     "test_behavior.py": ("legacy", "Written against the original API; kept as strict xfail until rewritten.",
                          "נכתבה מול ה-API המקורי; נשמרת כ-xfail קשיח עד שתיכתב מחדש."),
     "test_merge.py": ("legacy", "Written against the original API; kept as strict xfail until rewritten.",
@@ -320,7 +327,12 @@ def _cases() -> list[dict]:
     return cases
 
 
-def _bilingual(en: str, he: str, tag: str = "span") -> str:
+def _t(en: str, he: str, lang: str | None, tag: str = "span") -> str:
+    """One language (``lang`` "en" or "he"), or both on the same line (``lang`` None, the bilingual report)."""
+    if lang == "en":
+        return html.escape(en)
+    if lang == "he":
+        return html.escape(he)
     return f'{html.escape(en)} · <{tag} dir="rtl">{html.escape(he)}</{tag}>'
 
 
@@ -331,9 +343,9 @@ def _bar(counts: dict) -> str:
         for k in STATUS if counts.get(k)) + "</div>"
 
 
-def _badges(counts: dict) -> str:
-    return "".join(f'<span class="badge {STATUS[k][2]}">{counts[k]} {STATUS[k][0].lower()}</span>'
-                   for k in STATUS if counts.get(k))
+def _badges(counts: dict, lang: str | None = None) -> str:
+    label = (lambda k: STATUS[k][1]) if lang == "he" else (lambda k: STATUS[k][0].lower())
+    return "".join(f'<span class="badge {STATUS[k][2]}">{counts[k]} {label(k)}</span>' for k in STATUS if counts.get(k))
 
 
 def _limitation_id(reason: str) -> str:
@@ -341,27 +353,36 @@ def _limitation_id(reason: str) -> str:
     return m.group(1) if m else ("legacy" if "legacy API" in reason else "")
 
 
-def _nightly() -> str:
+def _nightly(lang: str | None = None) -> str:
     files = sorted(NIGHTLY_DIR.glob("*.json")) if NIGHTLY_DIR.exists() else []
     if not files:
-        return ("<p>No local nightly run recorded. On GitHub the gates run every night "
-                "(<code>.github/workflows/nightly.yml</code>).</p>")
+        return ("<p>" + _t("No local nightly run recorded. On GitHub the gates run every night "
+                           "(.github/workflows/nightly.yml).",
+                           "לא נרשמה הרצה לילית מקומית. ב-GitHub השערים רצים בכל לילה "
+                           "(.github/workflows/nightly.yml).", lang) + "</p>")
     when = datetime.datetime.fromtimestamp(max(f.stat().st_mtime for f in files)).strftime("%Y-%m-%d %H:%M")
+    sec = "שנ'" if lang == "he" else "s"
     rows = []
     for f in files:
         s = json.loads(f.read_text())
         rows.append(f"<tr><td>{html.escape(f.stem)}</td><td>{s['n']}</td><td>{s['merged_pct']:.1f}%</td>"
                     f"<td>{s['contact_pct']:.1f}%</td><td>{s['stuck_pct']:.1f}%</td><td>{s['strict_pct']:.1f}%</td>"
                     f"<td>{s['over_centre_pct']:.1f}%</td><td>{s.get('other_violation_runs', 0)}</td>"
-                    f"<td>{s['time_mean_s']:.1f} s</td></tr>")
-    return (f'<p class="meta">Last local run of <code>pytest --nightly -m nightly</code>: {when} · '
-            f'<span dir="rtl">ההרצה המקומית האחרונה</span></p>'
-            '<div class="table-wrap"><table><thead><tr><th>Gate</th><th>Seeds</th><th>Merged</th><th>Contact</th>'
-            '<th>Stuck</th><th>Strict</th><th>Centre line</th><th>Other violations</th><th>Mean time</th></tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></div>')
+                    f"<td>{s['time_mean_s']:.1f} {sec}</td></tr>")
+    heads = _t("Gate|Seeds|Merged|Contact|Stuck|Strict|Centre line|Other violations|Mean time",
+               "שער|Seeds|השתלב|מגע|תקוע|מחמיר|קו אמצע|הפרות אחרות|זמן ממוצע", lang if lang else "en").split("|")
+    if lang == "he":
+        intro = f'<p class="meta">ההרצה המקומית האחרונה של <code>pytest --nightly -m nightly</code>: {when}</p>'
+    else:
+        intro = (f'<p class="meta">Last local run of <code>pytest --nightly -m nightly</code>: {when}'
+                 + ("" if lang else ' · <span dir="rtl">ההרצה המקומית האחרונה</span>') + "</p>")
+    return (intro + '<div class="table-wrap"><table><thead><tr>' + "".join(f"<th>{h}</th>" for h in heads) +
+            f'</tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
 
 
-def _report_body() -> tuple[str, str]:
+def _report_body(lang: str | None = None) -> tuple[str, str]:
+    """The report body and its table of contents. ``lang`` None is the bilingual page, "en"/"he" a single language."""
+    both = lang is None
     cases = _cases()
     meta = json.loads(RUN_META.read_text()) if RUN_META.exists() else {}
     totals = defaultdict(int)
@@ -371,24 +392,29 @@ def _report_body() -> tuple[str, str]:
     for c in cases:
         by_file[c["file"]].append(c)
     unknown = sorted(set(by_file) - set(FILES))
+    sec = "שנ'" if lang == "he" else "s"
+    cat_name = lambda en, he: (he if lang == "he" else en)      # noqa: E731  (single-language label)
+    status_label = lambda k: STATUS[k][1] if lang == "he" else STATUS[k][0]   # noqa: E731
 
     green = totals["failed"] == 0
     verdict = (f'<div class="verdict {"ok" if green else "bad"}">'
-               + (_bilingual("All green: every test passed or failed exactly as documented.",
-                             "הכול ירוק: כל בדיקה עברה או נכשלה בדיוק כפי שתועד.") if green else
-                  _bilingual(f"{totals['failed']} test(s) failed.", f"{totals['failed']} בדיקות נכשלו."))
+               + (_t("All green: every test passed or failed exactly as documented.",
+                     "הכול ירוק: כל בדיקה עברה או נכשלה בדיוק כפי שתועד.", lang) if green else
+                  _t(f"{totals['failed']} test(s) failed.", f"{totals['failed']} בדיקות נכשלו.", lang))
                + "</div>")
     env = " · ".join(f"{k} {meta[k]}" for k in ("python", "torch", "numpy", "pandas", "streamlit") if k in meta)
-    head = (f'<div class="report-head"><h1>Test report · <span dir="rtl">דוח בדיקות</span></h1></div>'
-            f'<p class="meta">Run {html.escape(meta.get("when", "?"))} · commit <code>{html.escape(meta.get("commit", "?"))}</code>'
+    title = _t("Test report", "דוח בדיקות", lang, "span")
+    when = _t("Run", "הורצה", lang if not both else "en")
+    head = (f'<div class="report-head"><h1>{title}</h1></div>'
+            f'<p class="meta">{when} {html.escape(meta.get("when", "?"))} · commit <code>{html.escape(meta.get("commit", "?"))}</code>'
             f' · {html.escape(env)}</p>')
-    intro = (
-        "<p>Every result on this page comes from one real run of the whole suite (<code>pytest</code>, as CI runs "
-        "it). <strong>Strict xfail</strong> marks a known limitation: the test keeps its honest assertion, must "
-        "fail on that assertion, and turns red the day the behaviour changes.</p>"
-        '<div dir="rtl"><p>כל תוצאה בעמוד הזה מגיעה מהרצה אמיתית אחת של כל החבילה (<code>pytest</code>, כפי '
-        "שה-CI מריץ אותה). <strong>xfail קשיח</strong> מסמן מגבלה ידועה: הבדיקה שומרת על ההנחה הכנה שלה, חייבת "
-        "להיכשל עליה, והופכת לאדומה ביום שההתנהגות משתנה.</p></div>")
+    intro_en = ("<p>Every result on this page comes from one real run of the whole suite (<code>pytest</code>, as CI runs "
+                "it). <strong>Strict xfail</strong> marks a known limitation: the test keeps its honest assertion, must "
+                "fail on that assertion, and turns red the day the behaviour changes.</p>")
+    intro_he = ("<p>כל תוצאה בעמוד הזה מגיעה מהרצה אמיתית אחת של כל החבילה (<code>pytest</code>, כפי "
+                "שה-CI מריץ אותה). <strong>xfail קשיח</strong> מסמן מגבלה ידועה: הבדיקה שומרת על ההנחה הכנה שלה, חייבת "
+                "להיכשל עליה, והופכת לאדומה ביום שההתנהגות משתנה.</p>")
+    intro = intro_en + f'<div dir="rtl">{intro_he}</div>' if both else (intro_he if lang == "he" else intro_en)
     total = sum(totals.values())
     nightly_skips = sum(1 for c in cases if c["status"] == "skipped" and c["file"] == "test_nightly.py")
     tiles = [(total, "Test cases", "מקרי בדיקה"), (totals["passed"], "Passed", "עברו"),
@@ -396,10 +422,12 @@ def _report_body() -> tuple[str, str]:
              (totals["skipped"], f"Skipped ({nightly_skips} nightly, {totals['skipped'] - nightly_skips} other)",
               f"דולגו ({nightly_skips} ליליות, {totals['skipped'] - nightly_skips} אחרות)"),
              (totals["failed"], "Failed", "נכשלו"),
-             (f"{meta['wall_s'] / 60:.1f} min" if "wall_s" in meta else "–", "Run time", "זמן ריצה")]
+             (f"{meta['wall_s'] / 60:.1f} " + ("דק'" if lang == "he" else "min") if "wall_s" in meta else "–",
+              "Run time", "זמן ריצה")]
     tiles_html = '<div class="tiles">' + "".join(
-        f'<div class="tile"><div class="num">{v}</div><div class="lbl">{html.escape(en)}'
-        f'<span dir="rtl">{html.escape(he)}</span></div></div>' for v, en, he in tiles) + "</div>"
+        f'<div class="tile"><div class="num">{v}</div><div class="lbl">'
+        + (f'{html.escape(en)}<span dir="rtl">{html.escape(he)}</span>' if both else _t(en, he, lang))
+        + "</div></div>" for v, en, he in tiles) + "</div>"
 
     # Categories overview
     rows = []
@@ -411,36 +439,44 @@ def _report_body() -> tuple[str, str]:
                 counts[c["status"]] += 1
         if not files:
             continue
-        rows.append(f'<tr><td><a href="#{key}">{html.escape(en)}</a></td><td class="he">{html.escape(he)}</td>'
-                    f"<td>{len(files)}</td><td>{sum(counts.values())}</td><td>{_bar(counts)}</td>"
-                    f"<td>{_badges(counts)}</td></tr>")
-    overview = ('<h2 id="overview">Overview by area · <span dir="rtl">סקירה לפי תחום</span></h2>'
-                '<div class="table-wrap"><table><thead><tr><th>Area</th><th>תחום</th><th>Files</th><th>Cases</th>'
-                f'<th>Status</th><th></th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
+        name_cells = (f'<td><a href="#{key}">{html.escape(en)}</a></td><td class="he">{html.escape(he)}</td>' if both
+                      else f'<td><a href="#{key}">{html.escape(cat_name(en, he))}</a></td>')
+        rows.append(f"<tr>{name_cells}<td>{len(files)}</td><td>{sum(counts.values())}</td><td>{_bar(counts)}</td>"
+                    f"<td>{_badges(counts, lang)}</td></tr>")
+    head_cells = ("<th>Area</th><th>תחום</th><th>Files</th><th>Cases</th><th>Status</th><th></th>" if both else
+                  "<th>תחום</th><th>קבצים</th><th>מקרים</th><th>מצב</th><th></th>" if lang == "he" else
+                  "<th>Area</th><th>Files</th><th>Cases</th><th>Status</th><th></th>")
+    overview = (f'<h2 id="overview">{_t("Overview by area", "סקירה לפי תחום", lang)}</h2>'
+                f'<div class="table-wrap"><table><thead><tr>{head_cells}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
 
     # Known limitations (strict xfail)
     lim_rows = []
     for c in sorted((c for c in cases if c["status"] == "xfailed"), key=lambda c: (c["file"], c["name"])):
         lid = _limitation_id(c["reason"])
         reason = re.sub(r"^reason:\s*", "", c["reason"])
+        explain = html.escape(LIMITATIONS_HE.get(lid, ""))
+        last = (f'<td>{html.escape(reason)}</td><td class="he">{explain}</td>' if both else
+                f"<td>{explain}</td>" if lang == "he" else f"<td>{html.escape(reason)}</td>")
         lim_rows.append(f'<tr><td class="t">{html.escape(c["file"])}<br>{html.escape(c["name"])}</td>'
-                        f'<td>{html.escape(lid) if lid != "legacy" else "legacy"}</td><td>{html.escape(reason)}</td>'
-                        f'<td class="he">{html.escape(LIMITATIONS_HE.get(lid, ""))}</td></tr>')
-    limitations = ('<h2 id="limitations">Known limitations (strict xfail) · <span dir="rtl">מגבלות ידועות</span></h2>'
-                   '<div class="table-wrap"><table><thead><tr><th>Test</th><th>BUGS</th><th>Reason</th>'
-                   f'<th>הסבר</th></tr></thead><tbody>{"".join(lim_rows)}</tbody></table></div>')
+                        f'<td>{html.escape(lid)}</td>{last}</tr>')
+    lim_head = ("<th>Test</th><th>BUGS</th><th>Reason</th><th>הסבר</th>" if both else
+                "<th>בדיקה</th><th>BUGS</th><th>הסבר</th>" if lang == "he" else "<th>Test</th><th>BUGS</th><th>Reason</th>")
+    limitations = (f'<h2 id="limitations">{_t("Known limitations (strict xfail)", "מגבלות ידועות", lang)}</h2>'
+                   f'<div class="table-wrap"><table><thead><tr>{lim_head}</tr></thead><tbody>{"".join(lim_rows)}</tbody></table></div>')
 
-    nightly = f'<h2 id="nightly-results">Latest nightly results · <span dir="rtl">תוצאות ליליות אחרונות</span></h2>{_nightly()}'
+    nightly = (f'<h2 id="nightly-results">{_t("Latest nightly results", "תוצאות ליליות אחרונות", lang)}</h2>'
+               f'{_nightly(lang)}')
 
     # Per area, per file
-    sections, toc_items = [], ['<li><a href="#overview">Overview by area</a></li>',
-                               '<li><a href="#limitations">Known limitations</a></li>',
-                               '<li><a href="#nightly-results">Latest nightly results</a></li>']
+    toc_labels = [("overview", "Overview by area", "סקירה לפי תחום"), ("limitations", "Known limitations", "מגבלות ידועות"),
+                  ("nightly-results", "Latest nightly results", "תוצאות ליליות אחרונות")]
+    sections, toc_items = [], [f'<li><a href="#{k}">{html.escape(he if lang == "he" else en)}</a></li>'
+                               for k, en, he in toc_labels]
     for key, (en, he) in CATEGORIES.items():
         files = sorted(f for f in by_file if FILES.get(f, ("",))[0] == key)
         if not files:
             continue
-        toc_items.append(f'<li><a href="#{key}">{html.escape(en)}</a></li>')
+        toc_items.append(f'<li><a href="#{key}">{html.escape(cat_name(en, he))}</a></li>')
         cards = []
         for f in files:
             _, desc_en, desc_he = FILES[f]
@@ -449,17 +485,21 @@ def _report_body() -> tuple[str, str]:
                 counts[c["status"]] += 1
             test_rows = "".join(
                 f'<tr><td class="t">{html.escape(c["name"])}</td>'
-                f'<td><span class="badge {STATUS[c["status"]][2]}">{STATUS[c["status"]][0]}</span></td>'
-                f'<td class="time">{c["time"]:.2f} s</td></tr>' for c in sorted(by_file[f], key=lambda c: c["name"]))
+                f'<td><span class="badge {STATUS[c["status"]][2]}">{status_label(c["status"])}</span></td>'
+                f'<td class="time">{c["time"]:.2f} {sec}</td></tr>'
+                for c in sorted(by_file[f], key=lambda c: c["name"]))
             open_attr = " open" if counts.get("failed") else ""
+            desc = (f'<p class="desc">{html.escape(desc_en)}</p><p class="desc" dir="rtl">{html.escape(desc_he)}</p>' if both
+                    else f'<p class="desc">{html.escape(desc_he if lang == "he" else desc_en)}</p>')
+            case_head = ("<th>Test case</th><th>Result</th><th>Time</th>" if lang != "he"
+                         else "<th>מקרה בדיקה</th><th>תוצאה</th><th>זמן</th>")
             cards.append(
                 f'<details class="file"{open_attr}><summary><span class="name">{html.escape(f)}</span>'
-                f'<span class="counts">{_badges(counts)}</span></summary><div class="body">'
-                f'<p class="desc">{html.escape(desc_en)}</p><p class="desc" dir="rtl">{html.escape(desc_he)}</p>'
-                '<div class="table-wrap"><table><thead><tr><th>Test case</th><th>Result</th><th>Time</th></tr>'
-                f'</thead><tbody>{test_rows}</tbody></table></div></div></details>')
-        sections.append(f'<h2 id="{key}">{html.escape(en)} · <span dir="rtl">{html.escape(he)}</span></h2>'
-                        + "".join(cards))
+                f'<span class="counts">{_badges(counts, lang)}</span></summary><div class="body">{desc}'
+                f'<div class="table-wrap"><table><thead><tr>{case_head}</tr></thead>'
+                f'<tbody>{test_rows}</tbody></table></div></div></details>')
+        heading = _t(en, he, lang, "span")
+        sections.append(f'<h2 id="{key}">{heading}</h2>' + "".join(cards))
     if unknown:
         sections.append(f"<p>Files without a description: {', '.join(unknown)}</p>")
     toc = "<ul>" + "".join(toc_items) + "</ul>"
@@ -467,19 +507,28 @@ def _report_body() -> tuple[str, str]:
     return body, toc
 
 
-def write(out_dir: Path) -> Path:
-    """Write TEST_REPORT.html from the last recorded run (or a page explaining how to record one)."""
+def write(out_dir: Path, lang: str | None = None, **shell_args) -> Path:
+    """Write TEST_REPORT.html from the last recorded run (or a page explaining how to record one).
+
+    ``lang`` None writes the bilingual page of the main docs site; "en" or "he" writes a one-language page,
+    for a site that has one language only (``shell_args`` are passed to ``build_docs_html.shell``).
+    """
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import build_docs_html
     target = Path(out_dir) / "TEST_REPORT.html"
     if JUNIT.exists():
-        body, toc = _report_body()
+        body, toc = _report_body(lang)
     else:
-        body, toc = ("<h1>Test report · <span dir=\"rtl\">דוח בדיקות</span></h1><p>No test run recorded yet. Run "
-                     "<code>python scripts/build_test_report.py</code>.</p>"), ""
-    target.write_text(build_docs_html.shell("Test report", "TEST_REPORT.html", body, toc,
-                                            "Generated by <code>scripts/build_test_report.py</code> from a recorded "
-                                            "pytest run.", EXTRA_CSS), encoding="utf-8")
+        body, toc = (f"<h1>{_t('Test report', 'דוח בדיקות', lang)}</h1><p>"
+                     + _t("No test run recorded yet. Run python scripts/build_test_report.py.",
+                          "עדיין לא נרשמה הרצת בדיקות. הריצו python scripts/build_test_report.py.", lang)
+                     + "</p>"), ""
+    footer = (_t("Generated by scripts/build_test_report.py from a recorded pytest run.",
+                 "נוצר על ידי scripts/build_test_report.py מתוך הרצת pytest שנרשמה.", lang)
+              if lang else "Generated by <code>scripts/build_test_report.py</code> from a recorded pytest run.")
+    target.write_text(build_docs_html.shell(_t("Test report", "דוח בדיקות", lang if lang else "en"), "TEST_REPORT.html",
+                                            body, toc, footer, EXTRA_CSS, lang=lang or "en", **shell_args),
+                      encoding="utf-8")
     return target
 
 
