@@ -158,7 +158,7 @@ Writing the tests found real problems, each now fixed or documented:
 
 ## 5. Stability achieved
 
-- **Push CI:** 340 passed, 20 strict `xfail`, 6 skipped (the 5 nightly gates and 1 conditional skip), in
+- **Push CI:** 361 passed, 20 strict `xfail`, 6 skipped (the 5 nightly gates and 1 conditional skip), in
   about 2 minutes. The result is identical in a clean virtual environment installed exactly as the
   workflow installs it (current PyTorch and NumPy).
 - **Nightly gates:** 5 of 5 pass on 250 seeds used nowhere else (400 runs). The default agent merges in 98.0% of
@@ -170,7 +170,7 @@ Writing the tests found real problems, each now fixed or documented:
 
 ## 5. היציבות שהושגה
 
-- **CI בכל push:** ‏340 עוברות, 20 ‏`xfail` קשיחות, 6 מדולגות (5 הבדיקות הליליות ודילוג מותנה אחד), בכ-2 דקות. התוצאה זהה בסביבה וירטואלית נקייה שהותקנה בדיוק כמו ב-workflow (גרסאות עדכניות של PyTorch ו-NumPy).
+- **CI בכל push:** ‏361 עוברות, 20 ‏`xfail` קשיחות, 6 מדולגות (5 הבדיקות הליליות ודילוג מותנה אחד), בכ-2 דקות. התוצאה זהה בסביבה וירטואלית נקייה שהותקנה בדיוק כמו ב-workflow (גרסאות עדכניות של PyTorch ו-NumPy).
 - **בדיקות ליליות:** 5 מתוך 5 עוברות על 250 seeds שלא משמשים בשום מקום אחר (400 הרצות). הסוכן ברירת המחדל משתלב ב-98.0% מההרצות ו-89.5% הן הצלחות קפדניות, בהתאמה ל-89.4% שפורסמו על 1,000 seeds אחרים.
 - **שחזוריות:** הרצה מחדש של כל מדידה שפורסמה על הקוד הנוכחי נתנה תוצאות זהות.
 
