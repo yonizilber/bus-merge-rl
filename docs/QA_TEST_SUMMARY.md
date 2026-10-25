@@ -89,14 +89,16 @@ the honest assertion in the suite and documents the limitation next to the code:
 | **No brake actuation lag**: jerk up to about 107 m/s³ | `test_physics_limits.py` | O18 |
 | The safe-speed law can intrude up to 0.55 m into the 2 m minimum gap (never into contact) | `test_safe_speed_properties.py` | O19 |
 | The car generator loses arrivals: about 71% of the requested inflow is delivered at the default | `test_traffic_density.py` (4 densities) | O20 |
+| **The cars' steering law overshoots**: a 0.5 m nudge overshoots by about 100% and never settles | `test_car_steering_controller.py` | O21 |
+| **The IDM functions change the vehicle's state**: a second identical query gets another answer | `test_idm_query_side_effects.py` | O22 |
 
-There are 11 such cases. The other 9 `xfail` are tests inherited from the original project, written
+There are 13 such cases. The other 9 `xfail` are tests inherited from the original project, written
 against an older API and kept until they are rewritten.
 
-**Documented, not yet pinned by a test** (2026-10-25): O21, the cars' steering law has no heading term and
-overshoots (it explains most of the cars crossing the centre line), and O22, the IDM acceleration functions
-change the vehicle's state. Both would be strict `xfail` tests (TEST_STRATEGY N1, N2); they are listed so that
-the 11 above are not read as the full list of limitations.
+O21 and O22 were found on 2026-10-25 during research for a multi-lane extension and pinned the same day. Each has a
+pinning test that records today's behaviour (a 0.5 m step overshoots by more than 90%; a second IDM query
+returns a different value), and the O21 requirement is shown to be reachable: the bus's pure pursuit meets it on the
+same step. Limitations still without a test: O11, O15 and O16 (see BUGS.md).
 
 <div dir="rtl">
 
@@ -117,12 +119,14 @@ the 11 above are not read as the full list of limitations.
 | **אין השהיית בלמים**: jerk עד כ-107 מ'/ש³ | `test_physics_limits.py` | O18 |
 | חוק המהירות הבטוחה יכול לחדור עד 0.55 מ' לתוך המרווח המינימלי של 2 מ' (אף פעם לא עד מגע) | `test_safe_speed_properties.py` | O19 |
 | מחולל המכוניות מאבד הגעות: בברירת המחדל מתקבל כ-71% מהזרימה המבוקשת | `test_traffic_density.py` (4 צפיפויות) | O20 |
+| **חוק ההיגוי של המכוניות חורג מהיעד**: סטייה של 0.5 מ' חורגת ב-100% בערך ולא מתייצבת | `test_car_steering_controller.py` | O21 |
+| **פונקציות ה-IDM משנות את מצב הרכב**: שאילתה זהה שנייה מקבלת תשובה אחרת | `test_idm_query_side_effects.py` | O22 |
 
-יש 11 מקרים כאלה. 9 ה-`xfail` האחרים הם בדיקות שעברו בירושה מהפרויקט המקורי, נכתבו מול API ישן ונשמרות עד שייכתבו מחדש.
+יש 13 מקרים כאלה. 9 ה-`xfail` האחרים הם בדיקות שעברו בירושה מהפרויקט המקורי, נכתבו מול API ישן ונשמרות עד שייכתבו מחדש.
 
-**מתועדות, ועדיין לא מקובעות בבדיקה** (25.10.2026): O21, חוק ההיגוי של המכוניות ללא איבר כיוון וחורג מהיעד (הוא מסביר את
-רוב חציית קו האמצע של מכוניות), ו-O22, פונקציות התאוצה של ה-IDM משנות את מצב הרכב. שתיהן יהיו בדיקות xfail קשיחות
-(TEST_STRATEGY, N1 ו-N2); הן מופיעות כאן כדי ש-11 המקרים שלמעלה לא ייקראו כרשימה המלאה של המגבלות.
+O21 ו-O22 נמצאו ב-25.10.2026 בעת מחקר להרחבה לכמה נתיבים וקובעו באותו יום. לכל אחת יש בדיקת קיבוע שמתעדת את ההתנהגות של היום
+(סטייה של 0.5 מ' חורגת ביותר מ-90%; שאילתת IDM שנייה מחזירה ערך אחר), ואת דרישת O21 אפשר להשיג: ה-pure pursuit של
+האוטובוס עומד בה על אותו צעד. מגבלות שעדיין בלי בדיקה: O11, O15 ו-O16 (ראו BUGS.md).
 
 </div>
 
@@ -167,7 +171,7 @@ Writing the tests found real problems, each now fixed or documented:
 
 ## 5. Stability achieved
 
-- **Push CI:** 361 passed, 20 strict `xfail`, 6 skipped (the 5 nightly gates and 1 conditional skip), in
+- **Push CI:** 370 passed, 22 strict `xfail`, 6 skipped (the 5 nightly gates and 1 conditional skip), in
   about 2 minutes. The result is identical in a clean virtual environment installed exactly as the
   workflow installs it (current PyTorch and NumPy).
 - **Nightly gates:** 5 of 5 pass on 250 seeds used nowhere else (400 runs). The default agent merges in 98.0% of
@@ -179,7 +183,7 @@ Writing the tests found real problems, each now fixed or documented:
 
 ## 5. היציבות שהושגה
 
-- **CI בכל push:** ‏361 עוברות, 20 ‏`xfail` קשיחות, 6 מדולגות (5 הבדיקות הליליות ודילוג מותנה אחד), בכ-2 דקות. התוצאה זהה בסביבה וירטואלית נקייה שהותקנה בדיוק כמו ב-workflow (גרסאות עדכניות של PyTorch ו-NumPy).
+- **CI בכל push:** ‏370 עוברות, 22 ‏`xfail` קשיחות, 6 מדולגות (5 הבדיקות הליליות ודילוג מותנה אחד), בכ-2 דקות. התוצאה זהה בסביבה וירטואלית נקייה שהותקנה בדיוק כמו ב-workflow (גרסאות עדכניות של PyTorch ו-NumPy).
 - **בדיקות ליליות:** 5 מתוך 5 עוברות על 250 seeds שלא משמשים בשום מקום אחר (400 הרצות). הסוכן ברירת המחדל משתלב ב-98.0% מההרצות ו-89.5% הן הצלחות קפדניות, בהתאמה ל-89.4% שפורסמו על 1,000 seeds אחרים.
 - **שחזוריות:** הרצה מחדש של כל מדידה שפורסמה על הקוד הנוכחי נתנה תוצאות זהות.
 

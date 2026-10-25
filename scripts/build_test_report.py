@@ -202,6 +202,18 @@ FILES = {
     "test_docs_html.py": ("app",
         "The HTML docs build, cover every document, and have no broken links.",
         "מסמכי ה-HTML נבנים, מכסים כל מסמך, ואין בהם קישורים שבורים."),
+    "test_car_steering_controller.py": ("physics",
+        "The cars' steering controller (BUGS O21): the step response of a car through its 0.5 m nudge. Strict xfail: "
+        "it overshoots by about 100% and never settles; a pinning test records the numbers; the bus's pure pursuit "
+        "meets the same requirement.",
+        "בקר ההיגוי של המכוניות (BUGS O21): תגובת צעד של מכונית דרך הסטייה של 0.5 מ'. xfail קשיח: היא חורגת ב-100% "
+        "בערך ולא מתייצבת; בדיקת קיבוע מתעדת את המספרים; ה-pure pursuit של האוטובוס עומד באותה דרישה."),
+    "test_idm_query_side_effects.py": ("physics",
+        "Asking the IDM for an acceleration must not change the vehicle (BUGS O22). Strict xfail: a second identical "
+        "query changes the squeeze flag and the yield limiter and gets another answer; a pinning test records every "
+        "side effect.",
+        "שאילתת תאוצה מה-IDM לא צריכה לשנות את הרכב (BUGS O22). xfail קשיח: שאילתה זהה שנייה משנה את דגל הסחיפה הצידה "
+        "ואת מגביל הפינוי ומקבלת תשובה אחרת; בדיקת קיבוע מתעדת כל תופעת לוואי."),
     "test_next_docs.py": ("app",
         "The next documentation version: an English and a Hebrew site that never mix (no Hebrew in the English "
         "pages, right-to-left Hebrew pages, no link from one to the other), no broken link, every term with a "
@@ -235,6 +247,8 @@ LIMITATIONS_HE = {
     "O17": "אין מסה לרכב: אוטובוס בולם בעוצמה של מכונית קטנה.",
     "O18": "אין השהיית בלמים: התאוצה יכולה לעבור משיוט לבלימה מלאה בצעד אחד.",
     "O19": "חוק המהירות הבטוחה יכול להכניס רכב עוקב עד כ-0.55 מ' לתוך המרווח המינימלי שלו (לא עד מגע).",
+    "O21": "חוק ההיגוי של המכוניות ללא איבר כיוון: הוא חורג מהיעד ב-100% בערך ולא מתייצב.",
+    "O22": "פונקציות התאוצה של ה-IDM משנות את מצב הרכב, ולכן אי אפשר לשאול אותן שאלת \"מה אם\".",
     "O20": "מחולל המכוניות מאבד הגעות כשהכניסה חסומה, ולכן מספק פחות מהזרימה המבוקשת.",
     "legacy": "בדיקה ישנה שנכתבה מול API קודם; ממתינה לכתיבה מחדש.",
 }

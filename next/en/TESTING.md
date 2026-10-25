@@ -51,9 +51,9 @@ numbers, 3000-3249 for the nightly gates.
 
 ## Known limitations as tests
 
-There are 11 [[strict_xfail|strict xfail]] cases that document a limitation of the engine or the agent, and 9
+There are 13 [[strict_xfail|strict xfail]] cases that document a limitation of the engine or the agent, and 9
 inherited from the original project, written against an older interface and kept until they are rewritten.
-Each of the 11 cites its entry in the list on the [Limitations](LIMITATIONS.md) page.
+Each of the 13 cites its entry in the list on the [Limitations](LIMITATIONS.md) page.
 
 | Limitation | Tracked by | ID |
 |---|---|---|
@@ -64,9 +64,11 @@ Each of the 11 cites its entry in the list on the [Limitations](LIMITATIONS.md) 
 | **No brake actuation lag:** a jerk of up to about 107 m/s³ | `test_physics_limits.py` | O18 |
 | The safe-speed law can intrude up to 0.55 m into the 2 m minimum gap, never into contact | `test_safe_speed_properties.py` | O19 |
 | The car generator loses arrivals: about 71% of the requested inflow is delivered at the default | `test_traffic_density.py` (4 densities) | O20 |
+| **The cars' steering law overshoots:** a 0.5 m nudge overshoots by about 100% and never settles | `test_car_steering_controller.py` | O21 |
+| **The IDM functions change the vehicle's state:** a second identical query gets another answer | `test_idm_query_side_effects.py` | O22 |
 
-Two further limitations are documented but not yet tracked by a test: the cars' steering law (O21) and the IDM's
-side effects on the vehicle's state (O22); see the [Limitations](LIMITATIONS.md) page.
+Each of these has, besides the xfail, a passing test that records today's behaviour (so the reason for the failure
+is known), and O21 also shows that the requirement is reachable: the bus's pure pursuit meets it on the same step.
 
 For a limitation that is a list (the state assignments outside the physics), a passing companion test pins
 the list exactly, so a new case fails the build.

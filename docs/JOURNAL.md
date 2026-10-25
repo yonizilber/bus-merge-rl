@@ -329,4 +329,5 @@ in a single lane. Neither is fixed in this branch; both are documented (BUGS O21
 - **Why they were hidden.** Both depend on the size of the input (a 0.5 m nudge) or on how often the function
   is called (once per frame). **Lesson:** a defect that small inputs hide is still a defect; the same pattern
   as the bus steering, found in the cars.
-
+- **Pinned the same day.** Two strict `xfail` tests (`test_car_steering_controller.py`, `test_idm_query_side_effects.py`), each with a
+  pinning test of today's behaviour; the suite is 370 passed, 6 skipped, 22 xfailed.
