@@ -93,6 +93,11 @@ the honest assertion in the suite and documents the limitation next to the code:
 There are 11 such cases. The other 9 `xfail` are tests inherited from the original project, written
 against an older API and kept until they are rewritten.
 
+**Documented, not yet pinned by a test** (2026-10-25): O21, the cars' steering law has no heading term and
+overshoots (it explains most of the cars crossing the centre line), and O22, the IDM acceleration functions
+change the vehicle's state. Both would be strict `xfail` tests (TEST_STRATEGY N1, N2); they are listed so that
+the 11 above are not read as the full list of limitations.
+
 <div dir="rtl">
 
 ## 3. ‏`xfail` קשיח: מגבלות ידועות נשארות גלויות
@@ -114,6 +119,10 @@ against an older API and kept until they are rewritten.
 | מחולל המכוניות מאבד הגעות: בברירת המחדל מתקבל כ-71% מהזרימה המבוקשת | `test_traffic_density.py` (4 צפיפויות) | O20 |
 
 יש 11 מקרים כאלה. 9 ה-`xfail` האחרים הם בדיקות שעברו בירושה מהפרויקט המקורי, נכתבו מול API ישן ונשמרות עד שייכתבו מחדש.
+
+**מתועדות, ועדיין לא מקובעות בבדיקה** (25.10.2026): O21, חוק ההיגוי של המכוניות ללא איבר כיוון וחורג מהיעד (הוא מסביר את
+רוב חציית קו האמצע של מכוניות), ו-O22, פונקציות התאוצה של ה-IDM משנות את מצב הרכב. שתיהן יהיו בדיקות xfail קשיחות
+(TEST_STRATEGY, N1 ו-N2); הן מופיעות כאן כדי ש-11 המקרים שלמעלה לא ייקראו כרשימה המלאה של המגבלות.
 
 </div>
 

@@ -65,6 +65,9 @@ Each of the 11 cites its entry in the list on the [Limitations](LIMITATIONS.md) 
 | The safe-speed law can intrude up to 0.55 m into the 2 m minimum gap, never into contact | `test_safe_speed_properties.py` | O19 |
 | The car generator loses arrivals: about 71% of the requested inflow is delivered at the default | `test_traffic_density.py` (4 densities) | O20 |
 
+Two further limitations are documented but not yet tracked by a test: the cars' steering law (O21) and the IDM's
+side effects on the vehicle's state (O22); see the [Limitations](LIMITATIONS.md) page.
+
 For a limitation that is a list (the state assignments outside the physics), a passing companion test pins
 the list exactly, so a new case fails the build.
 

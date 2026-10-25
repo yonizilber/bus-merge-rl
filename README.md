@@ -78,8 +78,9 @@ its own plant. With the controller fixed, it merged in **0%** of runs.
 - **Safe-speed law:** every follower's acceleration is bounded by one law in the style of Gipps and
   Krauss (as in SUMO): `v_safe = sqrt(v_leader² + 2·b·gap)`, capped at the physical 9 m/s². Speed and
   position only ever follow from acceleration; nothing is assigned.
-- **Steering:** vehicles move laterally with a **kinematic bicycle model** steered by **pure pursuit**
-  (with a heading term), limited by steering rate and angle, with Ornstein-Uhlenbeck lane drift.
+- **Steering:** vehicles move laterally with a **kinematic bicycle model** limited by steering rate and angle, with Ornstein-Uhlenbeck lane
+  drift. The bus is steered by **pure pursuit** (with a heading term); cars use a simpler law that overshoots
+  (see Known limitations).
 - **The bay:** the bus follows the drawn kerb into the bay, stops by physics, boards passengers, and
   then hands control to the agent.
 
@@ -119,13 +120,14 @@ its own plant. With the controller fixed, it merged in **0%** of runs.
 
 ## Known limitations
 
-Measured, documented and tracked by tests ([docs/BUGS.md](docs/BUGS.md), "Open"):
+Measured and documented ([docs/BUGS.md](docs/BUGS.md), "Open"); most are tracked by tests:
 - **Contact with a car alongside (about 2%).** The agent sometimes pulls out while a car is beside the
   bay.
 - **Exit kerb (about 9%).** From the far end of the bay, after letting a car pass, the agent steers out
   too slowly and the exit-taper kerb corner cuts into the bus's side.
 - **Model simplifications.** No vehicle mass (a bus brakes as hard as a car), no brake actuation lag,
   and the bus turns about its body centre.
+- **Cars' steering and acceleration queries.** Cars steer with a simple law that has no heading term and overshoots every target; it is hidden because cars only nudge 0.5 m, and it causes most of the cars crossing the centre line (O21). The IDM acceleration functions also change the vehicle's state, so they cannot answer a "what-if" question (O22). Both matter for a multi-lane extension; neither is fixed in v1.0.
 - **Traffic generator.** Arrivals during a blocked entry are lost, so the delivered inflow is about
   λ / (1 + 1.5·λ): the "0.4 cars/s" setting delivers about 0.28.
 

@@ -31,8 +31,18 @@ are regenerated.
 - **v13:** 97.8% merged, 89.4% strict, on 1,000 unseen seeds.
 
 **Now:** development is frozen for QA and documentation. The failures are measured, not fixed: the
-exit kerb corner (O12), contact (O2), merge time (O13), cars over the centre line (O14), and stress
-tests over traffic density.
+exit kerb corner (O12), contact (O2), merge time (O13), cars over the centre line (O14, which comes from
+the cars' steering law, O21), and stress tests over traffic density.
+
+## 1d. Before a multi-lane extension (found 2026-10-25, documented, not scheduled)
+
+A multi-lane road needs two things that v1.0 does not have, both found while researching it:
+- **Cars that steer well (BUGS O21).** The cars' steering law has no heading term and overshoots every target
+  by 100%; it is hidden today because cars move only 0.5 m sideways. Pure pursuit, as for the bus, is the fix, and
+  every published number that depends on car behaviour must then be measured again.
+- **Acceleration queries without side effects (BUGS O22).** A lane-change model (for example MOBIL) must ask what
+  a car's acceleration would be in another lane without braking it. The IDM functions change the vehicle's state
+  today; they must be split into a pure computation and an explicit commit.
 
 ## 2. Finish physical correctness
 

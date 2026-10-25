@@ -312,3 +312,21 @@ counted as a physics violation.
   (BUGS O16).
 - **Constructed scenarios:** v13 never touched a single car placed beside the bay at 302 m. Its contacts
   need the far end of the bay or real traffic.
+
+## 2026-10-25: two limitations found while researching a multi-lane extension
+
+The project owner reported two architectural limitations that are in the v1.0 code and that were not visible
+in a single lane. Neither is fixed in this branch; both are documented (BUGS O21 and O22).
+
+- **O21, the car steering law has no heading term.** It is the law the bus used before the case study's fix.
+  The step response was measured here: a 0.5 m target overshoots by 100% (peak heading about 5°), a 3.5 m
+  target by 99-100% (peak heading 34-39°), and neither settles. Pure pursuit on the same steps: 3% overshoot.
+- **It explains most of O10 and O14**, which had been attributed to lane drift. On v13, seeds 2000-2049, cars
+  crossed the centre line in 62% of runs; without the 0.5 m nudge 6%; with cars on pure pursuit 8%. The
+  merge rate did not change (96%).
+- **O22, the IDM acceleration functions change state** (`is_squeezing`, `last_applied_yield`), so they cannot
+  answer a "what-if" question.
+- **Why they were hidden.** Both depend on the size of the input (a 0.5 m nudge) or on how often the function
+  is called (once per frame). **Lesson:** a defect that small inputs hide is still a defect; the same pattern
+  as the bus steering, found in the cars.
+

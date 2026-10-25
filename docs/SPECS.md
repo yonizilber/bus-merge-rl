@@ -62,8 +62,11 @@ models/              versioned checkpoints (default: ppo_bus_brain_v13.pth)
 - **Classes:** five (Compact, Mid, Large, SUV, Aggressive). Parameters are drawn per driver: top
   speed, time headway, comfortable braking 1.8-2.5 m/s², minimum gap 2 m, reaction time.
 - **Politeness:** sampled per driver from Beta distributions.
-- **Lateral motion:** a steering-first bicycle model with Ornstein-Uhlenbeck lane drift.
-- **Longitudinal motion:** IDM, re-evaluated at the driver's reaction time.
+- **Lateral motion:** a steering-first bicycle model with Ornstein-Uhlenbeck lane drift. Cars aim with
+  `atan2(lateral_error, max(v, 5))`, a law with no heading term that overshoots every target (**BUGS O21**); it
+  is invisible for the 0.5 m nudges cars make in v1.0.
+- **Longitudinal motion:** IDM, re-evaluated at the driver's reaction time. The IDM functions change the
+  vehicle's state (squeeze flag, yield limiter), so they cannot be asked a "what-if" question (**BUGS O22**).
 - **Yielding:** when the bus merges, cars yield through a continuous blend ("yield factor", rate-limited
   by a "surprise filter"). They also see a virtual blinker during the last 3 s of boarding.
 - **Arrivals (`SimulationEngine._try_spawn_car`):** drawn with probability `traffic_rate·dt` per frame,
@@ -205,7 +208,8 @@ leaving the bay, entering the lane and settling, plus the time spent standing st
 | Extreme heading | beyond 60° |
 
 The tolerance for the road edges is 0.02 m. A car across the centre line or the kerb is **reported,
-not failed** (`InvariantReport.notes`). Cars drift in their lane and move over for the bus (BUGS O10).
+not failed** (`InvariantReport.notes`). Most of it is the overshoot of the cars' steering law when they move over for the bus (BUGS O21, O10); lane
+drift alone gives about 6% of runs.
 
 **`traffic_metrics`** reports flow past the stop, cars within 60 m of the bus when boarding ends, and
 car jerk.

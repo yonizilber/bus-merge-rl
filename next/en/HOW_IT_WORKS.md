@@ -60,9 +60,10 @@ vehicles touch and the contact is recorded as a collision, not hidden.
 ### Moving sideways
 
 Every vehicle moves sideways with a [[bicycle|kinematic bicycle model]]: steering angle changes the heading, the
-heading changes the sideways position, and steering is limited in angle and in rate. A steering controller aims
-the vehicle at a target line using [[pure_pursuit|pure pursuit]]. Every vehicle also wobbles slightly in its lane
-([[ou|lane drift]]).
+heading changes the sideways position, and steering is limited in angle and in rate. The bus
+is aimed at its target line by [[pure_pursuit|pure pursuit]]. Cars use a simpler law with no heading term, which
+overshoots every target; it is hidden because cars only move 0.5 m sideways (limitation O21). Every vehicle also
+wobbles slightly in its lane ([[ou|lane drift]]).
 
 ### Arrivals
 
@@ -169,8 +170,8 @@ verification script and the nightly gates. A run ends in one of these outcomes:
 "Merged" is judged on traffic only. [[strict|Strict success]] is a merge with none of the other anomalies. Besides the
 outcome, [[invariants|physics checks]] look for every impossible moment: braking beyond 9 m/s², acceleration beyond
 5 m/s², negative speed, backward motion, position jumps, overlaps, leaving the road, the centre line and extreme
-headings. Cars that cross the centre line or the kerb (they do it when they move over for the bus) are reported but
-not failed.
+headings. Cars that cross the centre line or the kerb (mostly the overshoot of their steering law when they move over for
+the bus, limitation O21) are reported but not failed.
 
 Results are measured on unseen seeds, with [[wilson|confidence intervals]]: at 100 runs, differences
 of a few points are not significant.

@@ -67,8 +67,8 @@ equations and exactly how this project implements them.
 - **The traffic.** Every car is an [[idm|IDM]] driver with its own parameters (five classes). While the bus merges, cars
   leave it more room and yield through a blend that ramps up smoothly. One [[safe_speed|safe-speed law]] limits every
   follower's acceleration; positions and speeds are never assigned.
-- **The vehicles' motion.** Sideways motion follows a [[bicycle|kinematic bicycle model]], steered by
-  [[pure_pursuit|pure pursuit]]. Every vehicle wobbles in its lane as an [[ou|Ornstein-Uhlenbeck]] process.
+- **The vehicles' motion.** Sideways motion follows a [[bicycle|kinematic bicycle model]]. The bus is steered by
+  [[pure_pursuit|pure pursuit]]; cars use a simpler law that overshoots (see the limitations). Every vehicle wobbles in its lane as an [[ou|Ornstein-Uhlenbeck]] process.
 - **The agent.** A [[ppo|PPO]]-trained [[actor_critic|actor-critic network]] sees 11 numbers ([[observation|the
   observation]], optionally with [[noise|perception noise]]) and outputs two: where to be sideways, and how fast to go.
   Two rule layers can override it: the [[governor|governor]] (off by default) and the [[shield|safety shield]].
@@ -89,12 +89,13 @@ which lists every test with its result.
 
 ## Known limitations
 
-Measured, documented and tracked by tests (the [Limitations](LIMITATIONS.md) page explains each):
+Measured and documented, and mostly tracked by tests (the [Limitations](LIMITATIONS.md) page explains each):
 - **Contact with a car alongside (about 2%).** The agent sometimes pulls out while a car is beside the bay.
 - **Exit kerb (about 9%).** From the far end of the bay, after letting a car pass, the agent steers out too slowly
   and a [[kerb_corner|kerb corner]] cuts into the bus's side.
 - **Model simplifications.** No vehicle mass (a bus brakes as hard as a car), no brake actuation lag, and the bus
   turns about its body centre.
+- **Cars' steering and acceleration queries.** Cars steer with a simple law that has no heading term and overshoots every target; it is hidden because cars only nudge 0.5 m, and it causes most of the cars crossing the centre line (O21). The IDM acceleration functions also change the vehicle's state, so they cannot answer a "what-if" question (O22). Both matter for a multi-lane extension; neither is fixed in v1.0.
 - **Traffic generator.** Arrivals during a blocked entry are lost, so the delivered inflow is about
   λ / (1 + 1.5·λ): the "0.4 cars/s" setting delivers about 0.28.
 

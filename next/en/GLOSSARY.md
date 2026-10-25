@@ -147,13 +147,14 @@ $$a=a_{\max}\left[\,1-\left(\frac{v}{v_0}\right)^{\delta}-\left(\frac{s^{*}}{s}\
 - **The bus changes the situation.** While the bus pulls out, the minimum gap is enlarged to $s_0+3.5\,\min(p/0.22,\,1)$, where $p$ is the bus's presence (the share of the lane it covers, multiplied by 1.15 while merging), so cars leave more room. Cars also move over sideways by up to 0.5 m (times their politeness), and brake softly when the lane narrows.
 - **Yielding blend.** While the bus merges, a car's acceleration is $a=(1-Y)\,a_{\text{free}}+Y\,a_{\text{IDM(bus)}}$, the free-road acceleration against the IDM with the *bus* as leader. $Y\in[0,1]$ grows with how far the bus has entered the lane and falls with the distance to it (ignored beyond 50 m). It may change by at most 0.5 per second (the "surprise filter"), so the start of a merge cannot cause a one-frame emergency stop. During the last 3 s of boarding a faint "virtual blinker" gives $Y$ a small value, so cars begin to ease off.
 - **The IDM is a driver model, not a safety guarantee.** Between two recomputations a car can close in on its leader. The [[safe_speed|safe-speed law]] therefore limits the acceleration the IDM asks for.
+- **A known limitation (O22): the functions are not pure.** Computing the acceleration also writes the squeeze flag (`is_squeezing`, through a Schmitt trigger) and the yield limiter (`last_applied_yield`), and a driver's reaction timer advances in the physics step. That is harmless while the engine asks once per car per frame, but it prevents "what-if" queries (what would my acceleration be in another lane?), which a lane-change model needs.
 
 ## Invariants (physics checks) {#invariants}
 > Checks run on every simulated run for moments that cannot happen in reality.
 
 A run is not judged only by its outcome. `busmerge/invariants.py` goes over the whole frame log and reports every
-impossible moment. Cars crossing the centre line or the kerb are reported but not failed (they do it when they move over
-for the bus).
+impossible moment. Cars crossing the centre line or the kerb are reported but not failed (mostly the overshoot of their steering
+law when they move over for the bus, limitation O21).
 
 <!-- details -->
 | Check | Fails when |
@@ -339,7 +340,7 @@ and the wheel then turns toward it at its bounded rate.
 | Pulling into the bay | 6 m | the drawn kerb under the bus's front (`geometry.bay_pull_in_target`) |
 | Merging | 12 m | the sideways target the agent chose: `steer` mapped from $[-1,1]$ to $[-3.5\,\mathrm m,\,0]$ |
 
-A shorter look-ahead while merging swings the rear corner into the bay wall (because the model rotates about the body centre). Cars use a simpler aim, $\delta=\arctan\big(e/\max(v,5)\big)$ limited to $\delta_{\max}$, since they only make small sideways moves (up to 0.5 m).
+A shorter look-ahead while merging swings the rear corner into the bay wall (because the model rotates about the body centre). Cars use a simpler aim, $\delta=\arctan\big(e/\max(v,5)\big)$ limited to $\delta_{\max}$, since they only make small sideways moves (up to 0.5 m). **This law has no heading term and overshoots every target** (limitation O21): a 0.5 m move overshoots by 100%, a 3.5 m move by 99-100% with a peak heading of 34-39°, and neither settles. The small moves hide it today; it would show in a lane change.
 
 ## Rollback rule {#rollback}
 > During training: after several evaluations without improvement, go back to the best checkpoint so far.

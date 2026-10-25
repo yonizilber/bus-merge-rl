@@ -99,7 +99,7 @@ So the 97.9% did not measure the agent alone. It measured the agent together wit
 ## 6. Fixing the bus, not the agent
 
 The fixes were confined to the bus. Cars crossing the centre line or the kerb, which they do while
-drifting in their lane or moving over for the bus, is now reported but not failed (`InvariantReport.notes`).
+drifting in their lane or moving over for the bus (mostly the latter, see limitation O21), is now reported but not failed (`InvariantReport.notes`).
 
 - **Steering:** pure pursuit with the heading term. The look-ahead is 18 m in the lane, 6 m pulling
   in, and 12 m merging. The model rotates the bus about the centre of its body, so a shorter merge
@@ -228,7 +228,9 @@ overshot, cannot be met by any policy and have to be re-derived.
 - **Tilted at the threshold (3 of 1,000 runs).** The bus passed -0.25 m while still turned, with a rear
   corner over the kerb line. -0.25 m means wholly in the lane only when the bus is nearly parallel.
 - **Cars over the centre line (report only).** It happened in 60% of runs, up to 0.93 m (13.7% with
-  v11 under honest steering). The slower merge makes cars move over for the bus for longer.
+  v11 under honest steering). The slower merge makes cars move over for the bus for longer. **Later found (2026-10-25, limitation O21):** most
+  of it is the overshoot of the cars' own steering law, which has no heading term (the defect this case study
+  describes for the bus). With the cars' 0.5 m nudge off it drops to 6% of runs.
 
 ## 9. Lessons
 

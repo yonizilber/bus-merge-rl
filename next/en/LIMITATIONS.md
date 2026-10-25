@@ -26,13 +26,15 @@ test does.
 | O20 | The car generator loses arrivals while the entry is blocked, so the inflow delivered is about λ / (1 + 1.5·λ): 80% of the setting at 0.2 cars/s, 71% at the default 0.4, 46% at 0.8 | The "heavy" traffic settings are not much heavier. A real stress test needs the training scenarios or a different arrival model | `test_traffic_density.py` |
 | O11 | The model turns the bus about the centre of its body; a real bus pivots near its rear axle | The tail swing is exaggerated, which limits how sharply the bus may exit | none |
 | O16 | The pull-in steering (6 m look-ahead) is unstable for a sudden target step at speed, for example 3.5 m off the line at 10 m/s | It only ever follows the gradual kerb line, and 300 pull-ins were clean | none (the steering test excludes it) |
+| O21 | The cars' steering law has no heading term and overshoots every target, the defect the bus had before the case study's fix. Measured: a 0.5 m sideways move overshoots by 100% (peak heading about 5°); a 3.5 m move by 99-100% (34-39°) and never settles | Hidden in v1.0 because cars only nudge 0.5 m to make room for the bus. It causes most of the cars crossing the centre line (see below). A lane change would show it. A fix is pure pursuit for cars, and then every number that depends on car behaviour must be measured again | none |
+| O22 | The IDM acceleration functions change the vehicle's state (the squeeze flag and the yield limiter), not only return a number | Hidden because the engine asks once per car per frame. It prevents "what-if" queries: a lane-change model such as MOBIL must ask what the acceleration would be in another lane without braking the car now. A fix splits each function into a pure computation and an explicit commit | none |
 | O5, O7 | The arrival in the bay still sets the bus speed to 0 (at 0.05 m/s or less), and scenario A resets the bus pose | An assignment, within the physical limit | `test_no_state_assignment.py` |
 
 ## What is reported but not failed
 
 | ID | What | Decision |
 |---|---|---|
-| O10, O14 | Cars cross the centre line (and the kerb, up to 0.35 m). With v13 it happens in 60% of runs, up to 0.93 m | Cars drift in their lane and move over for the bus; the slower merge makes them do it for longer. It is reported, not failed (2026-10-10) |
+| O10, O14 | Cars cross the centre line (and the kerb, up to 0.35 m). With v13 it happens in 60% of runs, up to 0.93 m | Mostly the overshoot of the cars' steering law (O21), not lane drift or realism: in a 50-seed check, 62% of runs have a car over the centre line, 6% with the cars' 0.5 m nudge switched off, and 8% with cars steered by pure pursuit. It is reported, not failed (2026-10-10), but it is a defect of the model |
 
 ## Training
 
