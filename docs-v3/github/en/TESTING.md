@@ -2,13 +2,13 @@
 
 ## Status
 
-The last full run recorded 398 test cases: 370 passed, 22 expected failures (strict xfail), 6 skipped, 0 failed. That is **0 unknown failures**: every test that does not pass is either an accepted, documented
+The last full run recorded 412 test cases: 384 passed, 22 expected failures (strict xfail), 6 skipped, 0 failed. That is **0 unknown failures**: every test that does not pass is either an accepted, documented
 limitation or deliberately not run on every push. The test report (HTML site) lists every test case with its
 result, from that one real run.
 
 | Result | Count | What it means |
 |---|---|---|
-| Passed | 370 | The behaviour is as required |
+| Passed | 384 | The behaviour is as required |
 | Expected failure (strict xfail) | 22 | **13 known limitations** of the simulation or the brain, each a test that keeps the correct requirement and fails on it today (listed [below](#known-limitations-as-tests)), and **9 legacy tests** inherited from the original project, written against an interface that no longer exists |
 | Skipped | 6 | **5 statistical gates** that take 10-20 minutes and run as a [scheduled job](#when-the-tests-run), and **1 test that never reaches its check** (see future work) |
 | Failed | 0 | |

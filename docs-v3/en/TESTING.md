@@ -8,10 +8,10 @@ result, from that one real run.
 
 | Result | Count | What it means |
 |---|---|---|
-| Passed | 370 | The behaviour is as required |
-| Expected failure (strict xfail) | 22 | **13 known limitations** of the simulation or the brain, each a test that keeps the correct requirement and fails on it today (listed [below](#known-limitations-as-tests)), and **9 legacy tests** inherited from the original project, written against an interface that no longer exists |
-| Skipped | 6 | **5 statistical gates** that take 10-20 minutes and run as a [scheduled job](#when-the-tests-run), and **1 test that never reaches its check** (see future work) |
-| Failed | 0 | |
+| Passed | {{n_passed}} | The behaviour is as required |
+| Expected failure (strict xfail) | {{n_xfailed}} | **13 known limitations** of the simulation or the brain, each a test that keeps the correct requirement and fails on it today (listed [below](#known-limitations-as-tests)), and **9 legacy tests** inherited from the original project, written against an interface that no longer exists |
+| Skipped | {{n_skipped}} | **5 statistical gates** that take 10-20 minutes and run as a [scheduled job](#when-the-tests-run), and **1 test that never reaches its check** (see future work) |
+| Failed | {{n_failed}} | |
 
 A [[strict_xfail|strict xfail]] is a test for a known limitation: it must fail on its assertion, and it turns red the
 day the behaviour changes, so a limitation can neither be hidden nor be fixed without anyone noticing.

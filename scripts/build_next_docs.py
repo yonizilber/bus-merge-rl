@@ -195,14 +195,12 @@ def features_table(lang: str, head: list[str] | None = None) -> str:
     return "\n".join(lines)
 
 
-def test_totals(lang: str) -> str:
+def test_totals(lang: str, counts: dict | None = None) -> str:
     cfg = LANGS[lang]
-    if not build_test_report.JUNIT.exists():
+    counts = counts or test_counts()
+    if not counts["total"]:
         return cfg["no_totals"]
-    counts = {"passed": 0, "xfailed": 0, "skipped": 0, "failed": 0}
-    for c in build_test_report._cases():
-        counts[c["status"]] += 1
-    return cfg["totals"].format(n=sum(counts.values()), **counts)
+    return cfg["totals"].format(n=counts["total"], **{k: counts[k] for k in ("passed", "xfailed", "skipped", "failed")})
 
 
 # ---------------------------------------------------------------------------------------------- glossary
@@ -508,9 +506,25 @@ def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dic
                                  lang=lang, nav=cfg["nav"], toc_label=cfg["toc"], extra_body=_pop(cfg) if used else "")
 
 
-def _fill_placeholders(text: str, lang: str, site: dict) -> str:
-    return (text.replace("{{features_table}}", features_table(lang, site["feature_head"].get(lang)))
-                .replace("{{test_totals}}", test_totals(lang)))
+def test_counts() -> dict:
+    """Counts of the last recorded full run (scripts/build_test_report.py), for {{n_passed}} and the like."""
+    counts = {"total": 0, "passed": 0, "xfailed": 0, "skipped": 0, "failed": 0}
+    if build_test_report.JUNIT.exists():
+        for c in build_test_report._cases():
+            counts[c["status"]] += 1
+            counts["total"] += 1
+    return counts
+
+
+def _fill_placeholders(text: str, lang: str, site: dict, counts: dict | None = None) -> str:
+    """``counts``: test counts to use; by default those of the last local run (outputs/, not committed)."""
+    counts = counts or test_counts()
+    text = (text.replace("{{features_table}}", features_table(lang, site["feature_head"].get(lang)))
+                .replace("{{test_totals}}", test_totals(lang, counts)))
+    if "{{n_" in text:
+        for key, value in counts.items():
+            text = text.replace("{{n_" + key + "}}", f"{value:,}")
+    return text
 
 
 def build_language(lang: str, out_dir: Path, root: Path = NEXT) -> list[Path]:
@@ -573,15 +587,25 @@ def github_glossary(text: str, lang: str) -> str:
     return _plain_links(text, "").replace(DETAILS_MARK, f"**{label}**")
 
 
+def frozen_test_counts(root: Path, refresh: bool = False) -> dict:
+    """The test counts the committed Markdown shows, kept in ``root/test_counts.json`` so that the export is the
+    same on every machine (the local run in outputs/ is not committed). ``refresh`` copies the last local run."""
+    path = root / "test_counts.json"
+    if refresh and build_test_report.JUNIT.exists():
+        path.write_text(json.dumps(test_counts(), indent=1) + "\n", encoding="utf-8")
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else test_counts()
+
+
 def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> list[Path]:
     """Write the GitHub-flavoured Markdown version of one language to ``root/github/<lang>``."""
     site = site_config(root)
+    counts = frozen_test_counts(root)
     out_dir = out_dir or root / "github" / lang
     out_dir.mkdir(parents=True, exist_ok=True)
     glossary = parse_glossary(root / lang / "GLOSSARY.md")
     written = []
     for src_name in site["pages"].values():
-        text = _fill_placeholders((root / lang / src_name).read_text(encoding="utf-8"), lang, site)
+        text = _fill_placeholders((root / lang / src_name).read_text(encoding="utf-8"), lang, site, counts)
         text = github_glossary(text, lang) if src_name == "GLOSSARY.md" else github_markdown(text, glossary, lang, src_name)
         # Images point at docs/media/ in the repository, so the GIFs are not copied once per language.
         media_rel = os.path.relpath(MEDIA, root / "github" / lang).replace(os.sep, "/")
@@ -609,5 +633,6 @@ if __name__ == "__main__":
     for lang, paths in build(out, langs, root).items():
         print(lang, out / lang / "index.html", f"({len(paths)} pages)")
     if args.github:
+        frozen_test_counts(root, refresh=True)
         for lang in langs:
             print(lang, root / "github" / lang, f"({len(export_github(lang, root))} Markdown files)")
