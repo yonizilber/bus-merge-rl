@@ -1,7 +1,8 @@
 # Experiment: bus stop in a bay or in the lane
 
-**Status:** design and code ready; the pilot is done (1,000 runs); the full run and its analysis are pending.
-**No conclusions yet.**
+**Status:** the full run is done: 15,000 runs, measured at commit `fa5ee4c` (2026-10-31), 0 censored. The
+aggregate table is `results/experiments/stop_design_v1/summary.json`; the raw data and the report are regenerated
+with the commands below. **The figures are data; their interpretation is still to be reviewed.**
 
 ## Question
 
@@ -102,6 +103,19 @@ aggregate table in `results/experiments/stop_design_v1/summary.json`.
 | `stopped_s` | time spent below 0.5 m/s |
 | `free_flow_s` | road length / desired speed: a reference for absolute delay |
 | `censored` | did not leave the road before the cap |
+
+## First observations (2026-10-31, occupancy 1.2 per car and 50 on the bus)
+
+Read from `summary.json`; every number has a 95% bootstrap interval there.
+- **The bay costs the bus 5-10 s** in every cell (the merge), which weighs 50 passengers; **it saves the cars**
+  from queueing behind the stopped bus, and that saving grows with the traffic and the dwell time.
+- **Short stops (10-15 s) favour the lane stop** at almost every inflow; at 10 s and 0.3 cars/s or more the bay
+  even slows the cars (they yield to the merging bus), so the lane stop is better for any occupancy.
+- **Long stops or dense traffic favour the bay:** at 30 s from 0.2 cars/s, and at 20 s from about 0.35 cars/s.
+- **A shorter stop in the lane** (for example 15 s in the lane against 20 s in the bay) moves the balance clearly
+  toward the lane stop.
+- **Robustness:** leaving out the seeds whose bay run ended in contact (1.6% of bay runs) changes no cell's mean by
+  more than 12 person-seconds.
 
 ## Caveats
 
