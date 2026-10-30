@@ -197,6 +197,17 @@ def figures(cells: pd.DataFrame, out: Path, pax_car: float, pax_bus: float, labe
     return made
 
 
+def contact_sensitivity(runs: pd.DataFrame, cells: pd.DataFrame, pax_car: float, pax_bus: float) -> float:
+    """Largest change of a cell's mean ΔPT when the seeds whose bay run ended in contact are left out (both designs
+    of that seed, so the comparison stays paired)."""
+    contact = runs[(runs["scenario"] == "B") & runs["bus_contact"]]
+    drop = set(zip(contact["traffic_rate"], contact["dwell_s"], contact["seed"]))
+    keep = [k not in drop for k in zip(runs["traffic_rate"], runs["dwell_s"], runs["seed"])]
+    clean = cell_table(runs[keep], pax_car, pax_bus).set_index(["traffic_rate", "dwell_s"])["delta_pt_mean"]
+    full = cells.set_index(["traffic_rate", "dwell_s"])["delta_pt_mean"]
+    return float((full - clean).abs().max())
+
+
 def checks(runs: pd.DataFrame) -> list[str]:
     """Data checks reported before any result: censoring, physics violations, the bay's outcomes."""
     lines = [f"- Runs: {len(runs)} ({(runs['scenario'] == 'A').sum()} in lane, {(runs['scenario'] == 'B').sum()} bay)."]
@@ -235,6 +246,7 @@ def main() -> None:
     label = "pilot" if args.pilot else spec.name
     made = figures(cells, out / "figures", args.pax_car, args.pax_bus, label)
     provenance = json.loads((data / "provenance.json").read_text())
+    sensitivity = contact_sensitivity(runs, cells, args.pax_car, args.pax_bus)
 
     show = ["traffic_rate", "dwell_s", "pairs", "cars_per_run", "delta_pt_mean", "delta_pt_ci_low", "delta_pt_ci_high",
             "bay_better_share", "delta_bus_time_s", "delta_cars_time_s", "break_even_pax_car",
@@ -243,7 +255,9 @@ def main() -> None:
               f"Data: `{data.relative_to(REPO)}`, commit `{provenance['commit']}`, brain {provenance['brain_version']}, "
               f"{provenance['date']}. Occupancy: {args.pax_car:g} per car, {args.pax_bus:g} on the bus.", "",
               "**This is data, not a conclusion.**" + (" The pilot sets the number of seeds for the full run." if args.pilot else ""),
-              "", "## Data checks", "", *checks(runs), "", "## Per cell (bay − lane, same dwell time)", "",
+              "", "## Data checks", "", *checks(runs),
+              f"- Sensitivity: leaving out the seeds whose bay run ended in contact changes a cell's mean ΔPT by at most "
+              f"{sensitivity:.1f} person-seconds.", "", "## Per cell (bay − lane, same dwell time)", "",
               "ΔPT in person-seconds per run; CI: 95% bootstrap over seeds; *bay better share*: the share of seeds in "
               "which the bay's person-time is lower; *break-even*: car occupancy at which the designs tie.", "",
               markdown_table(cells[show]), ""]
@@ -256,6 +270,7 @@ def main() -> None:
         target.mkdir(parents=True, exist_ok=True)
         (target / "summary.json").write_text(json.dumps({
             "provenance": provenance, "pax_car": args.pax_car, "pax_bus": args.pax_bus,
+            "contact_sensitivity_max_person_s": round(sensitivity, 1),
             "cells": cells.to_dict(orient="records")}, indent=1))
     print(out / "report.md")
 
