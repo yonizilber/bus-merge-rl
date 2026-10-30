@@ -1,0 +1,12 @@
+{
+  "name": "stop_design_v1",
+  "question": "On a single-lane road, does a bus stop in a bay (B) or in the lane (A) move more people faster?",
+  "brain": "models/ppo_bus_brain_v13.pth",
+  "scenarios": ["A", "B"],
+  "traffic_rates": [0.1, 0.2, 0.3, 0.4, 0.5],
+  "dwell_times_s": [10, 15, 20, 30, 45],
+  "seeds": {"start": 4000, "count": 300},
+  "pilot_seeds": 20,
+  "arrival_window_s": 150,
+  "max_sim_time_s": 900
+}

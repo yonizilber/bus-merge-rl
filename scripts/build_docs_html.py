@@ -38,6 +38,7 @@ PAGES = [
     ("docs/TEST_STRATEGY.md", "TEST_STRATEGY.html", "Test strategy"),
     ("docs/JOURNAL.md", "JOURNAL.html", "Journal"),
     ("docs/ROADMAP.md", "ROADMAP.html", "Roadmap"),
+    ("docs/EXPERIMENT_STOP_DESIGN.md", "EXPERIMENT_STOP_DESIGN.html", "Experiment"),
 ]
 PAGE_OF = {(REPO / src).resolve(): out for src, out, _ in PAGES}
 NAV = [(out, title) for _, out, title in PAGES] + [("TEST_REPORT.html", "Test report")]

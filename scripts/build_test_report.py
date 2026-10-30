@@ -214,6 +214,13 @@ FILES = {
         "side effect.",
         "שאילתת תאוצה מה-IDM לא צריכה לשנות את הרכב (BUGS O22). xfail קשיח: שאילתה זהה שנייה משנה את דגל הסחיפה הצידה "
         "ואת מגביל הפינוי ומקבלת תשובה אחרת; בדיקת קיבוע מתעדת כל תופעת לוואי."),
+    "test_stop_experiment.py": ("harness",
+        "The stop-design experiment's data: both designs get the same cars for a seed, no arrival is lost at a "
+        "blocked entry, trips are measured from the scheduled arrival, runs repeat exactly, and person-time weights "
+        "and the sign of the paired difference are right.",
+        "הנתונים של ניסוי תכנון התחנה: שני התכנונים מקבלים את אותן מכוניות לאותו seed, אף הגעה לא הולכת לאיבוד בכניסה "
+        "חסומה, נסיעות נמדדות מזמן ההגעה המתוכנן, הרצות חוזרות על עצמן במדויק, והשקלול לפי מספר אנשים וסימן ההפרש "
+        "המזווג נכונים."),
     "test_next_docs.py": ("app",
         "The next documentation version: an English and a Hebrew site that never mix (no Hebrew in the English "
         "pages, right-to-left Hebrew pages, no link from one to the other), no broken link, every term with a "

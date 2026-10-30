@@ -51,6 +51,11 @@ class SimulationEngine:
         self.traffic_rate = self.cfg.traffic_rate
         self.cars_spawned_count = 0
         self._pending_arrivals = 0
+        # Experiment arrivals (SimConfig.arrival_seed): the schedule, the next car on it, and one trip record
+        # per vehicle (scheduled, entered and exit times, time spent stopped). Unused when arrival_seed is None.
+        self.arrival_schedule = None
+        self._next_arrival = 0
+        self.trip_log = {}
         
         # --- LOAD THE TRAINED PYTORCH BRAIN ---
         # brain_path overrides the default checkpoint; a missing file is an error.
@@ -93,6 +98,9 @@ class SimulationEngine:
         self.cars_spawned_count = 0
         self._pending_arrivals = 0
         self.cars_finished_count = 0 
+        self.arrival_schedule = self._draw_arrival_schedule() if self.cfg.arrival_seed is not None else None
+        self._next_arrival = 0
+        self.trip_log = {}
         
         # Spawn the bus at the start line (0.0).
         # Initial speed is uniformly sampled ±15 % around 10 m/s so that
@@ -107,6 +115,9 @@ class SimulationEngine:
         bus.set_stop_schedule(stop_x, self.cfg.bus_dwell_time)
         
         self.vehicles.append(bus)
+        if self.arrival_schedule is not None:
+            self.trip_log[bus.id] = {"type": "Bus", "class": "Bus", "scheduled_t": 0.0, "entered_t": 0.0,
+                                     "exit_t": None, "stopped_s": 0.0, "desired_speed": float(_MC_BUS_MAX_SPEED)}
 
     def step(self):
         self.time += self.dt
@@ -421,6 +432,9 @@ class SimulationEngine:
         leader = min(self.vehicles, key=lambda v: v.position) if self.vehicles else None
         if leader is not None and leader.position < 15.0:
             return
+        if self.arrival_schedule is not None:
+            self._spawn_scheduled_car(leader)
+            return
         if self._pending_arrivals == 0:
             if self.cars_spawned_count >= self.cfg.total_cars_to_spawn:
                 return
@@ -443,7 +457,47 @@ class SimulationEngine:
         self.cars_spawned_count += 1
         self._pending_arrivals = 0
 
+    def _draw_arrival_schedule(self) -> list:
+        """Poisson arrivals at traffic_rate over arrival_window_s, each car's parameters drawn with it, all from
+        one generator seeded by arrival_seed (independent of everything else the run draws)."""
+        rng = np.random.default_rng(self.cfg.arrival_seed)
+        schedule, t = [], 0.0
+        while self.traffic_rate > 0:
+            t += float(rng.exponential(1.0 / self.traffic_rate))
+            if t > self.cfg.arrival_window_s:
+                break
+            _, params = sample_vehicle_params(rng=rng)
+            schedule.append((t, params, float(rng.uniform(0.68, 0.95))))
+        return schedule
+
+    def _spawn_scheduled_car(self, leader) -> None:
+        """The next car on the schedule enters once its time has come and the entry is clear; until then it waits
+        outside the road, so no arrival is lost. The entry rules are those of _try_spawn_car."""
+        if self._next_arrival >= len(self.arrival_schedule):
+            return
+        scheduled_t, params, speed_factor = self.arrival_schedule[self._next_arrival]
+        if self.time < scheduled_t:
+            return
+        start_speed = max(5.5, params.max_speed * speed_factor)
+        if leader is not None:
+            room = float(leader.position) - float(leader.params.length) - float(params.min_gap)
+            start_speed = min(start_speed, safe_speed(room, float(leader.velocity), float(params.comfortable_brake),
+                                                      self.dt))
+            if start_speed < SPAWN_MIN_SPEED_MS:
+                return
+        self.global_id_counter += 1
+        car = Vehicle(self.global_id_counter, position=0.0, velocity=start_speed, params=params)
+        self.vehicles.append(car)
+        self.trip_log[car.id] = {"type": "Car", "class": params.vehicle_class, "scheduled_t": scheduled_t,
+                                 "entered_t": self.time, "exit_t": None, "stopped_s": 0.0,
+                                 "desired_speed": float(params.max_speed)}
+        self.last_spawn_time = self.time
+        self.cars_spawned_count += 1
+        self._next_arrival += 1
+
     def all_vehicles_finished(self) -> bool:
+        if self.arrival_schedule is not None:
+            return self._next_arrival >= len(self.arrival_schedule) and not self.vehicles
         if self.cars_spawned_count < self.cfg.total_cars_to_spawn: return False
         if len(self.vehicles) == 0: return True
         return False
@@ -745,7 +799,12 @@ class SimulationEngine:
     def _remove_finished_cars(self):
         active = []
         for v in self.vehicles:
+            trip = self.trip_log.get(v.id)
+            if trip is not None and v.velocity < 0.5:
+                trip["stopped_s"] += self.dt
             if v.position > self.road_length:
+                if trip is not None:
+                    trip["exit_t"] = self.time
                 self.cars_finished_count += 1
             else:
                 active.append(v)
