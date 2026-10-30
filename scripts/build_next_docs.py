@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import re
 import shutil
 import sys
@@ -28,6 +29,7 @@ from pathlib import Path
 
 import latex2mathml.converter
 import markdown
+from markdown.extensions.toc import slugify_unicode
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_docs_html  # noqa: E402
@@ -156,6 +158,26 @@ FEATURE_TEXT = {
 }
 
 
+def site_config(root: Path) -> dict:
+    """Pages, navigation and labels of the site whose sources are in ``root`` (``next`` uses the defaults).
+
+    A root may hold a ``site.json`` with ``pages`` (output page -> source file), ``nav`` (per language, a list
+    of [page, label]) and ``feature_head`` (per language, the column labels of the inputs table).
+    """
+    cfg = {"pages": dict(PAGES), "langs": {k: dict(v) for k, v in LANGS.items()}, "root": root,
+           "feature_head": {lang: FEATURE_TEXT[lang]["head"] for lang in FEATURE_TEXT}}
+    extra = root / "site.json"
+    if extra.exists():
+        data = json.loads(extra.read_text(encoding="utf-8"))
+        cfg["pages"] = data.get("pages", cfg["pages"])
+        for lang, nav in data.get("nav", {}).items():
+            cfg["langs"][lang]["nav"] = [tuple(item) for item in nav]
+        cfg["feature_head"].update(data.get("feature_head", {}))
+    for lang, lc in cfg["langs"].items():
+        lc["footer"] = lc["footer"].replace("next/", f"{root.name}/")
+    return cfg
+
+
 def _scale_text(offset: float, scale: float) -> str:
     x = "x"
     if offset:
@@ -163,9 +185,10 @@ def _scale_text(offset: float, scale: float) -> str:
     return x if scale == 1.0 else f"{x} / {scale:g}"
 
 
-def features_table(lang: str) -> str:
+def features_table(lang: str, head: list[str] | None = None) -> str:
     text = FEATURE_TEXT[lang]
-    lines = ["<!-- cards: | input -->", "", "| " + " | ".join(text["head"]) + " |", "|" + "---|" * len(text["head"])]
+    head = head or text["head"]
+    lines = ["<!-- cards: | input -->", "", "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for i, (key, _lo, _hi, offset, scale, _noise) in enumerate(FEATURES):
         name, meaning, rng, noise = text["rows"][key]
         lines.append(f"| {name} | {i} | {meaning} | {rng} | `{_scale_text(offset, scale)}` | {noise} |")
@@ -455,11 +478,11 @@ def _pop(cfg: dict) -> str:
     return f'<script type="application/json" id="pop-labels">{labels}</script>\n{POP_JS}'
 
 
-def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dict]) -> str:
-    cfg = LANGS[lang]
-    source = NEXT / lang / src_name
-    text = source.read_text(encoding="utf-8")
-    text = text.replace("{{features_table}}", features_table(lang)).replace("{{test_totals}}", test_totals(lang))
+def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dict], site: dict | None = None) -> str:
+    site = site or site_config(NEXT)
+    cfg = site["langs"][lang]
+    source = site["root"] / lang / src_name
+    text = _fill_placeholders(source.read_text(encoding="utf-8"), lang, site)
     used: dict[str, int] = {}
     if src_name == "GLOSSARY.md":
         text = _plain_links(text, "").replace(DETAILS_MARK, f"**{cfg['details']}**")
@@ -470,7 +493,8 @@ def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dic
     md = markdown.Markdown(extensions=["tables", "fenced_code", "codehilite", "sane_lists", "md_in_html",
                                        "attr_list", "toc"],
                            extension_configs={"codehilite": {"guess_lang": False},
-                                              "toc": {"permalink": "#", "toc_depth": "2-3"}})
+                                              "toc": {"permalink": "#", "toc_depth": "2-3",
+                                                      "slugify": slugify_unicode}})
     body = _restore_math(md.convert(text), math_items)
     body = cards(body)
     body = body.replace("<table>", '<div class="table-wrap"><table>').replace("</table>", "</table></div>")
@@ -484,31 +508,106 @@ def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dic
                                  lang=lang, nav=cfg["nav"], toc_label=cfg["toc"], extra_body=_pop(cfg) if used else "")
 
 
-def build_language(lang: str, out_dir: Path) -> list[Path]:
+def _fill_placeholders(text: str, lang: str, site: dict) -> str:
+    return (text.replace("{{features_table}}", features_table(lang, site["feature_head"].get(lang)))
+                .replace("{{test_totals}}", test_totals(lang)))
+
+
+def build_language(lang: str, out_dir: Path, root: Path = NEXT) -> list[Path]:
+    site = site_config(root)
     out_dir.mkdir(parents=True, exist_ok=True)
-    glossary = parse_glossary(NEXT / lang / "GLOSSARY.md")
+    glossary = parse_glossary(root / lang / "GLOSSARY.md")
     written = []
-    for out_name, src_name in PAGES.items():
+    for out_name, src_name in site["pages"].items():
         target = out_dir / out_name
-        target.write_text(render_page(lang, out_name, src_name, glossary), encoding="utf-8")
+        target.write_text(render_page(lang, out_name, src_name, glossary, site), encoding="utf-8")
         written.append(target)
     media_out = out_dir / "media"
     media_out.mkdir(exist_ok=True)
     for f in MEDIA.glob("*"):
         shutil.copy2(f, media_out / f.name)
-    cfg = LANGS[lang]
+    cfg = site["langs"][lang]
     written.append(build_test_report.write(out_dir, lang, nav=cfg["nav"], toc_label=cfg["toc"]))
     return written
 
 
-def build(out_root: Path, langs=("en", "he")) -> dict[str, list[Path]]:
-    return {lang: build_language(lang, Path(out_root) / lang) for lang in langs}
+# ------------------------------------------------------------------------------- GitHub-flavoured Markdown
+
+def github_markdown(text: str, glossary: dict[str, dict], lang: str, page: str) -> str:
+    """A source page as GitHub renders it: terms become footnotes (GitHub shows them at the bottom with a link
+    back), math stays as $...$ (GitHub renders it), links to the HTML-only test report become plain text."""
+    used: dict[str, int] = {}
+
+    def convert(section: str) -> str:
+        seen: set[str] = set()
+
+        def repl(m: re.Match) -> str:
+            key, shown = m.group(1), m.group(2)
+            if key not in glossary:
+                raise KeyError(f"{page}: term [[{key}]] is not in the glossary")
+            label = " ".join((shown or glossary[key]["title"]).split())
+            if key in seen:
+                return label
+            seen.add(key)
+            used[key] = used.get(key, 0) + 1
+            return f"{label}[^{key}]"
+        parts = re.split(r"(```.*?```)", section, flags=re.S)
+        return "".join(part if part.startswith("```") else _TERM.sub(repl, part) for part in parts)
+
+    out = "".join(convert(section) for section in re.split(r"(?m)^(?=## )", text))
+    out = re.sub(r"\[([^\]]+)\]\(TEST_REPORT\.html\)", r"\1 (HTML site)" if lang == "en" else r"\1 (באתר ה-HTML)", out)
+    if used:
+        more = "more" if lang == "en" else "עוד"
+        notes = []
+        for key in used:
+            e = glossary[key]
+            body = _plain_links(f"{e['tip']} {e['note']}", "GLOSSARY.md").replace("\n", " ")
+            notes.append(f"[^{key}]: **{e['title']}.** {body} [{more}](GLOSSARY.md#{key})")
+        out = out.rstrip("\n") + "\n\n" + "\n".join(notes) + "\n"
+    return out
+
+
+def github_glossary(text: str, lang: str) -> str:
+    label = LANGS[lang]["details"]
+    text = _ENTRY.sub(lambda m: f'<a name="{m.group(2)}"></a>\n\n## {m.group(1)}', text)
+    return _plain_links(text, "").replace(DETAILS_MARK, f"**{label}**")
+
+
+def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> list[Path]:
+    """Write the GitHub-flavoured Markdown version of one language to ``root/github/<lang>``."""
+    site = site_config(root)
+    out_dir = out_dir or root / "github" / lang
+    out_dir.mkdir(parents=True, exist_ok=True)
+    glossary = parse_glossary(root / lang / "GLOSSARY.md")
+    written = []
+    for src_name in site["pages"].values():
+        text = _fill_placeholders((root / lang / src_name).read_text(encoding="utf-8"), lang, site)
+        text = github_glossary(text, lang) if src_name == "GLOSSARY.md" else github_markdown(text, glossary, lang, src_name)
+        # Images point at docs/media/ in the repository, so the GIFs are not copied once per language.
+        media_rel = os.path.relpath(MEDIA, root / "github" / lang).replace(os.sep, "/")
+        text = text.replace('src="media/', f'src="{media_rel}/')
+        target = out_dir / src_name
+        target.write_text(text, encoding="utf-8")
+        written.append(target)
+    return written
+
+
+def build(out_root: Path, langs=("en", "he"), root: Path = NEXT) -> dict[str, list[Path]]:
+    return {lang: build_language(lang, Path(out_root) / lang, root) for lang in langs}
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--root", type=Path, default=NEXT, help="the folder with en/ and he/ sources (default: next)")
     ap.add_argument("--lang", choices=sorted(LANGS), help="one language only")
-    ap.add_argument("--out", type=Path, default=NEXT / "site")
+    ap.add_argument("--out", type=Path, help="where the HTML site goes (default: <root>/site)")
+    ap.add_argument("--github", action="store_true", help="also write GitHub-flavoured Markdown to <root>/github")
     args = ap.parse_args()
-    for lang, paths in build(args.out, (args.lang,) if args.lang else ("en", "he")).items():
-        print(lang, args.out / lang / "index.html", f"({len(paths)} pages)")
+    root = args.root if args.root.is_absolute() else REPO / args.root
+    out = args.out or root / "site"
+    langs = (args.lang,) if args.lang else ("en", "he")
+    for lang, paths in build(out, langs, root).items():
+        print(lang, out / lang / "index.html", f"({len(paths)} pages)")
+    if args.github:
+        for lang in langs:
+            print(lang, root / "github" / lang, f"({len(export_github(lang, root))} Markdown files)")

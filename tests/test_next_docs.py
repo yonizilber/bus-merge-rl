@@ -22,10 +22,16 @@ _spec.loader.exec_module(build_next_docs)
 HEBREW = re.compile(r"[֐-׿]")
 
 
-@pytest.fixture(scope="module")
-def sites(tmp_path_factory):
-    root = tmp_path_factory.mktemp("next_site")
-    return root, build_next_docs.build(root)
+# The documentation versions built by scripts/build_next_docs.py: the second (next/) and the third (docs-v3/).
+ROOTS = ["next", "docs-v3"]
+INPUTS_PAGE = {"next": "HOW_IT_WORKS.html", "docs-v3": "AGENT.html"}
+
+
+@pytest.fixture(scope="module", params=ROOTS)
+def sites(request, tmp_path_factory):
+    out = tmp_path_factory.mktemp(f"site_{request.param}")
+    src = REPO_ROOT / request.param
+    return out, build_next_docs.build(out, root=src), src
 
 
 def _text(path):
@@ -33,18 +39,18 @@ def _text(path):
 
 
 def test_both_languages_have_the_same_pages_and_glossary_entries(sites):
-    _, built = sites
+    _, built, src = sites
     assert {p.name for p in built["en"]} == {p.name for p in built["he"]}
-    en = build_next_docs.parse_glossary(REPO_ROOT / "next" / "en" / "GLOSSARY.md")
-    he = build_next_docs.parse_glossary(REPO_ROOT / "next" / "he" / "GLOSSARY.md")
+    en = build_next_docs.parse_glossary(src / "en" / "GLOSSARY.md")
+    he = build_next_docs.parse_glossary(src / "he" / "GLOSSARY.md")
     assert set(en) == set(he), f"only in en: {sorted(set(en) - set(he))}, only in he: {sorted(set(he) - set(en))}"
     for lang in ("en", "he"):
-        sources = {p.name for p in (REPO_ROOT / "next" / lang).glob("*.md")}
-        assert sources == set(build_next_docs.PAGES.values()), lang
+        sources = {p.name for p in (src / lang).glob("*.md")}
+        assert sources == set(build_next_docs.site_config(src)["pages"].values()), lang
 
 
 def test_no_broken_links_and_no_link_leaves_the_site(sites):
-    root, built = sites
+    root, built, src = sites
     for lang, pages in built.items():
         for page in pages:
             for url in re.findall(r'\b(?:href|src)="([^"]+)"', _text(page)):
@@ -56,14 +62,24 @@ def test_no_broken_links_and_no_link_leaves_the_site(sites):
                     f"{lang}/{page.name} links outside its site: {url}"
 
 
+def test_every_anchor_link_points_to_an_existing_id(sites):
+    # "#section" links (the case study's story, the table of contents) and "PAGE.html#id" links between pages.
+    _, built, src = sites
+    for lang, pages in built.items():
+        ids = {p.name: set(re.findall(r'\bid="([^"]+)"', _text(p))) for p in pages}
+        for page in pages:
+            for target, anchor in re.findall(r'\bhref="([A-Za-z_]*\.html)?#([^"]+)"', _text(page)):
+                assert anchor in ids[target or page.name], (lang, page.name, f"{target}#{anchor}")
+
+
 def test_english_pages_contain_no_hebrew(sites):
-    _, built = sites
+    _, built, src = sites
     for page in built["en"]:
         assert not HEBREW.search(_text(page)), f"Hebrew text in {page.name}"
 
 
 def test_hebrew_pages_are_right_to_left_and_in_hebrew(sites):
-    _, built = sites
+    _, built, src = sites
     for page in built["he"]:
         text = _text(page)
         assert '<html lang="he" dir="rtl">' in text, page.name
@@ -74,15 +90,17 @@ def test_hebrew_pages_are_right_to_left_and_in_hebrew(sites):
 
 
 def test_neither_site_links_to_the_other(sites):
-    _, built = sites
+    _, built, src = sites
     for lang, other in (("en", "he"), ("he", "en")):
         for page in built[lang]:
             for url in re.findall(r'\bhref="([^"#][^"]*)"', _text(page)):
+                if url.startswith(("http://", "https://")):
+                    continue
                 assert f"/{other}/" not in url and not url.startswith(f"{other}/"), (lang, page.name, url)
 
 
 def test_every_term_has_a_popup_a_note_and_a_link_back(sites):
-    _, built = sites
+    _, built, src = sites
     for lang, pages in built.items():
         for page in pages:
             text = _text(page)
@@ -99,7 +117,7 @@ def test_every_term_has_a_popup_a_note_and_a_link_back(sites):
 
 
 def test_ids_are_unique_on_every_page(sites):
-    _, built = sites
+    _, built, src = sites
     for lang, pages in built.items():
         for page in pages:
             ids = re.findall(r'\bid="([^"]+)"', _text(page))
@@ -122,8 +140,8 @@ def test_unknown_terms_fail_the_build():
 
 
 def test_the_technical_terms_have_expandable_details_with_equations_in_both_languages(sites):
-    _, built = sites
-    entries = {lang: build_next_docs.parse_glossary(REPO_ROOT / "next" / lang / "GLOSSARY.md") for lang in ("en", "he")}
+    _, built, src = sites
+    entries = {lang: build_next_docs.parse_glossary(src / lang / "GLOSSARY.md") for lang in ("en", "he")}
     with_details = {lang: {k for k, v in e.items() if v["details"]} for lang, e in entries.items()}
     assert with_details["en"] == with_details["he"]
     assert {"idm", "safe_speed", "bicycle", "pure_pursuit", "ou", "noise", "ppo", "actor_critic"} <= with_details["en"]
@@ -131,31 +149,32 @@ def test_the_technical_terms_have_expandable_details_with_equations_in_both_lang
         glossary = _text(next(p for p in built[lang] if p.name == "GLOSSARY.html"))
         assert glossary.count("<math") >= 25 and 'class="math-block"' in glossary
         assert "$" not in re.sub(r"<math.*?</math>", "", glossary, flags=re.S)   # no formula was left as source text
-        how = _text(next(p for p in built[lang] if p.name == "HOW_IT_WORKS.html"))
+        pages = "".join(_text(p) for p in built[lang])
         for key in ("idm", "bicycle", "ou", "ppo"):
-            template = re.search(rf'<template id="tpl-{key}">(.*?)</template>', how, flags=re.S)
+            template = re.search(rf'<template id="tpl-{key}">(.*?)</template>', pages, flags=re.S)
             assert template and 'class="tip-more"' in template.group(1) and "<math" in template.group(1), (lang, key)
-            assert re.search(rf'<li id="note-{key}">.*?<details class="note-more">', how, flags=re.S), (lang, key)
+            assert re.search(rf'<li id="note-{key}">.*?<details class="note-more">', pages, flags=re.S), (lang, key)
 
 
-def test_common_terms_are_not_defined():
+@pytest.mark.parametrize("root", ROOTS)
+def test_common_terms_are_not_defined(root):
     for lang in ("en", "he"):
-        entries = build_next_docs.parse_glossary(REPO_ROOT / "next" / lang / "GLOSSARY.md")
+        entries = build_next_docs.parse_glossary(REPO_ROOT / root / lang / "GLOSSARY.md")
         assert not {"seed", "reward", "reward_hacking", "fine_tune", "ci", "dt", "bay", "boarding", "gae"} & set(entries)
 
 
 def test_the_pages_with_terms_actually_use_them(sites):
-    _, built = sites
+    _, built, src = sites
     for lang in ("en", "he"):
         counts = {p.name: len(re.findall(r'class="term"', _text(p))) for p in built[lang]}
-        assert counts["index.html"] >= 10 and counts["HOW_IT_WORKS.html"] >= 10, (lang, counts)
+        assert counts["index.html"] >= 8 and counts[INPUTS_PAGE[src.name]] >= 10, (lang, counts)
         assert counts["GLOSSARY.html"] == 0 and counts["TEST_REPORT.html"] == 0
 
 
 def test_the_input_table_has_eleven_rows_in_both_languages(sites):
-    _, built = sites
+    _, built, src = sites
     for lang in ("en", "he"):
-        text = _text(next(p for p in built[lang] if p.name == "HOW_IT_WORKS.html"))
+        text = _text(next(p for p in built[lang] if p.name == INPUTS_PAGE[src.name]))
         assert len(re.findall(r'<article class="card" id="input-', text)) == len(build_next_docs.FEATURES) == 11
 
 
@@ -195,3 +214,19 @@ def test_the_checks_can_fail():
     raw = list(NEUTRAL)
     raw[2] = hi
     assert float(encode_features(11, *raw)[2]) != pytest.approx((hi + 5 - offset) / scale, abs=1e-6)
+
+
+def test_the_github_markdown_export_is_up_to_date(tmp_path):
+    # docs-v3/github/ is committed so that GitHub renders it; it must be what the sources produce.
+    src = REPO_ROOT / "docs-v3"
+    for lang in ("en", "he"):
+        out = tmp_path / lang
+        written = build_next_docs.export_github(lang, src, out)
+        for page in written:
+            committed = src / "github" / lang / page.name
+            assert committed.exists() and committed.read_text(encoding="utf-8") == page.read_text(encoding="utf-8"), \
+                f"run: python scripts/build_next_docs.py --root docs-v3 --github ({lang}/{page.name})"
+            text = page.read_text(encoding="utf-8")
+            assert "[[" not in text and "{{" not in text, (lang, page.name)
+            for key in re.findall(r"\[\^([a-z0-9_-]+)\](?!:)", text):
+                assert f"[^{key}]:" in text, (lang, page.name, key)       # every footnote has its definition

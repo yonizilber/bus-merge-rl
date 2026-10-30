@@ -151,16 +151,80 @@ def headline(lang: str = "en") -> str:
             f"({_pct(s['contact_pct'])} contact with a car, {_pct(s['off_road_pct'])} off the road).")
 
 
+# ── Semantic versions (docs version 3) ─────────────────────────────────────────────────────────
+# Brains follow SemVer with major version 0 (no brain passes the acceptance gate yet): a new training
+# run is a new minor version. The old "vN" names are kept on the files; see the changelog.
+BRAIN_VERSION = {"v13": "0.13.0", "v11": "0.11.0", "v10": "0.10.0", "v9": "0.9.0", "v11_old_steering": "0.11.0"}
+
+
+def _version_label(name: str, label: str, he: bool) -> str:
+    version = BRAIN_VERSION[name]
+    if label.endswith(" best"):
+        version += " (הנקודה הטובה ביותר)" if he else " (best checkpoint)"
+    return f"**{version}**" if name == DEFAULT else version
+
+
+def brain_table_semver(lang: str = "en") -> str:
+    he = lang == "he"
+    head = ("| מוח | מצב | Seeds | השתלב | מגע | תקוע | הצלחה מחמירה | חצה קו אמצע | ירד מהכביש | זמן ממוצע / p95 |" if he else
+            "| Brain | Status | Seeds | Merged | Contact | Stuck | Strict success | Over centre line | Off road | Mean / p95 time |")
+    working = "✔ **עובד** (ברירת מחדל)" if he else "✔ **Working** (default)"
+    superseded = "✘ הוחלף: נעצר באמצע הדרך" if he else "✘ Superseded: stops half way"
+    lines = [head, "|---|---|---|---|---|---|---|---|---|---|"]
+    for name in BRAINS:
+        m = load(name)
+        s = m["summary"]
+        time = _time(s).replace(" s", " שנ'") if he else _time(s)
+        lines.append(f"| {_version_label(name, m['label'], he)} | {working if name == DEFAULT else superseded} | "
+                     f"{m['seeds'][0]}-{m['seeds'][1]} | {_pct(s['merged_pct'])} | {_pct(s['contact_pct'])} | "
+                     f"{_pct(s['stuck_pct'])} | {_pct(s['strict_pct'])} | {_pct(s['over_centre_pct'])} | "
+                     f"{_pct(s['off_road_pct'])} | {time} |")
+    return "\n".join(lines)
+
+
+def headline_semver(lang: str = "en") -> str:
+    m = load(DEFAULT)
+    s = m["summary"]
+    v = BRAIN_VERSION[DEFAULT]
+    if lang == "he":
+        return (f"מוח {v}, ברירת המחדל והמוח היחיד שעובד, משתלב ב-{_pct(s['merged_pct'])} מתוך {s['n']:,} הרצות שלא נראו "
+                f"באימון. הוא אף פעם לא נתקע ({_pct(s['stuck_pct'])}) ואף פעם לא חוצה את קו האמצע "
+                f"({_pct(s['over_centre_pct'])}); {_pct(s['contact_pct'])} מההרצות מסתיימות במגע עם מכונית. "
+                f"{_pct(s['strict_pct'])} מההרצות נקיות בכל בדיקה פיזיקלית.")
+    return (f"Brain {v}, the default and the only working brain, merges in {_pct(s['merged_pct'])} of {s['n']:,} "
+            f"unseen runs. It never gets stuck ({_pct(s['stuck_pct'])}) and never crosses the centre line "
+            f"({_pct(s['over_centre_pct'])}); {_pct(s['contact_pct'])} of runs end in contact with a car. "
+            f"{_pct(s['strict_pct'])} of runs are clean by every physical check.")
+
+
+def case_study_table_semver(lang: str = "en") -> str:
+    he = lang == "he"
+    labels = ({"v11_old_steering": "0.11.0, היגוי ישן", "v11": "0.11.0, היגוי מתוקן", "v13": "**0.13.0**, היגוי מתוקן"} if he else
+              {"v11_old_steering": "0.11.0, old steering", "v11": "0.11.0, corrected steering",
+               "v13": "**0.13.0**, corrected steering"})
+    table = case_study_table(lang).split("\n")
+    table[0] = "| | " + " | ".join(labels[n] for n in CASE_STUDY) + " |"
+    return "\n".join(table)
+
+
 RENDERERS = {"headline": headline, "brain_table": brain_table, "stress_table": stress_table,
              "case_study_table": case_study_table,
              "headline_he": lambda: headline("he"), "brain_table_he": lambda: brain_table("he"),
-             "case_study_table_he": lambda: case_study_table("he")}
+             "case_study_table_he": lambda: case_study_table("he"),
+             "brain_table_semver": brain_table_semver, "brain_table_semver_he": lambda: brain_table_semver("he"),
+             "headline_semver": headline_semver, "headline_semver_he": lambda: headline_semver("he"),
+             "case_study_table_semver": case_study_table_semver,
+             "case_study_table_semver_he": lambda: case_study_table_semver("he")}
 PUBLISHED = {"README.md": ["headline", "brain_table"],
              "README.he.md": ["headline_he", "brain_table_he"],
              "next/en/README.md": ["headline", "brain_table"],
              "next/en/CASE_STUDY.md": ["case_study_table"],
              "next/he/README.md": ["headline_he", "brain_table_he"],
              "next/he/CASE_STUDY.md": ["case_study_table_he"],
+             "docs-v3/en/README.md": ["headline_semver", "brain_table_semver"],
+             "docs-v3/en/CASE_STUDY.md": ["case_study_table_semver"],
+             "docs-v3/he/README.md": ["headline_semver_he", "brain_table_semver_he"],
+             "docs-v3/he/CASE_STUDY.md": ["case_study_table_semver_he"],
              "docs/SPECS.md": ["brain_table", "stress_table"],
              "docs/CASE_STUDY_REWARD_HACKING.md": ["case_study_table"]}
 

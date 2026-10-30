@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "busmerge"
-version = "0.1.0"
+version = "1.0.1"
 description = "Microscopic traffic simulation of a bus merging out of a bus bay, driven by a PPO agent, with a Streamlit dashboard."
 readme = "README.md"
 license = { text = "MIT" }
