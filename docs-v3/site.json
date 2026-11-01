@@ -2,6 +2,7 @@
   "pages": {
     "index.html": "README.md",
     "RESEARCH.html": "RESEARCH.md",
+    "RESULTS.html": "RESULTS.md",
     "WORLD.html": "WORLD.md",
     "AGENT.html": "AGENT.md",
     "CASE_STUDY.html": "CASE_STUDY.md",
@@ -11,17 +12,115 @@
     "GLOSSARY.html": "GLOSSARY.md"
   },
   "nav": {
-    "en": [["index.html", "Overview"], ["RESEARCH.html", "Research question"], ["WORLD.html", "World model"],
-           ["AGENT.html", "Agent"], ["CASE_STUDY.html", "Case study"], ["CHANGELOG.html", "Changelog"],
-           ["TESTING.html", "Testing"], ["LIMITATIONS.html", "Limitations"], ["TEST_REPORT.html", "Test report"],
-           ["GLOSSARY.html", "Glossary"]],
-    "he": [["index.html", "סקירה"], ["RESEARCH.html", "שאלת המחקר"], ["WORLD.html", "מודל העולם"],
-           ["AGENT.html", "הסוכן"], ["CASE_STUDY.html", "חקר מקרה"], ["CHANGELOG.html", "יומן שינויים"],
-           ["TESTING.html", "בדיקות"], ["LIMITATIONS.html", "מגבלות"], ["TEST_REPORT.html", "דוח בדיקות"],
-           ["GLOSSARY.html", "מילון מונחים"]]
+    "en": [
+      [
+        "index.html",
+        "Overview"
+      ],
+      [
+        "RESEARCH.html",
+        "Research question"
+      ],
+      [
+        "RESULTS.html",
+        "Results"
+      ],
+      [
+        "WORLD.html",
+        "World model"
+      ],
+      [
+        "AGENT.html",
+        "Agent"
+      ],
+      [
+        "CASE_STUDY.html",
+        "Case study"
+      ],
+      [
+        "CHANGELOG.html",
+        "Changelog"
+      ],
+      [
+        "TESTING.html",
+        "Testing"
+      ],
+      [
+        "LIMITATIONS.html",
+        "Limitations"
+      ],
+      [
+        "TEST_REPORT.html",
+        "Test report"
+      ],
+      [
+        "GLOSSARY.html",
+        "Glossary"
+      ]
+    ],
+    "he": [
+      [
+        "index.html",
+        "סקירה"
+      ],
+      [
+        "RESEARCH.html",
+        "שאלת המחקר"
+      ],
+      [
+        "RESULTS.html",
+        "תוצאות"
+      ],
+      [
+        "WORLD.html",
+        "מודל העולם"
+      ],
+      [
+        "AGENT.html",
+        "הסוכן"
+      ],
+      [
+        "CASE_STUDY.html",
+        "חקר מקרה"
+      ],
+      [
+        "CHANGELOG.html",
+        "יומן שינויים"
+      ],
+      [
+        "TESTING.html",
+        "בדיקות"
+      ],
+      [
+        "LIMITATIONS.html",
+        "מגבלות"
+      ],
+      [
+        "TEST_REPORT.html",
+        "דוח בדיקות"
+      ],
+      [
+        "GLOSSARY.html",
+        "מילון מונחים"
+      ]
+    ]
   },
   "feature_head": {
-    "en": ["Input", "Index", "Meaning", "Range (clipped to)", "Normalisation", "Perception noise (if enabled)"],
-    "he": ["קלט", "אינדקס", "משמעות", "טווח (נחתך מעבר לו)", "נרמול", "רעש תפיסה (אם מופעל)"]
+    "en": [
+      "Input",
+      "Index",
+      "Meaning",
+      "Range (clipped to)",
+      "Normalisation",
+      "Perception noise (if enabled)"
+    ],
+    "he": [
+      "קלט",
+      "אינדקס",
+      "משמעות",
+      "טווח (נחתך מעבר לו)",
+      "נרמול",
+      "רעש תפיסה (אם מופעל)"
+    ]
   }
 }

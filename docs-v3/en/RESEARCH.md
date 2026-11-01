@@ -1,7 +1,7 @@
 # Research question
 
-> **Status: planned.** This page states the question and how it will be answered. It contains no results and no
-> conclusions yet; the simulation and the driver described on the other pages are the instrument built for it.
+> **Status: the first experiment has run.** This page states the question and how it was answered; the [results](RESULTS.md)
+> are on their own page, as a story. The planning below is kept as it was written, with what is done marked.
 
 ## The question
 
@@ -57,17 +57,16 @@ is the question.
 
 ## What must be in place first
 
-The instrument is built, but these items would bias this particular comparison and come first:
-- **Traffic arrivals (limitation O20).** The generator loses arrivals while its entry is blocked, so "heavy" traffic
-  is not much heavier. A queue of pending arrivals is needed to test high inflows.
+The instrument was built, but these items would bias this particular comparison. **Marked done: handled for the first experiment.**
+- **Traffic arrivals (limitation O20).** *Done for the experiment:* the experiment's arrivals follow a schedule, and a car that
+  finds the entry blocked waits instead of being lost, so "heavy" traffic is heavy. The app's own arrival model on `main` still loses them.
 - **The in-lane scenario (O5, O7).** It is a baseline that still resets the bus's pose at the stop; it needs the same
   physical treatment as the bay.
 - **Cars' steering (O21).** Cars overshoot when they move aside for the bus; with a queue behind an in-lane stop that
   matters less, at a bay more.
-- **Paired arrivals.** Arrivals need their own random stream, so that a seed produces the same traffic in both
-  designs.
-- **Person delay.** The existing person-weighted speed counts each vehicle's whole trip; the primary measure needs the
-  free-flow reference defined and tested first.
+- **Paired arrivals.** *Done:* arrivals have their own random generator, so a seed produces the same traffic in both designs.
+- **Person delay.** *Done in another form:* the measure is person-time, occupancy × trip time from the scheduled arrival, and the
+  paired difference cancels the free-flow reference. Each vehicle's free-flow time is recorded too, for absolute delays.
 
 ## Threats to validity
 

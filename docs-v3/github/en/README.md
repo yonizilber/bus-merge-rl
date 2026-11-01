@@ -39,7 +39,8 @@ car behind it waits until boarding ends: a queue forms.</sub></p>
 **The question is not which option is better for the bus, but which one moves more people faster**, counting the
 50 passengers on the bus and the 1.2 people in an average car. It depends on how dense the traffic is, how long the
 bus stands at the stop in each design, how many people ride in each car, and how long a merge really takes. The
-[research question](RESEARCH.md) page sets out the experiment.
+[research question](RESEARCH.md) page sets out the experiment, and the [results](RESULTS.md) tell what it showed: in short, **a
+short stop favours the lane, a long stop or dense traffic favours the bay, and the tipping point moves with every assumption.**
 
 **The hard part is the merge.** A comparison is only as good as its weakest model, and the weakest point of most
 traffic simulations is exactly here: a bus leaving a bay into live traffic, which depends on judgement, not on a
@@ -91,7 +92,7 @@ How to read it:
   and two training bugs. The [case study](CASE_STUDY.md) tells the story.
 - **Measured on unseen data.** Training, selection, publication and the scheduled gates use separate sets of random
   seeds.
-- **412 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
+- **430 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
   main branch is that a change is merged only when they pass. Known limitations are kept as strict xfail[^strict_xfail] tests, so they
   stay visible and turn red the day the behaviour changes. See [Testing](TESTING.md).
 
@@ -99,7 +100,8 @@ How to read it:
 
 | Page | What it covers |
 |---|---|
-| [Research question](RESEARCH.md) | Bay or lane: the question, the measures, the factors and the planned experiment |
+| [Research question](RESEARCH.md) | Bay or lane: the question, the measures, the factors and the experiment |
+| [Results](RESULTS.md) | What 15,000 simulated runs showed: what the bay costs, what it buys, and who wins where |
 | [World model](WORLD.md) | The road, the cars, the bus and the bay, and the physics that holds it together |
 | [Agent](AGENT.md) | What the driver sees, what it decides, its network, how it learns, and every version |
 | [Case study](CASE_STUDY.md) | How an agent that exploited a steering bug was found out and replaced |

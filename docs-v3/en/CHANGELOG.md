@@ -25,6 +25,9 @@ model files keep their original names (`models/ppo_bus_brain_v13.pth`). Release 
 ## [Unreleased]
 
 ### Added
+- **The stop-design experiment** (`feature/stop-experiment`): an opt-in schedule of arrivals that gives both designs the same
+  cars and loses none (`fa5ee4c`), a runner and an analysis, and 15,000 measured runs (`70a44a9`, `e0a9e63`); the
+  [results](RESULTS.md) page tells what they showed. When released this is a minor version of the simulation, 1.1.0.
 - A third version of the documentation, in English and Hebrew: a research question, separate pages for the world and
   the agent, this changelog, and a GitHub-ready Markdown export.
 - A GIF of the in-lane stop (scenario A), next to the bay.

@@ -221,6 +221,11 @@ FILES = {
         "הנתונים של ניסוי תכנון התחנה: שני התכנונים מקבלים את אותן מכוניות לאותו seed, אף הגעה לא הולכת לאיבוד בכניסה "
         "חסומה, נסיעות נמדדות מזמן ההגעה המתוכנן, הרצות חוזרות על עצמן במדויק, והשקלול לפי מספר אנשים וסימן ההפרש "
         "המזווג נכונים."),
+    "test_stop_experiment_story.py": ("harness",
+        "Every number in the sentences of the experiment's results page (cells won by each design, the bus's delay, "
+        "queue lengths, break-even occupancies, confidence and robustness figures) is what the stored measurement says.",
+        "כל מספר במשפטי דף התוצאות של הניסוי (תאים שכל תכנון מנצח בהם, עיכוב האוטובוס, אורכי תורים, תפוסות איזון, "
+        "ורמות הביטחון והחוסן) הוא מה שהמדידה השמורה אומרת."),
     "test_next_docs.py": ("app",
         "The next documentation version: an English and a Hebrew site that never mix (no Hebrew in the English "
         "pages, right-to-left Hebrew pages, no link from one to the other), no broken link, every term with a "
