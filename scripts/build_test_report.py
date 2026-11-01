@@ -226,6 +226,11 @@ FILES = {
         "queue lengths, break-even occupancies, confidence and robustness figures) is what the stored measurement says.",
         "כל מספר במשפטי דף התוצאות של הניסוי (תאים שכל תכנון מנצח בהם, עיכוב האוטובוס, אורכי תורים, תפוסות איזון, "
         "ורמות הביטחון והחוסן) הוא מה שהמדידה השמורה אומרת."),
+    "test_real_data_comparison.py": ("harness",
+        "The simulation's numbers quoted in the real-data comparison (merge time, queue length, entry flow, the "
+        "verdict under other occupancies) are the ones in the stored comparison.",
+        "המספרים של הסימולציה בהשוואה לנתוני שטח (זמן השתלבות, אורך תור, זרימת כניסה, ההכרעה תחת תפוסות אחרות) הם "
+        "המספרים בהשוואה השמורה."),
     "test_next_docs.py": ("app",
         "The next documentation version: an English and a Hebrew site that never mix (no Hebrew in the English "
         "pages, right-to-left Hebrew pages, no link from one to the other), no broken link, every term with a "
