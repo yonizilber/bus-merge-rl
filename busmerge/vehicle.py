@@ -130,8 +130,14 @@ CAR_CLASS_PROFILES: Dict[str, Dict[str, object]] = {
 }
 
 
-def sample_vehicle_params(vehicle_class: str = None):
-    """Sample one car profile so physics is not tied to a single car size."""
+def sample_vehicle_params(vehicle_class: str = None, rng: "np.random.Generator | None" = None):
+    """Sample one car profile so physics is not tied to a single car size.
+
+    ``rng``: draw everything from this generator instead of the global ``random`` and ``np.random`` streams
+    (an experiment's arrival schedule, so that two scenarios get the same cars). ``None`` is unchanged.
+    """
+    if rng is not None:
+        return _sample_vehicle_params_rng(vehicle_class, rng)
     if vehicle_class is None:
         classes = list(CAR_CLASS_PROFILES.keys())
         weights = [CAR_CLASS_PROFILES[c]["weight"] for c in classes]
@@ -195,6 +201,33 @@ def sample_vehicle_params(vehicle_class: str = None):
         lane_keeping_noise=lane_noise,
     )
     return vehicle_class, params
+
+def _sample_vehicle_params_rng(vehicle_class, rng: "np.random.Generator"):
+    """The same distributions as sample_vehicle_params, drawn from one generator."""
+    if vehicle_class is None:
+        classes = list(CAR_CLASS_PROFILES.keys())
+        weights = np.array([CAR_CLASS_PROFILES[c]["weight"] for c in classes], dtype=float)
+        vehicle_class = classes[int(rng.choice(len(classes), p=weights / weights.sum()))]
+    profile = CAR_CLASS_PROFILES[vehicle_class]
+    length = float(rng.uniform(*profile["length_range"]))
+    width = float(rng.uniform(*profile["width_range"]))
+    politeness = float(rng.beta(1.0, 6.0) if vehicle_class == "Aggressive" else rng.beta(2.0, 2.0))
+    _sr_mean = profile.get("steer_rate_deg_per_s", 75.0)
+    steer_rate = float(np.clip(rng.lognormal(np.log(_sr_mean), 0.20), _sr_mean * 0.40, _sr_mean * 2.0))
+    _ma_mean = profile.get("max_steer_angle_deg", 35.0)
+    max_steer = float(np.clip(rng.normal(_ma_mean, 3.0), max(15.0, _ma_mean - 8.0), _ma_mean + 8.0))
+    _lk_mean = profile.get("lane_keeping_noise", 0.08)
+    lane_noise = float(np.clip(rng.lognormal(np.log(_lk_mean), 0.25), _lk_mean * 0.30, _lk_mean * 3.0))
+    params = VehicleParams(
+        max_speed=profile["max_speed"], max_accel=profile["max_accel"],
+        comfortable_brake=profile["comfortable_brake"], min_gap=2.0, time_headway=profile["time_headway"],
+        length=length, width=width, delta=4.0, base_reaction_time=profile["base_reaction_time"],
+        shock_reaction_time=max(0.9, profile["base_reaction_time"] + 0.5), vehicle_class=vehicle_class,
+        politeness_factor=politeness, wheelbase=profile["wheelbase"], max_steer_angle_deg=max_steer,
+        steer_rate_deg_per_s=steer_rate, lane_keeping_noise=lane_noise,
+    )
+    return vehicle_class, params
+
 
 class Vehicle:
     def __init__(self, v_id: int, position: float, velocity: float, params: VehicleParams = None):
