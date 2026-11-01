@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -112,53 +113,112 @@ def markdown_table(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def _caption(fig, text: str) -> None:
-    fig.text(0.01, 0.01, text, ha="left", va="bottom", fontsize=8.5, wrap=True)
+TEXT = {
+    "en": {
+        "rate": "requested traffic inflow (cars/s)", "dwell": "dwell time (s)",
+        "title1": "Bay minus in-lane stop, person-time ({label})",
+        "y1": "ΔPT = PT(bay) − PT(lane)  (person-minutes per run)", "dwell_label": "dwell {d:g} s",
+        "title2a": "The bus: T(bay) − T(lane)", "title2b": "All cars together: T(bay) − T(lane)",
+        "unit_s": "s", "unit_vm": "vehicle-minutes",
+        "title3": "Break-even car occupancy (bus carries {bus:g})", "cbar": "people per car (scale capped at {cap:g})",
+        "lane_always": "lane\nalways", "bay_always": "bay\nalways",
+        "cap1": ("Mean paired difference of person-time per run (bay − lane, same cars and seed), with its 95% bootstrap "
+                 "interval as a band, for each dwell time (the same in both designs). Occupancy: {car:g} people per "
+                 "car, {bus:g} on the bus. Below zero the bay moves people faster; above zero the in-lane stop does."),
+        "cap2": ("The two parts of the difference, before weighting by occupancy, as means over seeds. Left: how much "
+                 "longer the bus's trip is with a bay (the merge). Right: the summed trip times of all cars, bay minus "
+                 "lane (negative: the cars gain from the bay because they do not queue behind the stopped bus)."),
+        "cap3": ("The car occupancy at which the bay and the in-lane stop tie on mean person-time, given the bus's "
+                 "occupancy. With more people per car than this, the bay is better (the cars' gain outweighs the bus's "
+                 "loss); with fewer, the in-lane stop is. Cars carry about 1.2 on average, so values above {cap:g} "
+                 "mean the lane stop wins in practice. 'lane always' (grey): the bay costs both the bus and the cars, "
+                 "so the in-lane stop is better at any occupancy."),
+    },
+    "he": {
+        # No parentheses and no Latin text next to punctuation: the bidirectional algorithm mirrors them awkwardly.
+        "rate": "עוצמת התנועה המבוקשת, מכוניות בשנייה", "dwell": "זמן העלאת נוסעים, בשניות",
+        "title1": "מפרץ פחות עצירה בנתיב: זמן-אדם",
+        "y1": "הפרש זמן-אדם, מפרץ פחות נתיב, בדקות-אדם להרצה", "dwell_label": "עצירה {d:g} שנ'",
+        "title2a": "האוטובוס: מפרץ פחות נתיב", "title2b": "כל המכוניות יחד: מפרץ פחות נתיב",
+        "unit_s": "שניות", "unit_vm": "דקות-רכב",
+        "title3": "תפוסת מכונית בנקודת השוויון, באוטובוס {bus:g} נוסעים", "cbar": "אנשים במכונית, הסקאלה נחתכת ב-{cap:g}",
+        "lane_always": "נתיב\nתמיד", "bay_always": "מפרץ\nתמיד",
+        "cap1": ("ההפרש הממוצע המזווג של זמן-אדם להרצה, מפרץ פחות נתיב, באותן מכוניות ובאותו seed. הרצועה היא רווח סמך "
+                 "של 95%, והקווים הם זמני עצירה, אותו זמן בשני התכנונים. תפוסה: {car:g} אנשים במכונית ו-{bus:g} "
+                 "באוטובוס. מתחת לאפס המפרץ מעביר אנשים מהר יותר; מעל אפס העצירה בנתיב."),
+        "cap2": ("שני חלקי ההפרש לפני שקלול התפוסה, כממוצעים על פני seeds. משמאל: כמה ארוכה יותר הנסיעה של האוטובוס "
+                 "עם מפרץ, בגלל ההשתלבות. מימין: סכום זמני הנסיעה של כל המכוניות, מפרץ פחות נתיב. שלילי פירושו "
+                 "שהמכוניות מרוויחות מהמפרץ כי הן לא עומדות בתור מאחורי האוטובוס העומד."),
+        "cap3": ("תפוסת המכונית שבה המפרץ והעצירה בנתיב שווים בממוצע זמן-אדם, בהינתן תפוסת האוטובוס. עם יותר אנשים "
+                 "במכונית מזה המפרץ עדיף, כי הרווח של המכוניות גדול מההפסד של האוטובוס; עם פחות, העצירה בנתיב. מכונית "
+                 "נושאת בממוצע כ-1.2, ולכן ערך מעל {cap:g} פירושו שהנתיב מנצח בפועל. תא אפור, נתיב תמיד: המפרץ "
+                 "עולה גם לאוטובוס וגם למכוניות, ולכן העצירה בנתיב עדיפה בכל תפוסה."),
+    },
+}
 
 
-def figures(cells: pd.DataFrame, out: Path, pax_car: float, pax_bus: float, label: str) -> list[tuple[str, str]]:
+def _t(lang: str):
+    """A text-drawing helper: Hebrew needs right-to-left shaping (python-bidi) before matplotlib draws it."""
+    if lang != "he":
+        return lambda x: x
+    try:
+        from bidi import get_display
+    except ImportError as e:      # pragma: no cover
+        raise SystemExit("Hebrew figures need python-bidi: pip install python-bidi") from e
+    return lambda x: "\n".join(get_display(line) for line in x.split("\n"))
+
+
+def _caption(fig, text: str, lang: str = "en", width: int = 118) -> None:
+    import textwrap
+    shape = _t(lang)
+    lines = textwrap.wrap(text, width=width)
+    if lang == "he":
+        fig.text(0.99, 0.01, "\n".join(shape(line) for line in lines), ha="right", va="bottom", fontsize=8.5)
+    else:
+        fig.text(0.01, 0.01, "\n".join(lines), ha="left", va="bottom", fontsize=8.5)
+
+
+def figures(cells: pd.DataFrame, out: Path, pax_car: float, pax_bus: float, label: str,
+            lang: str = "en") -> list[tuple[str, str]]:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    matplotlib.rcParams["font.family"] = "DejaVu Sans"        # has Hebrew letters
+    X, shape = TEXT[lang], _t(lang)
     out.mkdir(parents=True, exist_ok=True)
     made = []
 
-    fig, ax = plt.subplots(figsize=(8.5, 5.6))
-    fig.subplots_adjust(bottom=0.27)
+    fig, ax = plt.subplots(figsize=(8.5, 5.8))
+    fig.subplots_adjust(bottom=0.29)
     for dwell, g in cells.groupby("dwell_s"):
         g = g.sort_values("traffic_rate")
-        ax.plot(g["traffic_rate"], g["delta_pt_mean"] / 60, marker="o", label=f"dwell {dwell:g} s")
+        ax.plot(g["traffic_rate"], g["delta_pt_mean"] / 60, marker="o", label=shape(X["dwell_label"].format(d=dwell)))
         ax.fill_between(g["traffic_rate"], g["delta_pt_ci_low"] / 60, g["delta_pt_ci_high"] / 60, alpha=0.15)
     ax.axhline(0, color="black", lw=0.8)
-    ax.set_xlabel("requested traffic inflow (cars/s)")
-    ax.set_ylabel("ΔPT = PT(bay) − PT(lane)  (person-minutes per run)")
-    ax.set_title(f"Bay minus in-lane stop, person-time ({label})")
+    ax.set_xlabel(shape(X["rate"]))
+    ax.set_ylabel(shape(X["y1"]))
+    ax.set_title(shape(X["title1"].format(label=label)))
     ax.legend(fontsize=8)
-    caption = (f"Mean paired difference of person-time per run (bay − lane, same cars and seed), with its 95% bootstrap "
-               f"interval as a band, for each dwell time (the same in both designs). Occupancy: {pax_car:g} people per "
-               f"car, {pax_bus:g} on the bus. Below zero the bay moves people faster; above zero the in-lane stop does.")
-    _caption(fig, caption)
+    caption = X["cap1"].format(car=pax_car, bus=pax_bus)
+    _caption(fig, caption, lang)
     fig.savefig(out / "delta_pt_vs_rate.png", dpi=130)
     plt.close(fig)
     made.append(("delta_pt_vs_rate.png", caption))
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4.8))
-    fig.subplots_adjust(bottom=0.3, wspace=0.3)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5.0))
+    fig.subplots_adjust(bottom=0.32, wspace=0.3)
     for dwell, g in cells.groupby("dwell_s"):
         g = g.sort_values("traffic_rate")
-        axes[0].plot(g["traffic_rate"], g["delta_bus_time_s"], marker="o", label=f"dwell {dwell:g} s")
-        axes[1].plot(g["traffic_rate"], g["delta_cars_time_s"] / 60, marker="o", label=f"dwell {dwell:g} s")
-    for ax, title, unit in ((axes[0], "The bus: T(bay) − T(lane)", "s"),
-                            (axes[1], "All cars together: T(bay) − T(lane)", "vehicle-minutes")):
+        axes[0].plot(g["traffic_rate"], g["delta_bus_time_s"], marker="o", label=shape(X["dwell_label"].format(d=dwell)))
+        axes[1].plot(g["traffic_rate"], g["delta_cars_time_s"] / 60, marker="o")
+    for ax, title, unit in ((axes[0], X["title2a"], X["unit_s"]), (axes[1], X["title2b"], X["unit_vm"])):
         ax.axhline(0, color="black", lw=0.8)
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel("requested traffic inflow (cars/s)")
-        ax.set_ylabel(unit)
+        ax.set_title(shape(title), fontsize=10)
+        ax.set_xlabel(shape(X["rate"]), fontsize=9)
+        ax.set_ylabel(shape(unit))
     axes[0].legend(fontsize=7)
-    caption = ("The two parts of the difference, before weighting by occupancy, as means over seeds. Left: how much "
-               "longer the bus's trip is with a bay (the merge). Right: the summed trip times of all cars, bay minus "
-               "lane (negative: the cars gain from the bay because they do not queue behind the stopped bus).")
-    _caption(fig, caption)
+    caption = X["cap2"]
+    _caption(fig, caption, lang, width=125)
     fig.savefig(out / "components.png", dpi=130)
     plt.close(fig)
     made.append(("components.png", caption))
@@ -167,8 +227,8 @@ def figures(cells: pd.DataFrame, out: Path, pax_car: float, pax_bus: float, labe
     d_bus = cells.pivot(index="dwell_s", columns="traffic_rate", values="delta_bus_time_s").to_numpy(dtype=float)
     vals = piv.to_numpy(dtype=float)
     shown = np.clip(vals, 0.0, CAP_PAX_CAR)          # the colour scale covers realistic occupancies only
-    fig, ax = plt.subplots(figsize=(8, 5.4))
-    fig.subplots_adjust(bottom=0.3)
+    fig, ax = plt.subplots(figsize=(8, 5.6))
+    fig.subplots_adjust(bottom=0.33)
     cmap = matplotlib.colormaps["viridis"].copy()
     cmap.set_bad("#d9d9d9")
     im = ax.imshow(np.ma.masked_invalid(shown), cmap=cmap, vmin=0.0, vmax=CAP_PAX_CAR, aspect="auto", origin="lower")
@@ -176,21 +236,17 @@ def figures(cells: pd.DataFrame, out: Path, pax_car: float, pax_bus: float, labe
     ax.set_yticks(range(len(piv.index)), [f"{i:g}" for i in piv.index])
     for (i, j), v in np.ndenumerate(vals):
         if np.isnan(v):
-            text = "lane\nalways" if d_bus[i, j] > 0 else "bay\nalways"
+            text = shape(X["lane_always"] if d_bus[i, j] > 0 else X["bay_always"])
         else:
             text = f">{CAP_PAX_CAR:g}" if v > CAP_PAX_CAR else f"{v:.2f}"
         ax.text(j, i, text, ha="center", va="center", fontsize=8.5,
                 color="black" if np.isnan(v) or v > 0.6 * CAP_PAX_CAR else "white")
-    ax.set_xlabel("requested traffic inflow (cars/s)")
-    ax.set_ylabel("dwell time (s)")
-    ax.set_title(f"Break-even car occupancy (bus carries {pax_bus:g})")
-    fig.colorbar(im, ax=ax, label=f"people per car (scale capped at {CAP_PAX_CAR:g})")
-    caption = ("The car occupancy at which the bay and the in-lane stop tie on mean person-time, given the bus's "
-               "occupancy. With more people per car than this, the bay is better (the cars' gain outweighs the bus's "
-               f"loss); with fewer, the in-lane stop is. Cars carry about 1.2 on average, so values above {CAP_PAX_CAR:g} "
-               "mean the lane stop wins in practice. 'lane always' (grey): the bay costs both the bus and the cars, "
-               "so the in-lane stop is better at any occupancy.")
-    _caption(fig, caption)
+    ax.set_xlabel(shape(X["rate"]))
+    ax.set_ylabel(shape(X["dwell"]))
+    ax.set_title(shape(X["title3"].format(bus=pax_bus)))
+    fig.colorbar(im, ax=ax, label=shape(X["cbar"].format(cap=CAP_PAX_CAR)))
+    caption = X["cap3"].format(cap=CAP_PAX_CAR)
+    _caption(fig, caption, lang, width=112)
     fig.savefig(out / "break_even_pax_car.png", dpi=130)
     plt.close(fig)
     made.append(("break_even_pax_car.png", caption))
@@ -245,6 +301,7 @@ def main() -> None:
     pairs.to_csv(out / "dwell_pairs.csv", index=False)
     label = "pilot" if args.pilot else spec.name
     made = figures(cells, out / "figures", args.pax_car, args.pax_bus, label)
+    figures(cells, out / "figures_he", args.pax_car, args.pax_bus, label, lang="he")
     provenance = json.loads((data / "provenance.json").read_text())
     sensitivity = contact_sensitivity(runs, cells, args.pax_car, args.pax_bus)
 
@@ -271,7 +328,12 @@ def main() -> None:
         (target / "summary.json").write_text(json.dumps({
             "provenance": provenance, "pax_car": args.pax_car, "pax_bus": args.pax_bus,
             "contact_sensitivity_max_person_s": round(sensitivity, 1),
-            "cells": cells.to_dict(orient="records")}, indent=1))
+            "cells": cells.to_dict(orient="records"),
+            "dwell_pairs": pairs.to_dict(orient="records")}, indent=1))
+        media = REPO / "docs" / "media"
+        for lang, folder in (("en", "figures"), ("he", "figures_he")):
+            for name, _ in made:
+                shutil.copy2(out / folder / name, media / f"{spec.name}_{name[:-4]}.{lang}.png")
     print(out / "report.md")
 
 
