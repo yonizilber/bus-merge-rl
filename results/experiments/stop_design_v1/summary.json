@@ -495,5 +495,757 @@
    "bay_off_road_pct": 10.3,
    "censored_runs": 0
   }
+ ],
+ "dwell_pairs": [
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 10,
+   "pairs": 300,
+   "delta_pt_mean": 264.1,
+   "delta_pt_ci_low": 252.7,
+   "delta_pt_ci_high": 275.4,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 10,
+   "pairs": 300,
+   "delta_pt_mean": 308.4,
+   "delta_pt_ci_low": 295.3,
+   "delta_pt_ci_high": 321.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 10,
+   "pairs": 300,
+   "delta_pt_mean": 361.7,
+   "delta_pt_ci_low": 343.2,
+   "delta_pt_ci_high": 380.4,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 10,
+   "pairs": 300,
+   "delta_pt_mean": 432.8,
+   "delta_pt_ci_low": 412.4,
+   "delta_pt_ci_high": 453.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 10,
+   "pairs": 300,
+   "delta_pt_mean": 466.3,
+   "delta_pt_ci_low": 445.5,
+   "delta_pt_ci_high": 487.0,
+   "bay_better_share": 0.003
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 501.8,
+   "delta_pt_ci_low": 490.6,
+   "delta_pt_ci_high": 513.1,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 561.7,
+   "delta_pt_ci_low": 547.0,
+   "delta_pt_ci_high": 575.6,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 645.2,
+   "delta_pt_ci_low": 625.0,
+   "delta_pt_ci_high": 667.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 709.2,
+   "delta_pt_ci_low": 684.9,
+   "delta_pt_ci_high": 733.5,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 725.5,
+   "delta_pt_ci_low": 699.9,
+   "delta_pt_ci_high": 750.0,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 752.4,
+   "delta_pt_ci_low": 740.5,
+   "delta_pt_ci_high": 764.2,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 816.6,
+   "delta_pt_ci_low": 800.4,
+   "delta_pt_ci_high": 833.1,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 904.2,
+   "delta_pt_ci_low": 881.5,
+   "delta_pt_ci_high": 927.2,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 952.4,
+   "delta_pt_ci_low": 927.7,
+   "delta_pt_ci_high": 979.4,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 971.1,
+   "delta_pt_ci_low": 947.6,
+   "delta_pt_ci_high": 996.7,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 1253.9,
+   "delta_pt_ci_low": 1240.8,
+   "delta_pt_ci_high": 1266.8,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 1314.0,
+   "delta_pt_ci_low": 1298.0,
+   "delta_pt_ci_high": 1329.2,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 1402.5,
+   "delta_pt_ci_low": 1376.1,
+   "delta_pt_ci_high": 1426.1,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 1457.3,
+   "delta_pt_ci_low": 1429.0,
+   "delta_pt_ci_high": 1485.8,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 1449.9,
+   "delta_pt_ci_low": 1422.9,
+   "delta_pt_ci_high": 1477.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1997.1,
+   "delta_pt_ci_low": 1984.1,
+   "delta_pt_ci_high": 2009.9,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 2075.4,
+   "delta_pt_ci_low": 2055.8,
+   "delta_pt_ci_high": 2095.8,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 2160.3,
+   "delta_pt_ci_low": 2134.3,
+   "delta_pt_ci_high": 2187.4,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 2173.3,
+   "delta_pt_ci_low": 2145.1,
+   "delta_pt_ci_high": 2203.9,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 10,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 2150.2,
+   "delta_pt_ci_low": 2121.5,
+   "delta_pt_ci_high": 2178.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 229.3,
+   "delta_pt_ci_low": 218.7,
+   "delta_pt_ci_high": 240.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 241.9,
+   "delta_pt_ci_low": 228.6,
+   "delta_pt_ci_high": 255.4,
+   "bay_better_share": 0.007
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 214.4,
+   "delta_pt_ci_low": 194.6,
+   "delta_pt_ci_high": 235.4,
+   "bay_better_share": 0.083
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 125.1,
+   "delta_pt_ci_low": 100.1,
+   "delta_pt_ci_high": 149.6,
+   "bay_better_share": 0.337
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 15,
+   "pairs": 300,
+   "delta_pt_mean": 21.3,
+   "delta_pt_ci_low": -1.3,
+   "delta_pt_ci_high": 46.2,
+   "bay_better_share": 0.58
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 479.9,
+   "delta_pt_ci_low": 468.3,
+   "delta_pt_ci_high": 491.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 496.8,
+   "delta_pt_ci_low": 480.6,
+   "delta_pt_ci_high": 513.0,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 473.4,
+   "delta_pt_ci_low": 450.2,
+   "delta_pt_ci_high": 495.1,
+   "bay_better_share": 0.007
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 368.3,
+   "delta_pt_ci_low": 342.3,
+   "delta_pt_ci_high": 394.4,
+   "bay_better_share": 0.003
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 266.9,
+   "delta_pt_ci_low": 244.3,
+   "delta_pt_ci_high": 292.3,
+   "bay_better_share": 0.047
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 981.3,
+   "delta_pt_ci_low": 967.8,
+   "delta_pt_ci_high": 994.9,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 994.2,
+   "delta_pt_ci_low": 976.2,
+   "delta_pt_ci_high": 1011.7,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 971.7,
+   "delta_pt_ci_low": 947.6,
+   "delta_pt_ci_high": 995.7,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 873.2,
+   "delta_pt_ci_low": 842.4,
+   "delta_pt_ci_high": 904.3,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 745.8,
+   "delta_pt_ci_low": 718.5,
+   "delta_pt_ci_high": 773.4,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1724.5,
+   "delta_pt_ci_low": 1710.6,
+   "delta_pt_ci_high": 1738.6,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1755.6,
+   "delta_pt_ci_low": 1733.6,
+   "delta_pt_ci_high": 1777.1,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1729.5,
+   "delta_pt_ci_low": 1702.7,
+   "delta_pt_ci_high": 1757.9,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1589.2,
+   "delta_pt_ci_low": 1556.7,
+   "delta_pt_ci_high": 1624.0,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 15,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1446.0,
+   "delta_pt_ci_low": 1416.7,
+   "delta_pt_ci_high": 1476.4,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 208.5,
+   "delta_pt_ci_low": 197.2,
+   "delta_pt_ci_high": 219.8,
+   "bay_better_share": 0.01
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 169.8,
+   "delta_pt_ci_low": 152.1,
+   "delta_pt_ci_high": 188.0,
+   "bay_better_share": 0.12
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": 26.5,
+   "delta_pt_ci_low": 1.8,
+   "delta_pt_ci_high": 51.9,
+   "bay_better_share": 0.463
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": -218.6,
+   "delta_pt_ci_low": -247.1,
+   "delta_pt_ci_high": -191.4,
+   "bay_better_share": 0.807
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 20,
+   "pairs": 300,
+   "delta_pt_mean": -419.8,
+   "delta_pt_ci_low": -447.0,
+   "delta_pt_ci_high": -393.5,
+   "bay_better_share": 0.943
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 710.0,
+   "delta_pt_ci_low": 696.8,
+   "delta_pt_ci_high": 723.9,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 667.1,
+   "delta_pt_ci_low": 648.8,
+   "delta_pt_ci_high": 685.5,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 524.8,
+   "delta_pt_ci_low": 497.6,
+   "delta_pt_ci_high": 552.7,
+   "bay_better_share": 0.013
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 286.3,
+   "delta_pt_ci_low": 253.7,
+   "delta_pt_ci_high": 318.3,
+   "bay_better_share": 0.137
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 59.1,
+   "delta_pt_ci_low": 28.9,
+   "delta_pt_ci_high": 87.4,
+   "bay_better_share": 0.493
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1453.1,
+   "delta_pt_ci_low": 1438.7,
+   "delta_pt_ci_high": 1466.6,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1428.6,
+   "delta_pt_ci_low": 1406.6,
+   "delta_pt_ci_high": 1452.7,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1282.6,
+   "delta_pt_ci_low": 1248.7,
+   "delta_pt_ci_high": 1314.9,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 1002.3,
+   "delta_pt_ci_low": 965.5,
+   "delta_pt_ci_high": 1041.2,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 20,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 759.3,
+   "delta_pt_ci_low": 729.1,
+   "delta_pt_ci_high": 791.0,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": 143.9,
+   "delta_pt_ci_low": 130.1,
+   "delta_pt_ci_high": 157.8,
+   "bay_better_share": 0.1
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": -44.0,
+   "delta_pt_ci_low": -68.7,
+   "delta_pt_ci_high": -19.4,
+   "bay_better_share": 0.54
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": -442.7,
+   "delta_pt_ci_low": -479.0,
+   "delta_pt_ci_high": -405.5,
+   "bay_better_share": 0.913
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": -927.6,
+   "delta_pt_ci_low": -966.2,
+   "delta_pt_ci_high": -888.8,
+   "bay_better_share": 0.983
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 30,
+   "pairs": 300,
+   "delta_pt_mean": -1341.7,
+   "delta_pt_ci_low": -1377.7,
+   "delta_pt_ci_high": -1302.8,
+   "bay_better_share": 0.997
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 887.0,
+   "delta_pt_ci_low": 870.1,
+   "delta_pt_ci_high": 903.1,
+   "bay_better_share": 0.0
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 717.5,
+   "delta_pt_ci_low": 688.9,
+   "delta_pt_ci_high": 746.2,
+   "bay_better_share": 0.013
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 315.1,
+   "delta_pt_ci_low": 273.8,
+   "delta_pt_ci_high": 358.0,
+   "bay_better_share": 0.22
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": -211.6,
+   "delta_pt_ci_low": -253.5,
+   "delta_pt_ci_high": -166.4,
+   "bay_better_share": 0.753
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 30,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": -641.5,
+   "delta_pt_ci_low": -680.6,
+   "delta_pt_ci_high": -603.3,
+   "bay_better_share": 0.957
+  },
+  {
+   "traffic_rate": 0.1,
+   "dwell_lane_s": 45,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": 4.3,
+   "delta_pt_ci_low": -16.0,
+   "delta_pt_ci_high": 23.6,
+   "bay_better_share": 0.463
+  },
+  {
+   "traffic_rate": 0.2,
+   "dwell_lane_s": 45,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": -436.1,
+   "delta_pt_ci_low": -478.0,
+   "delta_pt_ci_high": -396.5,
+   "bay_better_share": 0.92
+  },
+  {
+   "traffic_rate": 0.3,
+   "dwell_lane_s": 45,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": -1213.2,
+   "delta_pt_ci_low": -1265.7,
+   "delta_pt_ci_high": -1160.0,
+   "bay_better_share": 0.993
+  },
+  {
+   "traffic_rate": 0.4,
+   "dwell_lane_s": 45,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": -2041.9,
+   "delta_pt_ci_low": -2097.6,
+   "delta_pt_ci_high": -1987.4,
+   "bay_better_share": 1.0
+  },
+  {
+   "traffic_rate": 0.5,
+   "dwell_lane_s": 45,
+   "dwell_bay_s": 45,
+   "pairs": 300,
+   "delta_pt_mean": -2744.0,
+   "delta_pt_ci_low": -2797.6,
+   "delta_pt_ci_high": -2691.6,
+   "bay_better_share": 1.0
+  }
  ]
 }
