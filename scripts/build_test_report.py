@@ -231,6 +231,11 @@ FILES = {
         "verdict under other occupancies) are the ones in the stored comparison.",
         "המספרים של הסימולציה בהשוואה לנתוני שטח (זמן השתלבות, אורך תור, זרימת כניסה, ההכרעה תחת תפוסות אחרות) הם "
         "המספרים בהשוואה השמורה."),
+    "test_stop_design_explorer.py": ("harness",
+        "The interactive explorer: its embedded table reproduces the published summary, every number in its written "
+        "summary is what the table gives, and the calculation in the browser agrees with an independent one.",
+        "הכלי האינטראקטיבי: הטבלה שבו משחזרת את הסיכום שפורסם, כל מספר בסיכום הכתוב שלו הוא מה שהטבלה נותנת, "
+        "והחישוב בדפדפן מתאים לחישוב בלתי תלוי."),
     "test_next_docs.py": ("app",
         "The next documentation version: an English and a Hebrew site that never mix (no Hebrew in the English "
         "pages, right-to-left Hebrew pages, no link from one to the other), no broken link, every term with a "
