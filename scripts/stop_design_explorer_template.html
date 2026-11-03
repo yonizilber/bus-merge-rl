@@ -110,6 +110,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     <div class="presets" role="group" aria-label="ערכות מוכנות">
       <span style="font-size:14px;color:var(--muted)">ערכות:</span>
       <button type="button" data-p="il" aria-pressed="false">ישראל (הערכה גסה): 1.5 · 20</button>
+      <button type="button" data-p="ilpeak" aria-pressed="false">ישראל, שעות שיא (הערכה): 1.2 · 20</button>
       <button type="button" data-p="us" aria-pressed="false">ממוצע בארה"ב: 1.7 · 10.7</button>
       <button type="button" data-p="exp" aria-pressed="false">ברירת המחדל של הניסוי: 1.2 · 50</button>
       <button type="button" data-p="crowd" aria-pressed="false">אוטובוס עמוס: 1.5 · 60</button>
@@ -188,13 +189,35 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
         <thead><tr><th>נתון</th><th>ערך</th><th>מקור</th><th>סטטוס</th></tr></thead>
         <tbody>
           <tr><td>אנשים ברכב פרטי</td><td><span class="num">1.52</span> (מטרופולין תל אביב, 2014, 3,000 משקי בית)<br><span class="num">1.44</span> (ירושלים, תל אביב, חיפה והצפון, באר שבע, 2010–2019, 38,500 משקי בית)</td><td><a href="https://www.gov.il/BlobFolder/reports/special_reports/he/%D7%A8%D7%99%D7%9B%D7%95%D7%96%20%D7%A0%D7%AA%D7%95%D7%A0%D7%99%D7%9D%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%99%D7%9D%20%D7%91%D7%AA%D7%97%D7%91%D7%95%D7%A8%D7%94%20%D7%94%D7%A6%D7%99%D7%91%D7%95%D7%A8%D7%99%D7%AA-%20%D7%99%D7%95%D7%9C%D7%99%202021.pdf" target="_blank" rel="noopener">משרד התחבורה, הרשות הארצית לתחבורה ציבורית, ריכוז נתונים מרכזיים, יולי 2021, עמ' 21</a> (סקרי הרגלי נסיעה)</td><td><span class="src read">נקרא</span></td></tr>
-          <tr><td>אנשים ברכב פרטי (מצוטט בתקשורת)</td><td>כ-<span class="num">1.2</span>, בלי הגדרה</td><td><a href="https://www.jpost.com/Israel-News/Ridesharing-are-Israelis-ready-to-not-travel-solo-to-save-environment-616651" target="_blank" rel="noopener">Jerusalem Post, 5.2.2020</a>, מיוחס למשרד התחבורה</td><td><span class="src sum">סיכום בלבד</span> גוף הכתבה לא נקרא</td></tr>
+          <tr><td>אנשים ברכב פרטי (מצוטט בתקשורת, 2019)</td><td><span class="num">1.2</span>: "ממוצע הנוסעים בכלי רכב פרטיים בישראל עומד כיום על 1.2 נוסעים בלבד"</td><td><a href="https://www.walla.co.il/news/israel/3321228" target="_blank" rel="noopener">וואלה, "תם עידן האזהרות", 3.11.2019</a>, מיוחס ל"נתוני משרד התחבורה"</td><td><span class="src sum">נקרא בכתבה</span> הדוח שמאחורי הנתון לא צוין</td></tr>
+          <tr><td>אנשים ברכב (מצוטט בתקשורת, 2016)</td><td><span class="num">1.2</span>: "נוסעים בה בממוצע 1.2 אנשים במשך כ-50 דקות בלבד ביום"</td><td><a href="https://www.globes.co.il/news/article.aspx?did=1001108288" target="_blank" rel="noopener">גלובס, 6.3.2016</a>, מיוחס לפורום התחבורה הבינלאומי של ה-OECD</td><td><span class="src sum">נקרא בכתבה</span> אמירה כללית על מכוניות, לא נתון ישראלי, בלי הגדרה</td></tr>
+          <tr><td>אנשים ברכב (מצוטט בתקשורת, 2020)</td><td><span class="num">1.2</span></td><td><a href="https://www.jpost.com/Israel-News/Ridesharing-are-Israelis-ready-to-not-travel-solo-to-save-environment-616651" target="_blank" rel="noopener">Jerusalem Post, 5.2.2020</a>, מיוחס למשרד התחבורה</td><td><span class="src sum">סיכום בלבד</span> גוף הכתבה לא נקרא</td></tr>
           <tr><td>מילוי אוטובוסים עירוניים, שעות שיא בוקר 2019</td><td>ביותר ממחצית הנסיעות מקדם המילוי בתחנות השיא הוא <span class="num">60%</span> ומטה</td><td>אותו מסמך, עמ' 20 (מערכת ספירת נוסעים)</td><td><span class="src read">נקרא</span></td></tr>
           <tr><td>נוסעים לנסיעה באוטובוס</td><td>כ-<span class="num">20</span> בקו עירוני, כ-<span class="num">11</span> בבין-עירוני, ללא תאריך</td><td><a href="https://www.israelhayom.co.il/news/transportation/article/17877267" target="_blank" rel="noopener">ישראל היום</a></td><td><span class="src sum">סיכום בלבד</span> הדף לא נפתח</td></tr>
         </tbody>
       </table>
     </div>
+    <div class="panel"><h3 style="margin-bottom:6px">למה יש גם 1.2 וגם 1.5?</h3>
+      <p>המספר היחיד שנשען על מדידה שראינו הוא <span class="num">1.44–1.52</span> מסקרי הרגלי נסיעה. <span class="num">1.2</span> מופיע בשלוש כתבות, ובאף אחת לא צוין הדוח או ההגדרה. בגלובס המשפט הוא אמירה כללית של ה-OECD על מכוניות, ולא נתון על ישראל. בוואלה הוא מיוחס למשרד התחבורה, אבל בלי מקור. ייתכן שהפער הוא הגדרה של סוג נסיעה: בארה"ב הפער דומה, <span class="num">1.18</span> לנסיעות עבודה מול <span class="num">1.67</span> לכל הנסיעות (NHTS 2017). זו השערה, כי לא מצאנו מקור ישראלי שמפרק לפי מטרת נסיעה. לכן יש שתי ערכות: <span class="num">1.5</span> לממוצע על כל הנסיעות, ו-<span class="num">1.2</span> לשעות שיא.</p></div>
     <p style="font-size:14px;color:var(--muted);max-width:72ch">מקדם מילוי הוא שיעור התפוסה, ובמסמך אין מספר המקומות באוטובוס, ולכן אי אפשר להמיר אותו לנוסעים בלי הנחה על הקיבולת. הערכת "20 נוסעים ו-1.5 במכונית" בערכה הראשונה היא לכן הערכה גסה ולא מדידה. בטבלה המלאה של המסמך יש גם התפלגות של מקדם המילוי בשבע קבוצות. מקדם המילוי בו נמדד ביחס למקומות ישיבה, ולמקומות ישיבה ועמידה, ולא ראינו את הגרף עצמו אלא רק את הטקסט שחולץ מהקובץ, ולכן לא ציטטנו אותו כאן.</p>
+  </section>
+
+  <section>
+    <h2>זמן עצירה במפרץ ובנתיב: מה יש במקורות</h2>
+    <div class="scroll panel" style="padding:4px 6px">
+      <table>
+        <thead><tr><th>מקור</th><th>מפרץ</th><th>עצירה בנתיב / ליד המדרכה</th><th>סטטוס</th></tr></thead>
+        <tbody>
+          <tr><td>סינגפור, 16 תחנות ב-8 זוגות, שעות שיא, 2014 (Liu ואחרים, 2017)</td><td>לכל נוסע (עלייה או ירידה): <span class="num">1.52</span> שנ'<br>חלק קבוע: <span class="num">5.6</span> שנ'<br>האצה כולל יציאה: <span class="num">11.35</span> שנ' (סטיית תקן <span class="num">4.3</span>)</td><td>לכל נוסע: <span class="num">1.33</span> שנ'<br>חלק קבוע: <span class="num">6.5</span> שנ'<br>האצה: <span class="num">9.73</span> שנ' (סטיית תקן <span class="num">1.9</span>)</td><td><span class="src read">נקרא</span> מעותק מאורכב של המאמר</td></tr>
+          <tr><td>סן פרנסיסקו, רחוב מיסיון, 1999 (TCRP, נספח C)</td><td>זמן עצירה ממוצע <span class="num">16–22</span> שנ' (טווח <span class="num">4–95</span>)</td><td>ב-bulb, תחנה בנתיב על מדרכה מורחבת: <span class="num">18–43</span> שנ'</td><td><span class="src read">נקרא</span></td></tr>
+          <tr><td>אוטווה, Genivar 2011 (כפי שמצוטט אצל Liu)</td><td>לנוסע <span class="num">3.5</span> שנ', יציאה והאצה ארוכות ב-<span class="num">4–5</span> שנ'</td><td>לנוסע <span class="num">3.5</span> שנ', בלי הבדל</td><td><span class="src sum">מיד שנייה</span></td></tr>
+          <tr><td>בייג'ינג, Chen ואחרים 2013 (דרך Liu)</td><td>לנוסע <span class="num">2.2–2.4</span> שנ'</td><td>לנוסע <span class="num">1.8–2.5</span> שנ'</td><td><span class="src sum">מיד שנייה</span></td></tr>
+          <tr><td>לונדון, TfL 2006 (דרך Liu)</td><td>לנוסע <span class="num">2.6–3.8</span> שנ' (בטבלה במאמר: 2.8–3.8)</td><td>המרת מפרצים לתחנות ליד המדרכה קיצרה ב-<span class="num">0.5–1</span> שנ' לנוסע</td><td><span class="src sum">מיד שנייה</span></td></tr>
+          <tr><td>ישראל</td><td colspan="2">לא נמצא. מה שפורסם הוא זמן המתנה של נוסעים בתחנה, ולא זמן העצירה של האוטובוס.</td><td><span class="src sum">אין</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>הפער בין שני התכנונים בזמן העצירה קטן במחקר המבוקר ביותר שקראנו: לעשרה נוסעים שעולים או יורדים הוא <span class="num">5.6 + 1.52 × 10 = 20.8</span> שניות במפרץ מול <span class="num">6.5 + 1.33 × 10 = 19.8</span> שניות ליד המדרכה, כשנייה. מכאן שהחלטת ברירת המחדל של הכלי (זמן זהה בשני התכנונים) קרובה למה שנמדד. סן פרנסיסקו מראה כיוון הפוך, אבל שם נרשם שמפקחים עצרו לשיחה עם הנהגים, והתחנות שונות. עצירה בנתיב קצרה בחמש שניות או יותר, כמו בכמה מהצירופים בניסוי, לא נתמכת באף מקור שמצאנו.</p>
   </section>
 
   <section>
@@ -244,7 +267,7 @@ const f0 = x => Math.round(x).toLocaleString("en-US").replace("-", "−");
 const NS = "http://www.w3.org/2000/svg";
 const el = (name, attrs = {}, text) => { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const PRESETS = { il: [1.5, 20], us: [1.7, 10.7], exp: [1.2, 50], crowd: [1.5, 60] };
+const PRESETS = { il: [1.5, 20], ilpeak: [1.2, 20], us: [1.7, 10.7], exp: [1.2, 50], crowd: [1.5, 60] };
 const S = { rate: 0.3, pbus: 20, pcar: 1.5, dbay: 15, dlane: 15, linked: true };
 
 function laneDwell(dbay) { return S.linked ? dbay : Math.min(45, Math.max(10, dbay + (S.dlane - S.dbay))); }

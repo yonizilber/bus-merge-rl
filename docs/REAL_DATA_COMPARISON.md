@@ -20,14 +20,14 @@ The simulation's numbers come from `scripts/compare_with_real_data.py`
 
 | # | Question | Simulation | Field data | Verdict |
 |---|---|---|---|---|
-| 1 | How much longer is the bus's trip with a bay stop than with an in-lane stop? | +5.3 to +10.5 s, mean about 7 s | Ottawa: about +5 to 6 s per stop, of which 4 to 5 s clearance (summary; the same summaries also say 13 s) | **Same order.** The figures disagree among themselves, so no finer statement |
+| 1 | How much longer is the bus's trip with a bay stop than with an in-lane stop? | +5.3 to +10.5 s, mean about 7 s | Singapore: acceleration with re-entry 11.35 s against 9.73 s, +1.6 s, at sites without heavy congestion (read). Ottawa: acceleration and re-entry 4 to 5 s longer (quoted in the Singapore paper; other summaries say 13 s per stop) | **Simulation at the top of the measured range** (about 2 to 6 s) |
 | 2 | How long does the bus take to merge back? | 12.7 s on average (median 12.4, 90% under 15.6, none above 28.4 s) | San Francisco: 4 to 13 s average wait before moving, up to 52 s (read). Florida: 36 s average, 29 s when a car yields, 39 s when not (read) | **Average plausible; the long tail is missing** |
 | 3 | How long is the queue behind a bus stopped in the lane? | 1.1 cars (10 s stop, 0.1 cars/s) to 22.3 cars (45 s, 0.5 cars/s); one lane, nobody passes | San Francisco: 1 to 3 cars on average, 6 at most; drivers change lanes about once per bus (read) | **Matches at short stops only; long queues are an artefact of one lane** |
 | 4 | How many cars does the entry let in? | 0.34 cars/s (1,231 per hour) once a queue stands at it | Standard saturation flow 1,900 per hour per lane, about 1.9 s per car (summary) | **Simulation about a third below** |
 | 5 | How much do cars lose to an in-lane stop, compared with a bay? | 2 to 4 s per car at a 15 s stop, 3 to 9 s at 20 s, 14 to 36 s at 45 s | Ottawa: about 8 s per stop at the kerb against about 4 s for a bus leaving a bay (summary) | **Same order at 15 to 20 s; cannot be checked finer** |
 | 6 | Dwell times | grid of 10, 15, 20, 30, 45 s, fixed | London: 9 to 16 s on average. San Francisco: 16 to 22 s at a bay. Portland: 12.4 s, standard deviation 9.2 s (read) | **Typical stops are in the lower half of the grid; the spread is missing** |
-| 7 | Is a stop in the lane quicker than a stop in a bay? | assumed possible, tried as a pairing | San Francisco: the in-lane stop was *slower* (18 to 43 s against 16 to 22 s) (read). Singapore: the kerb stop boards faster (summary) | **Evidence conflicts; not established either way** |
-| 8 | People per car | 1.2 | US 2017: 1.18 to or from work, 1.67 over all trips (read) | **Matches commuting; low for other trips** |
+| 7 | Is a stop in the lane quicker than a stop in a bay? | assumed possible, tried as a pairing | Singapore: 1.33 s per boarding or alighting passenger at the kerb against 1.52 s in a bay, fixed part 6.5 s against 5.6 s: about 1 s in 20 for ten passengers (read). San Francisco: the in-lane stop was *slower* (18 to 43 s against 16 to 22 s) (read). Ottawa: no difference (second-hand) | **Difference small and of unclear sign; a lane stop 5 s or more shorter is not supported** |
+| 8 | People per car | 1.2 | US 2017: 1.18 to or from work, 1.67 over all trips (read). Israel: 1.52 and 1.44 in household travel surveys (Ministry of Transport, 2021, read); 1.2 in news articles without a source report (see below) | **Matches commuting and the articles; below the Israeli surveys** |
 | 9 | People per bus | 50 | US 2016: 10.7 per bus on average, 5.1 to 16.8 across 33 metropolitan areas (read) | **Far above the average** |
 
 ## The simulation's outputs
@@ -39,12 +39,18 @@ The simulation gives 5.3 to 10.5 s per run in all 25 cells (mean about 7 s). In 
 dwell 7.6 s at the kerb against 14.75 s in a bay, an extra 5 to 6 s per stop, 4 to 5 s of it in clearance (start-up,
 re-entry and acceleration). Other lines of the same review are quoted as "13 seconds per bay stop" and "12 s at
 the kerb against 25 s in a bay". These do not agree with each other, and the city's pages could not be opened (they
-redirect to an empty page), so the original wording is unverified. **Source status: summary.** The Singapore study
-(Liu et al. 2017, 16 pairs of stops, 2,653 records) says only that the kerb stop was better in boarding and
-acceleration time; its numbers were not accessible.
+redirect to an empty page), so the original wording is unverified. **Source status: summary.**
 
-**Verdict:** the simulation's bay cost is of the same order as the one number we can lean on. It does not contradict
-any of the quotes, but nothing here tests it to better than "5 to 13 s".
+The Singapore study (Liu et al. 2017, **read**, in an archived copy: 16 stops in eight bay and kerb pairs, no heavy
+congestion, peak hours, July 2014, 2,653 valid records) measured acceleration including re-entry delays of 11.35 s
+(standard deviation 4.3 s) at bays against 9.73 s (1.9 s) at the kerb, and deceleration of 8.84 s against 8.53 s. The
+same paper quotes the Ottawa survey as acceleration plus re-entry 4 to 5 s longer and deceleration 1 to 2 s longer at
+bays, and London (2006) as re-entry delays reduced by 3 to 13% by converting bays to kerb stops. **The measured range
+is therefore about 2 to 6 s per stop.**
+
+**Verdict:** the simulation's 5.3 to 10.5 s is at the top of that range, and grows with traffic and dwell time; the
+Singapore sites were chosen without heavy congestion. If the true cost of a bay to the bus is lower, the bay's
+advantage in the results is larger than shown.
 
 ### 2. The time to merge back
 
@@ -148,13 +154,14 @@ the lane wins or ties there at most inflows, which is what the field practice of
 The experiment tried pairings in which the lane stop is shorter than the bay stop, on the thought that the bus stops
 exactly at the kerb and the doors line up. The San Francisco bay-to-bulb comparison (**read**; a bulb is a stop in the
 lane at an extended kerb) found the opposite: the average dwell at the bulb was 18 to 43 s against 16 to 22 s at the bay
-(the report mentions supervisors talking to drivers as a possible cause). Singapore's paired stops (**summary**) report
-better boarding times at the kerb. Two studies, two directions.
+(the report mentions supervisors talking to drivers as a possible cause). Singapore's paired stops (Liu et al. 2017, **read** in an archived copy: 16 stops in eight bay and kerb pairs, peak hours, July 2014) report 1.33 s per boarding or alighting passenger at the kerb against 1.52 s at a bay, and a fixed part of 6.5 s against 5.6 s, so ten passengers take 19.8 s against 20.8 s: about a second. Ottawa found no difference and London found 0.5 to 1 s per passenger saved by converting bays (both second-hand, through the Singapore paper). Two studies, two directions, and small differences.
 
-**Verdict:** the assumption that a lane stop is quicker is not supported by the evidence found. The pairing table of the
+No Israeli measurement of bus dwell time was found (only passengers' waiting times). **Verdict:** the assumption that a lane stop is much quicker is not supported by the evidence found; the Singapore difference is about a second. The pairing table of the
 results page should be read as "what if", not as a finding.
 
 ### 8 and 9. People per car and per bus
+
+**Israel, people per car.** Three figures, three bases. The Ministry of Transport's National Public Transport Authority summary (July 2021, p. 21, **read**) gives 1.52 (Tel Aviv metropolitan household travel survey, 2014, 3,000 households) and 1.44 (surveys 2010 to 2019 in the Jerusalem, Tel Aviv, Haifa and North, and Beer Sheva areas, 38,500 households). Walla (3 November 2019, page opened, **read**) writes that "according to Ministry of Transport data the average number of passengers in private vehicles in Israel is currently 1.2", without naming a report. Globes (6 March 2016, page opened, **read**) quotes the OECD International Transport Forum saying that a car carries "on average 1.2 people for about 50 minutes a day": a general statement about cars, not an Israeli measurement and without a definition. The Jerusalem Post (5 February 2020) is reported by search summaries to give 1.2 as well (**summary**; the body was not opened). Only the surveys rest on a described measurement. The gap may be a matter of trip type, as in the US (1.18 for work against 1.67 for all trips), but no Israeli source breaking it down by purpose was found, so this is a guess.
 
 Cars (**read**, 2017 National Household Travel Survey, person-miles per vehicle-mile): 1.18 for trips to or from work,
 1.67 for all trips, 1.82 for shopping, 2.1 for social trips. The FHWA uses 1.7. The simulation's 1.2 is a commuting value.
@@ -218,10 +225,16 @@ Read in full or in part:
 - Fricker, J. D. (2010). *Bus dwell time analysis using on-board video* (cites Bertini and El-Geneidy for Portland).
   <https://engineering.purdue.edu/~ce560/HW/Bus_Dwell_Time_jdf.pdf>
 
+- Liu, X., Yang, Y., Meng, M., Rau, A. (2017). *Impact of different bus stop designs on bus operating time components.* Journal of Public
+  Transportation 20(1). <https://doi.org/10.5038/2375-0901.20.1.6> (read in an archived copy; it also summarises Ottawa, London and Beijing,
+  which are therefore second-hand here).
+- Israel, people per car: Ministry of Transport, National Public Transport Authority, *Key data on public transport*, July 2021, p. 21
+  (<https://www.gov.il/BlobFolder/reports/special_reports/he/%D7%A8%D7%99%D7%9B%D7%95%D7%96%20%D7%A0%D7%AA%D7%95%D7%A0%D7%99%D7%9D%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%99%D7%9D%20%D7%91%D7%AA%D7%97%D7%91%D7%95%D7%A8%D7%94%20%D7%94%D7%A6%D7%99%D7%91%D7%95%D7%A8%D7%99%D7%AA-%20%D7%99%D7%95%D7%9C%D7%99%202021.pdf>);
+  Walla, 3 November 2019 (<https://www.walla.co.il/news/israel/3321228>); Globes, 6 March 2016 (<https://www.globes.co.il/news/article.aspx?did=1001108288>).
+  The two articles were opened; neither names the report behind its 1.2.
+
 Seen only as a summary or abstract page (verify before quoting):
 - City of Ottawa, *Bus bays: operational and process review* (ACS2011-ICS-TRA-0010) and the Genivar executive summary, 2011.
   The addresses found by search now redirect to an empty page. Search summaries disagree on the bay's extra delay.
-- Liu, X., Yang, Y., Meng, M., Rau, A. (2017). *Impact of different bus stop designs on bus operating time components.* Journal of Public
-  Transportation 20(1). <https://www.worldtransitresearch.info/research/6477>
 - Highway Capacity Manual saturation flow of 1,900 passenger cars per hour per lane: course notes and papers found by search; the manual itself was not opened.
 - Levinson (1983) and smart-card boarding times, as quoted in <https://www.worldtransitresearch.info/research/4561> and related search results.

@@ -130,8 +130,9 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
 
   <section id="summary">
     <h2>בקצרה</h2>
-    <p>הכיוון הכללי נתמך: מפרץ עולה לאוטובוס כמה שניות לכל עצירה, ועצירה בנתיב עולה למכוניות שמאחוריו, יותר ככל שהעצירה ארוכה. שלושה דברים לא משתחזרים, ואחד תלוי בהנחה שבחרנו.</p>
+    <p>הכיוון הכללי נתמך: מפרץ עולה לאוטובוס כמה שניות לכל עצירה, ועצירה בנתיב עולה למכוניות שמאחוריו, יותר ככל שהעצירה ארוכה. כמה דברים לא משתחזרים, ואחד תלוי בהנחה שבחרנו.</p>
     <ul class="plain">
+      <li><b>המחיר של המפרץ לאוטובוס בסימולציה הוא בקצה העליון של המדידות.</b> בסימולציה <span class="num">5.3–10.5</span> שניות. בשטח נמדד כ-<span class="num">2</span> עד <span class="num">6</span>: בסינגפור תוספת של <span class="num">1.6</span> שניות בהאצה (<span class="num">11.35</span> מול <span class="num">9.73</span>), ובאוטווה <span class="num">4–5</span> שניות (מיד שנייה). אם המחיר האמיתי נמוך יותר, יתרון המפרץ גדול ממה שהסימולציה מראה.</li>
       <li><b>אין זנב ארוך בהשתלבות.</b> הממוצע (12.7 שניות) סביר, אבל המתנות של 30 עד 50 שניות, שנמדדו בשטח, לא מופיעות בסימולציה בכלל. הערכה זהירה: המפרץ נראה בסימולציה קצת טוב ממה שהוא באמת.</li>
       <li><b>התורים הארוכים הם תוצר של נתיב בודד.</b> בשטח נהגים עוקפים, והתור הממוצע הוא 1 עד 3 מכוניות. אצלנו הוא מגיע עד 22.</li>
       <li><b>כניסת המכוניות נמוכה בכשליש</b> מערך הרוויה הסטנדרטי.</li>
@@ -155,7 +156,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
       <div class="sim"><div class="tag">הסימולציה</div><div class="big"><span class="num">+5.3</span> עד <span class="num">+10.5</span> שנ'</div><p>תוספת לזמן הנסיעה של האוטובוס לעומת עצירה בנתיב, בכל 25 התאים. ממוצע כ-7 שניות.</p></div>
       <div class="field"><div class="tag">שטח · אוטווה <span class="src sum">סיכום בלבד</span></div><div class="big"><span class="num">≈5–6</span> שנ' לעצירה</div><p>מזה 4 עד 5 שניות "זמן פינוי" (התנעה, יציאה, האצה). אותן סקירות מצוטטות גם עם 13 שניות, ושני הערכים לא מתיישבים.</p></div>
     </div>
-    <p>הדפים של עיריית אוטווה (דו"ח הייעוץ Genivar, 2011) לא נפתחים אצלנו, והם מפנים לדף ריק. את המספרים ראינו רק בסיכומי חיפוש שסותרים זה את זה, ולכן אי אפשר לומר יותר מ"אותו סדר גודל". המחקר בסינגפור (16 זוגות תחנות, 2,653 רשומות) מציין רק שתחנה בשפת המדרכה טובה יותר בזמני עלייה וירידה ובהאצה, בלי מספרים נגישים.</p>
+    <p>הדפים של עיריית אוטווה (דו"ח הייעוץ Genivar, 2011) לא נפתחים אצלנו, והם מפנים לדף ריק. את המספרים ראינו רק בסיכומי חיפוש שסותרים זה את זה, ולכן אי אפשר לומר יותר מ"אותו סדר גודל". מחקר בסינגפור (<span class="src read">נקרא</span>; 16 תחנות בשמונה זוגות של מפרץ ותחנה ליד המדרכה, שעות שיא, 2014, <span class="num">2,653</span> רשומות, אתרים בלי עומס כבד) מצא האצה כולל יציאה של <span class="num">11.35</span> שניות במפרץ (סטיית תקן <span class="num">4.3</span>) מול <span class="num">9.73</span> ליד המדרכה (<span class="num">1.9</span>), והאטה של <span class="num">8.84</span> מול <span class="num">8.53</span>. המאמר מצטט גם את אוטווה: האצה ויציאה ארוכות ב-<span class="num">4–5</span> שניות במפרץ והאטה ארוכה ב-<span class="num">1–2</span>. הטווח הנמדד הוא לכן כ-<span class="num">2</span> עד <span class="num">6</span> שניות, והסימולציה (<span class="num">5.3–10.5</span>) בקצה העליון שלו. בסימולציה התוספת גדלה עם התנועה והעצירה, ובסינגפור נבחרו אתרים בלי עומס כבד.</p>
 
     <h2>2. כמה זמן לוקח לאוטובוס להשתלב חזרה</h2>
     <div class="pair">
@@ -207,13 +208,14 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     <p>עצירות טיפוסיות בעיר הן 10 עד 20 שניות, החצי התחתון של הרשת. 30 ו-45 שניות מייצגות תחנות עמוסות. בנוסף, בסימולציה זמן העצירה קבוע, ובשטח הוא משתנה מאוד (בפורטלנד סטיית התקן כשלושה רבעים מהממוצע). שונות כזו מאריכה תורים. לכן התוצאות של 10 עד 20 שניות הן אלה שמתארות תחנה טיפוסית.</p>
 
     <h3>האם עצירה בנתיב מהירה יותר?</h3>
-    <p>הניסוי בדק גם זוגות שבהם העצירה בנתיב קצרה מזו שבמפרץ, מתוך הנחה שהאוטובוס עוצר צמוד למדרכה והדלתות מיושרות. בסן פרנסיסקו (<span class="src read">נקרא</span>, מעבר ממפרץ ל-bulb, תחנה בנתיב על מדרכה מורחבת) נמצא ההפך: עצירה ממוצעת של 18 עד 43 שניות ב-bulb מול 16 עד 22 במפרץ (הדו"ח מזכיר מפקחים שמדברים עם הנהגים כסיבה אפשרית). בסינגפור (<span class="src sum">סיכום בלבד</span>) דווקא העלייה מהירה יותר בשפת המדרכה. שני מחקרים, שני כיוונים: ההנחה לא נתמכת, וטבלת הזוגות צריכה להיקרא כ"מה אם".</p>
+    <p>הניסוי בדק גם זוגות שבהם העצירה בנתיב קצרה מזו שבמפרץ, מתוך הנחה שהאוטובוס עוצר צמוד למדרכה והדלתות מיושרות. בסן פרנסיסקו (<span class="src read">נקרא</span>, מעבר ממפרץ ל-bulb, תחנה בנתיב על מדרכה מורחבת) נמצא ההפך: עצירה ממוצעת של 18 עד 43 שניות ב-bulb מול 16 עד 22 במפרץ (הדו"ח מזכיר מפקחים שמדברים עם הנהגים כסיבה אפשרית). בסינגפור (<span class="src read">נקרא</span>) כל נוסע שעולה או יורד לוקח <span class="num">1.33</span> שניות ליד המדרכה מול <span class="num">1.52</span> במפרץ, והחלק הקבוע של העצירה <span class="num">6.5</span> מול <span class="num">5.6</span> שניות. לעשרה נוסעים זה כשנייה בלבד: <span class="num">19.8</span> מול <span class="num">20.8</span>. באוטווה (מיד שנייה) לא נמצא הבדל, בלונדון המרת מפרצים קיצרה <span class="num">0.5–1</span> שנ' לנוסע, ובסן פרנסיסקו העצירה בנתיב ארוכה יותר. המסקנה: הפער קטן וכיוונו לא אחיד. עצירה בנתיב שקצרה בחמש שניות ויותר, כמו בכמה מזוגות הניסוי, לא נתמכת באף מקור שמצאנו. לא נמצא מקור ישראלי על זמן עצירה, וטבלת הזוגות צריכה להיקרא כ"מה אם".</p>
 
     <h2>7. אנשים במכונית ובאוטובוס</h2>
     <div class="panel">
       <div class="bars" id="occ"></div>
     </div>
     <p style="font-size:14px;color:var(--muted);max-width:72ch">הערכים לפי סקר הנסיעות הלאומי של ארה"ב 2017 (אנשים לכל רכב-מייל; <span class="src read">נקרא</span>) ונתוני התחבורה הציבורית של 2016 (נוסעים לכל מייל-שירות של אוטובוס; <span class="src read">נקרא</span>). 10.7 הוא ממוצע על כל היום והמסלול, ולא העומס בתחנה בשעת שיא, ולכן הערך האמיתי בתחנה נתונה נמצא בין שני הקצוות. בשלושים ושלושה אזורים עירוניים הטווח הוא 5.1 (דאלאס) עד 16.8 (ניו יורק).</p>
+    <p><b>ישראל, אנשים במכונית.</b> הסקרים של משרד התחבורה (הרשות הארצית לתחבורה ציבורית, יולי 2021, עמ' 21) נותנים <span class="num">1.52</span> (מטרופולין תל אביב, 2014) ו-<span class="num">1.44</span> (סקרים 2010–2019, <span class="num">38,500</span> משקי בית) <span class="src read">נקרא</span>. המספר <span class="num">1.2</span> מופיע בכתבות: בוואלה (3.11.2019) מיוחס ל"נתוני משרד התחבורה", בלי דוח; בגלובס (6.3.2016) הוא אמירה כללית של פורום התחבורה של ה-OECD על מכוניות, לא נתון ישראלי, ובג'רוזלם פוסט (2020) מיוחס למשרד התחבורה (סיכום בלבד). ייתכן שהפער הוא שעות שיא מול כל הנסיעות, כמו בארה"ב (<span class="num">1.18</span> מול <span class="num">1.67</span>), אבל זו השערה.</p>
 
     <h3>כמה זה משנה את ההכרעה</h3>
     <p>ההכרעה לינארית בתפוסות, ולכן חישבנו אותה מחדש מהנתונים השמורים, בלי הרצה חדשה. בכל משבצת: מי מנצח לפי רווח סמך של 95%.</p>
@@ -255,7 +257,10 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
       <li><span class="src read">נקרא</span><a href="https://engineering.purdue.edu/~ce560/HW/Bus_Dwell_Time_jdf.pdf" target="_blank" rel="noopener">Fricker (2010), Bus dwell time analysis using on-board video</a><span class="what">מצטט את Bertini ו-El-Geneidy: פורטלנד, קו 14, 459 עצירות, ממוצע 12.42 שניות, סטיית תקן 9.23.</span></li>
       <li><span class="src sum">סיכום בלבד</span><a href="https://app06.ottawa.ca/calendar/ottawa/citycouncil/occ/2011/11-23/trc/1-ACS2011-ICS-TRA-0010%20-%20Bus%20Bays%20-%20Operational%20Process%20Review.htm" target="_blank" rel="noopener">עיריית אוטווה, סקירת מפרצי אוטובוס (ACS2011-ICS-TRA-0010)</a><span class="what">הקישור כבר מפנה לדף ריק. סיכומי החיפוש סותרים (5–6 שניות מול 13). עיכוב למכוניות כ-4 שניות מול 8.</span></li>
       <li><span class="src sum">סיכום בלבד</span><a href="https://app06.ottawa.ca/calendar/ottawa/citycouncil/trc/2011/11-02/1-Document%201%20-%20ACS2011-ICS-TRA-0010-Bus%20Bay%20Report%20Genivar%20Exec%20Summary.pdf" target="_blank" rel="noopener">Genivar, תקציר מנהלים של דו"ח המפרצים (2011)</a><span class="what">גם הוא מפנה לדף ריק היום.</span></li>
-      <li><span class="src sum">סיכום בלבד</span><a href="https://www.worldtransitresearch.info/research/6477" target="_blank" rel="noopener">Liu, Yang, Meng, Rau (2017), Impact of Different Bus Stop Designs on Bus Operating Time Components, סינגפור</a><span class="what">דף תקציר בלבד: 16 זוגות תחנות, 2,653 רשומות; שפת מדרכה טובה יותר בעלייה, ירידה והאצה.</span></li>
+      <li><span class="src read">נקרא</span><a href="https://doi.org/10.5038/2375-0901.20.1.6" target="_blank" rel="noopener">Liu, Yang, Meng, Rau (2017), Impact of Different Bus Stop Designs on Bus Operating Time Components, Journal of Public Transportation 20(1)</a><span class="what">סינגפור, 16 תחנות, 2,653 רשומות. הטקסט נקרא מעותק מאורכב של המאמר, כולל הטבלה שמסכמת את אוטווה, לונדון ובייג'ינג (מיד שנייה). כל הציטוטים מהם נשענים על המאמר הזה.</span></li>
+      <li><span class="src read">נקרא</span><a href="https://www.walla.co.il/news/israel/3321228" target="_blank" rel="noopener">וואלה, "תם עידן האזהרות" (3.11.2019)</a><span class="what">המשפט על 1.2 נוסעים ברכב פרטי, מיוחס לנתוני משרד התחבורה, בלי הפניה לדוח.</span></li>
+      <li><span class="src read">נקרא</span><a href="https://www.globes.co.il/news/article.aspx?did=1001108288" target="_blank" rel="noopener">גלובס (6.3.2016), "המכונית היא הון מת"</a><span class="what">המשפט על 1.2 אנשים מיוחס לפורום התחבורה הבינלאומי של ה-OECD, כאמירה כללית על מכוניות.</span></li>
+      <li><span class="src read">נקרא</span><a href="https://www.gov.il/BlobFolder/reports/special_reports/he/%D7%A8%D7%99%D7%9B%D7%95%D7%96%20%D7%A0%D7%AA%D7%95%D7%A0%D7%99%D7%9D%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%99%D7%9D%20%D7%91%D7%AA%D7%97%D7%91%D7%95%D7%A8%D7%94%20%D7%94%D7%A6%D7%99%D7%91%D7%95%D7%A8%D7%99%D7%AA-%20%D7%99%D7%95%D7%9C%D7%99%202021.pdf" target="_blank" rel="noopener">משרד התחבורה, הרשות הארצית לתחבורה ציבורית, ריכוז נתונים מרכזיים (יולי 2021)</a><span class="what">עמ' 21: אנשים ברכב פרטי 1.52 ו-1.44. עמ' 20: מקדם מילוי באוטובוסים.</span></li>
       <li><span class="src sum">סיכום בלבד</span><a href="https://www.webpages.uidaho.edu/niatt_labmanual/Chapters/signaltimingdesign/theoryandconcepts/CapacityAndSaturationFlowRate.htm" target="_blank" rel="noopener">מדריך מעבדה, University of Idaho: קיבולת וזרימת רוויה</a><span class="what">זרימת רוויה של 1,900 לשעה לנתיב, כ-1.9 שניות לרכב. מהדורת ה-HCM לא נבדקה.</span></li>
     </ul>
     <p style="font-size:14px;color:var(--muted)">המקורות נאספו בחיפוש רשת ב-2026-11-01. כל הדו"חות שמסומנים "נקרא" הורדו וחולץ מהם הטקסט. מספרי הסימולציה בדו"ח הזה הם מ-<span class="path">scripts/compare_with_real_data.py</span> ונשמרו ב-<span class="path">results/experiments/stop_design_v1/real_data_comparison.json</span> במאגר, וכל המספרים בהם נבדקים בבדיקה אוטומטית.</p>
@@ -271,14 +276,14 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 
 /* verdict table */
 const VERDICTS = [
-  ["כמה האוטובוס מפסיד במפרץ", "+5.3 עד +10.5 שנ', ממוצע כ-7", "אוטווה: כ-5–6 שנ' <span class='src sum'>סיכום בלבד</span>", "open", "אותו סדר גודל"],
+  ["כמה האוטובוס מפסיד במפרץ", "+5.3 עד +10.5 שנ', ממוצע כ-7", "סינגפור: +1.6 שנ' בהאצה <span class='src read'>נקרא</span>. אוטווה: 4–5 <span class='src sum'>מיד שנייה</span>", "part", "הסימולציה בקצה העליון"],
   ["זמן השתלבות חזרה", "ממוצע 12.7 שנ', מקסימום 28.4", "סן פרנסיסקו: 4–13, עד 52. פלורידה: 36 <span class='src read'>נקרא</span>", "part", "ממוצע סביר, אין זנב ארוך"],
   ["תור מאחורי אוטובוס בנתיב", "1.1 עד 22 מכוניות", "סן פרנסיסקו: ממוצע 1–3, עד 6 <span class='src read'>נקרא</span>", "part", "תואם רק בעצירות קצרות"],
   ["כניסת מכוניות", "0.34 לשנייה (1,231 לשעה)", "רוויה: 1,900 לשעה <span class='src sum'>סיכום בלבד</span>", "bad", "נמוך בכשליש"],
   ["הפסד המכוניות מעצירה בנתיב", "2–4 שנ' למכונית ב-15 שנ'", "אוטווה: כ-4 שנ' הפרש <span class='src sum'>סיכום בלבד</span>", "open", "אותו סדר גודל"],
   ["זמני עצירה", "10, 15, 20, 30, 45 שנ', קבוע", "לונדון 9–16, סן פרנסיסקו 16–22, פורטלנד 12.4±9.2 <span class='src read'>נקרא</span>", "part", "הרשת מכסה, השונות חסרה"],
-  ["עצירה בנתיב מהירה יותר", "הונחה כאפשרות", "סן פרנסיסקו: איטית יותר <span class='src read'>נקרא</span>. סינגפור: מהירה <span class='src sum'>סיכום בלבד</span>", "open", "לא נתמך, מחקרים סותרים"],
-  ["אנשים במכונית", "1.2", "1.18 לעבודה, 1.67 לכל הנסיעות <span class='src read'>נקרא</span>", "ok", "תואם נסיעות עבודה"],
+  ["עצירה בנתיב מהירה יותר", "הונחה כאפשרות", "סינגפור: 1.33 מול 1.52 שנ' לנוסע <span class='src read'>נקרא</span>. סן פרנסיסקו: איטית יותר <span class='src read'>נקרא</span>", "open", "פער קטן, כיוון לא אחיד"],
+  ["אנשים במכונית", "1.2", "ארה\"ב: 1.18 לעבודה, 1.67 לכל הנסיעות. ישראל: 1.44–1.52 בסקרים <span class='src read'>נקרא</span>, 1.2 בכתבות <span class='src sum'>בלי מקור</span>", "ok", "תואם שעות שיא, נמוך לממוצע"],
   ["אנשים באוטובוס", "50", "ממוצע 10.7 בארה\"ב <span class='src read'>נקרא</span>", "bad", "הרבה מעל הממוצע"],
 ];
 const vb = document.getElementById("verdicts");
@@ -297,8 +302,10 @@ const bars = [
   ["אוטובוס: ברירת המחדל בניסוי", 50, 50, "var(--sim)"],
   ["אוטובוס: ממוצע ארצי בארה\"ב", 10.7, 50, "var(--field)"],
   ["מכונית: ברירת המחדל בניסוי", 1.2, 2.2, "var(--sim)"],
-  ["מכונית: נסיעות עבודה", 1.18, 2.2, "var(--field)"],
-  ["מכונית: כל הנסיעות", 1.67, 2.2, "var(--field)"],
+  ["מכונית: נסיעות עבודה בארה\"ב", 1.18, 2.2, "var(--field)"],
+  ["מכונית: כל הנסיעות בארה\"ב", 1.67, 2.2, "var(--field)"],
+  ["מכונית: ישראל, סקרי נסיעה", 1.5, 2.2, "var(--field)"],
+  ["מכונית: ישראל, כתבות (בלי מקור)", 1.2, 2.2, "var(--warn)"],
 ];
 bars.forEach(([name, v, max, color]) => { const row = document.createElement("div"); row.className = "row";
   row.innerHTML = `<span>${name}</span><span class="track"><span class="fill" style="display:block;width:${100 * v / max}%;background:${color}"></span></span><span class="val">${v}</span>`;
