@@ -145,18 +145,17 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
         <div class="ctl"><label for="pbus"><span>נוסעים באוטובוס</span><span class="val" id="pbus-v"></span></label>
           <input type="range" id="pbus" min="2" max="80" step="1" value="20"><span class="hint">נוסעים על האוטובוס בזמן הנסיעה, כולל אלה שעולים בתחנה</span></div>
         <div class="ctl"><label for="npax"><span>נוסעים שעולים או יורדים בתחנה</span><span class="val" id="npax-v"></span></label>
-          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">0 אומר שאין נוסעים: האוטובוס רק נעצר ויוצא. בהגדרה ישירה משפיע רק על עונש הדיוק</span></div>
+          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">משפיע רק על עונש הדיוק של המפרץ: כל נוסע צריך לעבור את המרווח מהמדרכה. זמן העצירה עצמו נקבע למטה</span></div>
         <div class="ctl"><span class="lab"><span>דלתות שמשמשות לעלייה וירידה</span></span>
           <span class="seg" id="doors" role="group" aria-label="מספר דלתות"><button type="button" data-d="1" aria-pressed="false">1</button><button type="button" data-d="2" aria-pressed="true">2</button><button type="button" data-d="3" aria-pressed="false">3</button></span>
-          <span class="hint">בישראל אפשר לעלות מכל הדלתות מאז 2015; שלוש בעיקר באוטובוס מפרקי</span></div>
-        <div class="ctl wide"><span class="lab"><span>זמן העצירה</span><span class="val" id="dw-v"></span></span>
-          <span class="seg" style="direction:rtl" id="dmode" role="group" aria-label="איך נקבע זמן העצירה"><button type="button" data-m="pax" aria-pressed="true">לפי נוסעים ודלתות</button><button type="button" data-m="direct" aria-pressed="false">בשניות, ישירות</button></span>
-          <div id="dsecs" hidden style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+          <span class="hint">משפיע על עונש הדיוק: ככל שיש יותר דלתות, סטייה קטנה פחות מורגשת. בישראל אפשר לעלות מכל הדלתות מאז 2015</span></div>
+        <div class="ctl wide"><span class="lab"><span>זמן העצירה (שניות, נקבע ישירות)</span><span class="val" id="dw-v"></span></span>
+          <div id="dsecs" style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
             <span class="lab"><span>הקשר בין זמן העצירה בנתיב ובמפרץ</span></span>
             <span class="seg" style="direction:rtl" id="dlink" role="group" aria-label="קישור בין זמני העצירה"><button type="button" data-l="free" aria-pressed="false">נפרדים</button><button type="button" data-l="same" aria-pressed="false">זהים</button><button type="button" data-l="pen" aria-pressed="true">זהים בתוספת עונש למפרץ</button></span>
             <div class="twosl">
-              <div><label class="lab" for="dlane"><span>זמן עצירה בנתיב</span><span class="val" id="dlane-v"></span></label><input type="range" id="dlane" min="0" max="45" step="1" value="10"></div>
-              <div><label class="lab" for="dbay"><span>זמן עצירה במפרץ</span><span class="val" id="dbay-v"></span></label><input type="range" id="dbay" min="0" max="45" step="1" value="10" disabled></div>
+              <div><label class="lab" for="dlane"><span>זמן עצירה בנתיב</span><span class="val" id="dlane-v"></span></label><input type="range" id="dlane" min="0" max="45" step="1" value="6"></div>
+              <div><label class="lab" for="dbay"><span>זמן עצירה במפרץ</span><span class="val" id="dbay-v"></span></label><input type="range" id="dbay" min="0" max="45" step="1" value="6" disabled></div>
             </div>
           </div>
           <span class="hint" id="dw-h"></span></div>
@@ -217,18 +216,16 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
   </section>
 
   <section>
-    <h2>איך נגזר זמן העצירה ועונש המפרץ</h2>
-    <p>זמן העצירה הבסיסי הוא <b>זמן קבוע + נוסעים × זמן לנוסע × מקדם דלתות</b>, ו-0 כשאין נוסעים. לכל תכנון מתווספים אחר כך שני עונשי דיוק: סטייה לאורך הרחוב מנקודת העצירה, ומרווח בין דופן האוטובוס לשפת המדרכה. כך המפרץ והנתיב מקבלים זמני עצירה שונים כשהדיוק שלהם שונה.</p>
+    <h2>זמן העצירה ועונש המפרץ</h2>
+    <p><b>זמן העצירה נקבע ישירות, ולא לפי מספר נוסעים.</b> לא גזרנו אותו ממספר הנוסעים, כי המדידות שמצאנו נעשו במערכות אחרות (למשל כ-<span class="num">3.9</span> שנ' לנוסע בסן פרנסיסקו לפני עלייה מכל הדלתות) ולא מייצגות אוטובוס עירוני בישראל, עם אפליקציית תיקוף ועלייה מכל הדלתות, שעוצר הרבה פחות. לא מצאנו מדידה ישראלית, ולכן אין כאן ערך "נכון". בחרו את הזמן שמתאים לתחנה שאתם מדמיינים, מ-0 שניות: בנפרד לנתיב ולמפרץ, זהה בשניהם, או זהה בתוספת עונש למפרץ.</p>
+    <p>לכל תכנון יש עונשי דיוק שמצטרפים לעונש של המפרץ כשבוחרים "זהים בתוספת עונש": סטייה לאורך הרחוב מנקודת העצירה, ומרווח בין דופן האוטובוס לשפת המדרכה. להם נוספת תוספת לכניסה למפרץ.</p>
     <div class="scroll panel" style="padding:4px 6px">
       <table>
         <thead><tr><th>הנחה</th><th>ברירת מחדל</th><th>מקור</th><th>סטטוס</th></tr></thead>
         <tbody>
-          <tr><td>זמן לנוסע, דלת אחת</td><td><span class="num">3.0</span> שנ'</td><td>סן פרנסיסקו לפני עלייה מכל הדלתות: <span class="num">3.93</span> שנ' לנוסע (<a href="https://sfmta.com/media/4419/download" target="_blank" rel="noopener">SFMTA, מצגת על עלייה מכל הדלתות</a>)</td><td><span class="src read">נקרא</span> הערך 3.0 הוא הערכה בין מדידות</td></tr>
-          <tr><td>מקדם לשתי דלתות / שלוש</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-<span class="num">38%</span> בסן פרנסיסקו (<span class="num">3.93</span> ל-<span class="num">2.45</span>), ב-<span class="num">17%</span> בוונקובר וב-<span class="num">16%</span> בלוס אנג'לס (<a href="https://council.vancouver.ca/20090217/documents/ttra2.pdf" target="_blank" rel="noopener">ונקובר</a>, מסיכומי חיפוש)</td><td><span class="src read">נקרא</span> סן פרנסיסקו, <span class="src sum">סיכום בלבד</span> השאר</td></tr>
-          <tr><td>עלייה מכל הדלתות בישראל</td><td>2 דלתות</td><td>אגד ודן הנהיגו עלייה מהדלתות האחוריות, באישור משרד התחבורה, "כדי לקצר את זמן השהייה של האוטובוס בתחנה" (<a href="https://library.mevaker.gov.il/sites/DigitalLibrary/Documents/2017-68a-208-RavKav.pdf" target="_blank" rel="noopener">מבקר המדינה, 2017</a>; התחילה ב-2015 בגוש דן)</td><td><span class="src read">נקרא</span></td></tr>
-          <tr><td>זמן קבוע (פתיחה וסגירה)</td><td><span class="num">4</span> שנ'</td><td>סינגפור: חלק קבוע של <span class="num">5.6</span> במפרץ ו-<span class="num">6.5</span> ליד המדרכה, אבל כולל זמן שלא נוצל (<a href="https://doi.org/10.5038/2375-0901.20.1.6" target="_blank" rel="noopener">Liu ואחרים, 2017</a>)</td><td><span class="src read">נקרא</span> הערך 4 הוא הערכה</td></tr>
-          <tr><td>מרווח מהמדרכה, לכל נוסע ולכל <span class="num">10</span> ס"מ</td><td><span class="num">0.05</span> שנ'</td><td>בסינגפור נוסע במפרץ לוקח <span class="num">0.19</span> שנ' יותר מאשר ליד המדרכה (<span class="num">1.52</span> מול <span class="num">1.33</span>), בעיקר בגלל מרווח ופעולה נוספת להתקרבות. נניח הפרש מרווח של כ-<span class="num">40</span> ס"מ</td><td><span class="src read">נקרא</span> <span class="tag guess">הערכה</span> לגבי ההפרש</td></tr>
-          <tr><td>סטייה לאורך הרחוב, לכל מטר</td><td><span class="num">0.4</span> שנ' (דלת אחת)</td><td>הליכה של נוסעים לאורך האוטובוס אל הדלת, כ-<span class="num">1.3</span> מ' לשנייה, כשרק חלקם מושפעים. עם יותר דלתות הדלת הקרובה קרובה יותר, ולכן העונש מוכפל במקדם הדלתות</td><td><span class="tag guess">הערכה</span> בלי מקור</td></tr>
+          <tr><td>מרווח מהמדרכה, לכל נוסע ולכל <span class="num">10</span> ס"מ</td><td><span class="num">0.05</span> שנ'</td><td>בסינגפור נוסע במפרץ לוקח <span class="num">0.19</span> שנ' יותר מאשר ליד המדרכה (<span class="num">1.52</span> מול <span class="num">1.33</span>), בעיקר בגלל מרווח ופעולה נוספת להתקרבות. נניח הפרש מרווח של כ-<span class="num">40</span> ס"מ (<a href="https://doi.org/10.5038/2375-0901.20.1.6" target="_blank" rel="noopener">Liu ואחרים, 2017</a>)</td><td><span class="src read">נקרא</span> <span class="tag guess">הערכה</span> לגבי ההפרש</td></tr>
+          <tr><td>סטייה לאורך הרחוב, לכל מטר</td><td><span class="num">0.4</span> שנ' (דלת אחת)</td><td>הליכה של נוסעים לאורך האוטובוס אל הדלת, כ-<span class="num">1.3</span> מ' לשנייה, כשרק חלקם מושפעים</td><td><span class="tag guess">הערכה</span> בלי מקור</td></tr>
+          <tr><td>מקדם דלתות לעונשי הדיוק (שתיים / שלוש)</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-<span class="num">17%</span> עד <span class="num">38%</span> (סן פרנסיסקו, ונקובר, לוס אנג'לס). בישראל אפשר לעלות מכל הדלתות מאז 2015 (<a href="https://library.mevaker.gov.il/sites/DigitalLibrary/Documents/2017-68a-208-RavKav.pdf" target="_blank" rel="noopener">מבקר המדינה, 2017</a>)</td><td><span class="tag guess">הערכה</span> לשימוש כמקדם</td></tr>
           <tr><td>זמן הכניסה למפרץ עצמה, מעבר לנתיב</td><td><span class="num">1.0</span> שנ' (בסימולציה <span class="num">[[entry_sim]]</span>)</td><td>בסימולציה האוטובוס נכנס למפרץ ועומד באותו זמן כמו בנתיב (הפרש בין מפרץ לנתיב בזמן מתחילת הבלימה עד שהוא עומד, <span class="num">[[geom_seeds]]</span> זוגות הרצות עם אותה מהירות כניסה ואותה נקודת עצירה). בשטח ההאטה במפרץ ארוכה ב-<span class="num">0.3</span> שנ' בסינגפור וב-<span class="num">1–2</span> באוטווה ו-<span class="num">1.4</span> בבייג'ינג</td><td><span class="src read">נקרא</span> סינגפור; <span class="src sum">מיד שנייה</span> השאר</td></tr>
           <tr><td>סטייה לאורך הרחוב והמרווח מהמדרכה, מפרץ מול נתיב</td><td>סטייה: מפרץ <span class="num">[[dev_bay]]</span> מ' בסימולציה, נתיב <span class="num">[[dev_lane]]</span> מ'<br>מרווח: מפרץ <span class="num">[[gap_bay]]</span> מ', נתיב <span class="num">[[gap_lane]]</span> מ'<br>ברירת המחדל: <span class="num">+1.0</span> מ' סטייה ו-<span class="num">+0.4</span> מ' מרווח במפרץ</td><td>הסימולציה נותנת את אותה סטייה (המרחק מעמוד התחנה, <span class="num">300</span> מ') ואותו מרווח בשני התכנונים, כלומר היא לא מדמה את הקושי הנוסף ליישר אוטובוס במפרץ. התוספות הן הערכה, והמרווח נשען על <span class="num">0.19</span> שנ' לנוסע בסינגפור</td><td><span class="tag sim">מהסימולציה</span> <span class="tag guess">הערכה</span> לתוספות</td></tr>
         </tbody>
@@ -291,19 +288,16 @@ function evaluate(pc, pb, rate, dl, db, entryExtra = 0) {
            laneAlways: a > 0 && b > 0, bayAlways: a < 0 && b < 0 };
 }
 /* stop times of the two designs from the page's assumptions */
-const DEFAULT_ADV = { fixed: 4, tpax: 3.0, m2: 0.7, m3: 0.6, longPen: 0.4, latPen: 0.05,
+const DEFAULT_ADV = { m2: 0.7, m3: 0.6, longPen: 0.4, latPen: 0.05,
   devLane: DATA.geometry.dev_lane_m, devBay: +(DATA.geometry.dev_bay_m + 1.0).toFixed(2), gapLane: DATA.geometry.gap_lane_m, gapBay: +(DATA.geometry.gap_bay_m + 0.4).toFixed(2), entryExtra: 1.0 };
 const doorMult = (S, A) => S.doors === 1 ? 1 : S.doors === 2 ? A.m2 : A.m3;
-function baseDwell(S, A) { return S.mode === "direct" ? S.dLane : (S.npax <= 0 ? 0 : A.fixed + S.npax * A.tpax * doorMult(S, A)); }
+function baseDwell(S) { return S.dLane; }
 function geometryPenalty(S, A, dev, gap) { const m = doorMult(S, A); return A.longPen * dev * m + A.latPen * S.npax * m * (gap / 0.1); }
-function dwells(S, A) {
-  const base = baseDwell(S, A), cl = x => Math.min(AXIS_D[AXIS_D.length - 1], Math.max(0, x));
-  if (S.mode === "direct") {                       // the lane time is taken as typed; the bay time follows the chosen link
-    const extra = geometryPenalty(S, A, A.devBay, A.gapBay) - geometryPenalty(S, A, A.devLane, A.gapLane);
-    const bay = S.link === "free" ? S.dBay : S.link === "same" ? S.dLane : S.dLane + extra;
-    return { base, lane: cl(S.dLane), bay: cl(bay), extra };
-  }
-  return { base, lane: cl(base + geometryPenalty(S, A, A.devLane, A.gapLane)), bay: cl(base + geometryPenalty(S, A, A.devBay, A.gapBay)) };
+function dwells(S, A) {                            // the lane time is taken as typed; the bay time follows the chosen link
+  const cl = x => Math.min(AXIS_D[AXIS_D.length - 1], Math.max(0, x));
+  const extra = geometryPenalty(S, A, A.devBay, A.gapBay) - geometryPenalty(S, A, A.devLane, A.gapLane);
+  const bay = S.link === "free" ? S.dBay : S.link === "same" ? S.dLane : S.dLane + extra;
+  return { base: S.dLane, lane: cl(S.dLane), bay: cl(bay), extra };
 }
 window.Explorer = { evaluate, stats, dwells, baseDwell, geometryPenalty, DEFAULT_ADV, DATA };
 
@@ -316,13 +310,11 @@ const NS = "http://www.w3.org/2000/svg";
 const el = (name, attrs = {}, text) => { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const PRESETS = { il: { pcar: 1.35, pbus: 20, npax: 6, doors: 2 }, ilpeak: { pcar: 1.2, pbus: 20, npax: 10, doors: 2 }, us: { pcar: 1.7, pbus: 10.7, npax: 6, doors: 1 } };
-const S = { rate: 0.3, pbus: 20, pcar: 1.35, npax: 6, doors: 2, mode: "pax", link: "pen", dLane: 10, dBay: 10 };
+const S = { rate: 0.3, pbus: 20, pcar: 1.35, npax: 6, doors: 2, link: "pen", dLane: 6, dBay: 6 };
 const A = Object.assign({}, DEFAULT_ADV);
 const ADV_FIELDS = [
-  ["fixed", "זמן קבוע לעצירה עם נוסעים (שנ')", "0.5", "guess", "פתיחה וסגירה של דלתות. 0 כשאין נוסעים."],
-  ["tpax", "זמן לנוסע שעולה או יורד, דלת אחת (שנ')", "0.1", "src", "סן פרנסיסקו לפני עלייה מכל הדלתות: 3.93."],
-  ["m2", "מקדם שתי דלתות", "0.05", "src", "סן פרנסיסקו: 0.62; ונקובר: 0.83; לוס אנג'לס: 0.84."],
-  ["m3", "מקדם שלוש דלתות", "0.05", "guess", "שלוש דלתות מחלקות את העומס עוד קצת."],
+  ["m2", "מקדם שתי דלתות לעונשי הדיוק", "0.05", "guess", "עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-17% עד 38% (סן פרנסיסקו, ונקובר, לוס אנג'לס). משמש כאן רק להקטנת עונשי הדיוק."],
+  ["m3", "מקדם שלוש דלתות לעונשי הדיוק", "0.05", "guess", "שלוש דלתות מחלקות את העומס עוד קצת."],
   ["longPen", "עונש לכל מטר סטייה מנקודת העצירה (שנ', דלת אחת)", "0.05", "guess", "מוכפל במקדם הדלתות."],
   ["latPen", "עונש לכל 10 ס\"מ מרווח מהמדרכה, לכל נוסע (שנ')", "0.01", "guess", "מבוסס על 0.19 שנ' בסינגפור בהנחת הפרש של כ-40 ס\"מ."],
   ["devLane", "סטייה ממוצעת מנקודת העצירה בנתיב (מ')", "0.1", "sim", "נמדד בסימולציה."],
@@ -341,13 +333,11 @@ function current() { const d = dwells(S, A); return { d, r: evaluate(S.pcar, S.p
 function readControls() {
   S.rate = +$("rate").value; S.pbus = +$("pbus").value; S.pcar = +$("pcar").value; S.npax = +$("npax").value;
   S.dLane = +$("dlane").value; S.dBay = +$("dbay").value;
-  const direct = S.mode === "direct"; $("dsecs").hidden = !direct; $("dsecs").style.display = direct ? "flex" : "none";
-  if (direct && S.link !== "free") { const d = dwells(S, A); $("dbay").value = Math.round(d.bay); }
-  $("dbay").disabled = !(direct && S.link === "free");
-  document.querySelectorAll("#dmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === S.mode)));
+  if (S.link !== "free") { const d = dwells(S, A); $("dbay").value = Math.round(d.bay); }
+  $("dbay").disabled = S.link !== "free";
   document.querySelectorAll("#dlink button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.l === S.link)));
   document.querySelectorAll("#doors button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.d === S.doors)));
-  document.querySelectorAll(".presets button").forEach(b => { const p = PRESETS[b.dataset.p]; b.setAttribute("aria-pressed", String(Math.abs(p.pcar - S.pcar) < 0.01 && Math.abs(p.pbus - S.pbus) < 0.01 && p.npax === S.npax && p.doors === S.doors && S.mode === "pax")); });
+  document.querySelectorAll(".presets button").forEach(b => { const p = PRESETS[b.dataset.p]; b.setAttribute("aria-pressed", String(Math.abs(p.pcar - S.pcar) < 0.01 && Math.abs(p.pbus - S.pbus) < 0.01 && p.npax === S.npax && p.doors === S.doors)); });
 }
 function renderControls() {
   $("rate-v").innerHTML = N(S.rate.toFixed(2)); $("rate-h").textContent = `מכוניות לשנייה, בערך ${f0(S.rate * 3600)} מכוניות בשעה`;
@@ -355,9 +345,7 @@ function renderControls() {
   const d = dwells(S, A);
   $("dw-v").innerHTML = `נתיב ${N(f1(d.lane))} · מפרץ ${N(f1(d.bay))} שנ'`;
   $("dlane-v").innerHTML = `${N(S.dLane)} שנ'`; $("dbay-v").innerHTML = `${N(f1(d.bay))} שנ'`;
-  $("dw-h").innerHTML = S.mode === "direct"
-    ? (S.link === "pen" ? `במפרץ: ${N(S.dLane)} + עונש דיוק ${N(f1(d.extra))} שנ' (סטייה ומרווח, לפי ${N(S.npax)} נוסעים שמשפיעים על העונש)` : S.link === "same" ? "אותו זמן בשני התכנונים, בלי עונשי דיוק." : "שני זמנים בלתי תלויים, בלי עונשי דיוק.")
-    : (S.npax <= 0 ? "בלי נוסעים: אין עצירה ארוכה" : `${N(A.fixed)} + ${N(S.npax)} × ${N((A.tpax * doorMult(S, A)).toFixed(2))} שנ' לנוסע, ועונשי דיוק לכל תכנון`);
+  $("dw-h").innerHTML = S.link === "pen" ? `במפרץ: ${N(S.dLane)} + עונש דיוק ${N(f1(d.extra))} שנ' (סטייה ומרווח מהמדרכה, לפי ${N(S.npax)} נוסעים ו-${N(S.doors)} דלתות)` : S.link === "same" ? "אותו זמן בשני התכנונים, בלי עונשי דיוק." : "שני זמנים בלתי תלויים, בלי עונשי דיוק.";
   $("pcar-band").style.left = "20%"; $("pcar-band").style.right = "50%";
 }
 function renderResult() {
@@ -437,10 +425,9 @@ function renderMap() {
 }
 function renderAll() { readControls(); renderControls(); renderResult(); renderPbusChart(); renderMap(); }
 ["rate", "pbus", "pcar", "npax", "dlane", "dbay"].forEach(id => $(id).addEventListener("input", renderAll));
-document.querySelectorAll("#dmode button").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.m; renderAll(); }));
 document.querySelectorAll("#dlink button").forEach(b => b.addEventListener("click", () => { S.link = b.dataset.l; renderAll(); }));
 document.querySelectorAll("#doors button").forEach(b => b.addEventListener("click", () => { S.doors = +b.dataset.d; renderAll(); }));
-document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => { const p = PRESETS[b.dataset.p]; $("pcar").value = p.pcar; $("pbus").value = p.pbus; $("npax").value = p.npax; S.doors = p.doors; S.mode = "pax"; renderAll(); }));
+document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => { const p = PRESETS[b.dataset.p]; $("pcar").value = p.pcar; $("pbus").value = p.pbus; $("npax").value = p.npax; S.doors = p.doors; renderAll(); }));
 $("reset-adv").addEventListener("click", () => { Object.assign(A, DEFAULT_ADV); ADV_FIELDS.forEach(([k]) => { $("adv-" + k).value = A[k]; }); renderAll(); });
 $("prov").textContent = `הנתונים: ${DATA.provenance.map(p => `${p.experiment} (${p.runs_stored.toLocaleString("en-US")} הרצות, קומיט ${p.commit}, מוח ${p.brain_version}, ${p.date.slice(0, 10)})`).join("; ")}.`;
 buildAdv(); renderAll();

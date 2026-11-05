@@ -2,8 +2,8 @@
 
 - Its embedded table reproduces the published summary of the first experiment (same cars in both designs).
 - The numbers of its written summary are recomputed from the table, independently of the builder.
-- The dwell model (passengers, doors, accuracy penalties) and the calculation that run in the browser agree with
-  independent ones here, on and between grid points.
+- The stop times of the two designs (typed lane time, bay time free, equal, or lane time plus the bay's accuracy
+  penalty) and the calculation that run in the browser agree with independent ones here, on and between grid points.
 - Dwell time can be 0 (no passengers), the car-occupancy range of the page is the Israeli one (1.2 to 1.5), and the bay
   and lane stops are treated as the same in the simulation (no entry or alignment difference) with the field-based
   extras as visible, adjustable defaults.
@@ -88,16 +88,12 @@ def test_the_simulation_gives_the_two_designs_the_same_arrival_geometry():
     assert DATA["geometry"]["entry_s"] == GEOM["arrival_time_from_braking_s"]["bay_minus_lane_mean"]
 
 
-# --- the dwell model, independently of the page's code -----------------------------------------------------------
-ADV = dict(fixed=4, tpax=3.0, m2=0.7, m3=0.6, longPen=0.4, latPen=0.05)
+# --- the stop times of the two designs, independently of the page's code ------------------------------------------
+ADV = dict(m2=0.7, m3=0.6, longPen=0.4, latPen=0.05)
 
 
 def door_mult(doors):
     return {1: 1.0, 2: ADV["m2"], 3: ADV["m3"]}[doors]
-
-
-def base_dwell(npax, doors):
-    return 0.0 if npax <= 0 else ADV["fixed"] + npax * ADV["tpax"] * door_mult(doors)
 
 
 def geometry_penalty(npax, doors, dev, gap):
@@ -105,19 +101,23 @@ def geometry_penalty(npax, doors, dev, gap):
     return ADV["longPen"] * dev * m + ADV["latPen"] * npax * m * (gap / 0.1)
 
 
-@pytest.mark.parametrize("npax,doors", [(0, 2), (1, 1), (6, 2), (6, 1), (10, 3), (30, 1)])
-def test_the_default_dwell_times_follow_the_stated_model(npax, doors):
+def default_extra(npax, doors):
+    """The bay's extra accuracy penalty under the page's defaults (+1 m off the stop pole, +0.4 m gap)."""
     g = DATA["geometry"]
-    base = base_dwell(npax, doors)
-    lane = min(45, max(0, base + geometry_penalty(npax, doors, g["dev_lane_m"], g["gap_lane_m"])))
-    bay = min(45, max(0, base + geometry_penalty(npax, doors, g["dev_bay_m"] + 1.0, g["gap_bay_m"] + 0.4)))
-    assert bay >= lane                                   # the defaults make the bay stop no shorter than the lane stop
-    if npax == 0:
-        assert base == 0
+    return (geometry_penalty(npax, doors, g["dev_bay_m"] + 1.0, g["gap_bay_m"] + 0.4)
+            - geometry_penalty(npax, doors, g["dev_lane_m"], g["gap_lane_m"]))
 
 
-def test_more_doors_shorten_the_stop():
-    assert base_dwell(10, 1) > base_dwell(10, 2) > base_dwell(10, 3) > 0
+def test_there_is_no_passenger_based_dwell_model_on_the_page():
+    """The page does not derive the stop time from the number of passengers: no data from Israel supports it."""
+    for word in ("A.fixed", "A.tpax", "זמן קבוע + נוסעים", 'id="dmode"'):
+        assert word not in PAGE, word
+    assert 'id="dlane" min="0" max="45" step="1" value="6"' in PAGE          # the stop time starts at 0 s and defaults to 6 s
+
+
+def test_more_doors_shrink_the_bays_extra_penalty_and_it_is_positive_by_default():
+    assert default_extra(6, 1) > default_extra(6, 2) > default_extra(6, 3) > 0
+    assert default_extra(0, 2) == pytest.approx(0.4 * 1.0 * 0.7)                # with no passengers only the metres count
 
 
 def test_the_israeli_car_occupancy_range_is_on_the_page():
@@ -187,33 +187,19 @@ def test_the_browser_calculation_matches_an_independent_one(browser_page, pc, pb
     assert errors == []
 
 
-@pytest.mark.parametrize("npax,doors", [(0, 2), (6, 2), (6, 1), (10, 3)])
-def test_the_browser_dwell_model_matches_the_one_here(browser_page, npax, doors):
-    page, _ = browser_page
-    got = page.evaluate("([n, d]) => { const A = Explorer.DEFAULT_ADV; const S = {mode: 'pax', npax: n, doors: d};"
-                        " return Explorer.dwells(S, A); }", [npax, doors])
-    g = DATA["geometry"]
-    base = base_dwell(npax, doors)
-    assert got["base"] == pytest.approx(base)
-    assert got["lane"] == pytest.approx(min(45, base + geometry_penalty(npax, doors, g["dev_lane_m"], g["gap_lane_m"])))
-    assert got["bay"] == pytest.approx(min(45, base + geometry_penalty(npax, doors, g["dev_bay_m"] + 1.0, g["gap_bay_m"] + 0.4)))
-
-
 @pytest.mark.parametrize("link", ["free", "same", "pen"])
 def test_a_directly_chosen_dwell_time_follows_the_link_between_the_designs(browser_page, link):
     """Lane time as typed; bay time independent (free), equal (same), or the lane's plus the bay's extra accuracy penalty (pen)."""
     page, _ = browser_page
-    got = page.evaluate("([link]) => Explorer.dwells({mode: 'direct', link, dLane: 8, dBay: 14, npax: 6, doors: 2}, Explorer.DEFAULT_ADV)", [link])
-    g = DATA["geometry"]
-    extra = (geometry_penalty(6, 2, g["dev_bay_m"] + 1.0, g["gap_bay_m"] + 0.4) - geometry_penalty(6, 2, g["dev_lane_m"], g["gap_lane_m"]))
+    got = page.evaluate("([link]) => Explorer.dwells({link, dLane: 8, dBay: 14, npax: 6, doors: 2}, Explorer.DEFAULT_ADV)", [link])
+    extra = default_extra(6, 2)
     assert got["lane"] == pytest.approx(8)
     assert got["bay"] == pytest.approx({"free": 14, "same": 8, "pen": 8 + extra}[link])
     assert extra > 0                                    # with the default assumptions the bay stop is the less precise one
 
 
-def test_the_dwell_controls_switch_between_passengers_and_seconds(browser_page):
+def test_the_dwell_controls_follow_the_link(browser_page):
     page, errors = browser_page
-    page.click("#dmode button[data-m=direct]")
     assert page.is_visible("#dsecs") and page.is_disabled("#dbay")                 # default link: same + the bay's penalty
     page.click("#dlink button[data-l=free]")
     assert not page.is_disabled("#dbay")
@@ -222,16 +208,19 @@ def test_the_dwell_controls_switch_between_passengers_and_seconds(browser_page):
     assert "5.0" in page.inner_text("#dw-v") and "20.0" in page.inner_text("#dw-v")
     page.click("#dlink button[data-l=same]")
     assert page.is_disabled("#dbay") and page.input_value("#dbay") == "5"
-    page.click("#dmode button[data-m=pax]")
-    assert not page.is_visible("#dsecs")
+    page.click("#dlink button[data-l=pen]")
+    assert page.is_disabled("#dbay")
     assert errors == []
 
 
 def test_the_page_renders_and_reacts_to_the_controls(browser_page):
     page, errors = browser_page
-    page.evaluate("() => { const s = document.getElementById('pbus'); s.value = 3; s.dispatchEvent(new Event('input')); }")
-    light = page.inner_text("#verdict-title")
-    assert light == "המפרץ עדיף"
+    set_ = ("(ids) => { for (const [id, v] of Object.entries(ids)) { const s = document.getElementById(id); s.value = v;"
+            " s.dispatchEvent(new Event('input')); } }")
+    page.evaluate(set_, {"dlane": 6, "pbus": 20})
+    assert page.inner_text("#verdict-title") == "הנתיב עדיף"                 # a 6 s stop in dense traffic: the lane
+    page.evaluate(set_, {"dlane": 30, "pbus": 3})
+    assert page.inner_text("#verdict-title") == "המפרץ עדיף"                 # a long stop and an almost empty bus: the bay
     assert page.locator("#map .c").count() == 9 * len(DWELLS)
-    assert page.locator("#advgrid input").count() == 11
+    assert page.locator("#advgrid input").count() == 9
     assert errors == []

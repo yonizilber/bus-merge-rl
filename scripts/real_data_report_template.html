@@ -195,23 +195,20 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
   <section id="inputs">
     <div class="kicker">חלק ב · מה הסימולציה מקבלת כקלט</div>
     <h2>6. זמן העצירה ועונש המפרץ</h2>
-    <p>בניסוי הראשון זמן העצירה היה 10 עד 45 שניות, וזה לא ריאלי לעצירה טיפוסית: אוטובוס שמוריד נוסעים כמעט מיד ממשיך, ובלי נוסעים אין סיבה לעצור. לכן הרצנו גם עצירות של <span class="num">0</span>, <span class="num">3</span> ו-<span class="num">6</span> שניות, והכלי גוזר את זמן העצירה מהנוסעים: <b>זמן קבוע + נוסעים × זמן לנוסע × מקדם דלתות</b>, ו-0 כשאין נוסעים. לכל תכנון מתווספים אחר כך עונשי דיוק, ולמפרץ גם תוספת לכניסה.</p>
+    <p><b>זמן העצירה נקבע ישירות, ולא לפי מספר נוסעים.</b> בניסוי הראשון הוא היה 10 עד 45 שניות, וזה לא ריאלי לעצירה עירונית טיפוסית, ולכן הרצנו גם עצירות של <span class="num">0</span>, <span class="num">3</span> ו-<span class="num">6</span> שניות. לא גזרנו את הזמן ממספר הנוסעים, כי המדידות שמצאנו נעשו במערכות אחרות (למשל כ-<span class="num">3.9</span> שנ' לנוסע בסן פרנסיסקו לפני עלייה מכל הדלתות), ובישראל יש אפליקציית תיקוף ועלייה מכל הדלתות שמקצרות את העצירה מאוד. לא מצאנו מדידה ישראלית של זמן עצירה, ולכן הכלי האינטראקטיבי נותן לבחור אותו, בנפרד לנתיב ולמפרץ, זהה, או זהה בתוספת עונש למפרץ.</p>
     <div class="scroll panel" style="padding:4px 6px">
       <table>
         <thead><tr><th>הנחה</th><th>ברירת מחדל</th><th>מקור</th><th>סטטוס</th></tr></thead>
         <tbody>
-          <tr><td>זמן לנוסע, דלת אחת</td><td><span class="num">3.0</span> שנ'</td><td>סן פרנסיסקו לפני עלייה מכל הדלתות: <span class="num">3.93</span> שנ' לנוסע (<a href="https://sfmta.com/media/4419/download" target="_blank" rel="noopener">SFMTA</a>)</td><td><span class="src read">נקרא</span> הערך 3.0 הוא הערכה</td></tr>
-          <tr><td>מקדם לשתי דלתות / שלוש</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-<span class="num">38%</span> בסן פרנסיסקו (<span class="num">3.93</span> ל-<span class="num">2.45</span>), ב-<span class="num">17%</span> בוונקובר וב-<span class="num">16%</span> בלוס אנג'לס</td><td><span class="src read">נקרא</span> סן פרנסיסקו, <span class="src sum">סיכום בלבד</span> השאר</td></tr>
-          <tr><td>עלייה מכל הדלתות בישראל</td><td>2 דלתות</td><td>אגד ודן הנהיגו עלייה מהדלתות האחוריות, באישור משרד התחבורה, "כדי לקצר את זמן השהייה של האוטובוס בתחנה" (<a href="https://library.mevaker.gov.il/sites/DigitalLibrary/Documents/2017-68a-208-RavKav.pdf" target="_blank" rel="noopener">מבקר המדינה, 2017</a>; התחילה ב-2015 בגוש דן)</td><td><span class="src read">נקרא</span></td></tr>
-          <tr><td>זמן קבוע (פתיחה וסגירה)</td><td><span class="num">4</span> שנ'</td><td>סינגפור: חלק קבוע של <span class="num">5.6</span> במפרץ ו-<span class="num">6.5</span> ליד המדרכה, אבל כולל זמן שלא נוצל</td><td><span class="src read">נקרא</span> הערך 4 הוא הערכה</td></tr>
           <tr><td>מרווח מהמדרכה, לכל נוסע ולכל <span class="num">10</span> ס"מ</td><td><span class="num">0.05</span> שנ'</td><td>בסינגפור נוסע במפרץ לוקח <span class="num">0.19</span> שנ' יותר (<span class="num">1.52</span> מול <span class="num">1.33</span>). בהנחת הפרש מרווח של כ-<span class="num">40</span> ס"מ</td><td><span class="src read">נקרא</span> <span class="tag guess">הערכה</span> לגבי ההפרש</td></tr>
-          <tr><td>סטייה לאורך הרחוב, לכל מטר</td><td><span class="num">0.4</span> שנ' (דלת אחת)</td><td>הליכה לאורך האוטובוס אל הדלת, כ-<span class="num">1.3</span> מ' לשנייה, כשרק חלק מהנוסעים מושפעים. עם יותר דלתות העונש מוכפל במקדם הדלתות</td><td><span class="tag guess">הערכה</span> בלי מקור</td></tr>
+          <tr><td>סטייה לאורך הרחוב, לכל מטר</td><td><span class="num">0.4</span> שנ' (דלת אחת)</td><td>הליכה לאורך האוטובוס אל הדלת, כ-<span class="num">1.3</span> מ' לשנייה, כשרק חלק מהנוסעים מושפעים</td><td><span class="tag guess">הערכה</span> בלי מקור</td></tr>
+          <tr><td>מקדם דלתות לעונשי הדיוק (שתיים / שלוש)</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-<span class="num">17%</span> עד <span class="num">38%</span> בסן פרנסיסקו, בוונקובר ובלוס אנג'לס. בישראל אפשר לעלות מכל הדלתות מאז 2015 (מבקר המדינה, 2017, <span class="src read">נקרא</span>)</td><td><span class="tag guess">הערכה</span> לשימוש כמקדם</td></tr>
           <tr><td>תוספת לכניסה למפרץ</td><td><span class="num">1.0</span> שנ'</td><td>האטה ארוכה ב-<span class="num">0.3</span> שנ' בסינגפור, <span class="num">1–2</span> באוטווה ו-<span class="num">1.4</span> בבייג'ינג. בסימולציה: <span class="num">[[entry_sim]]</span></td><td><span class="src read">נקרא</span> סינגפור; <span class="src sum">מיד שנייה</span> השאר</td></tr>
           <tr><td>סטייה נוספת במפרץ / מרווח נוסף</td><td><span class="num">+1.0</span> מ' / <span class="num">+0.4</span> מ'</td><td>בסימולציה הסטייה זהה (<span class="num">[[dev_bay]]</span> מ' במפרץ, <span class="num">[[dev_lane]]</span> בנתיב) והמרווח כמעט זהה (<span class="num">[[gap_bay]]</span> מול <span class="num">[[gap_lane]]</span> מ')</td><td><span class="tag guess">הערכה</span></td></tr>
         </tbody>
       </table>
     </div>
-    <p>כל ההנחות האלה ניתנות לשינוי בכלי האינטראקטיבי, והדוח משתמש באותן ברירות מחדל, באותם נתונים ובאותה נוסחה. אפשר גם לקבוע את זמן העצירה ישירות בשניות: בנפרד לנתיב ולמפרץ, זהה בשניהם, או זהה בתוספת עונש הדיוק של המפרץ. עצירה עם דלתות רבות יותר קצרה יותר, והמפרץ מקבל עונש דיוק שהנתיב לא מקבל.</p>
+    <p>כל ההנחות האלה ניתנות לשינוי בכלי האינטראקטיבי, והדוח משתמש באותן ברירות מחדל, באותם נתונים ובאותה נוסחה.</p>
 
     <h2>7. אנשים במכונית ובאוטובוס</h2>
     <div class="panel">
@@ -286,7 +283,7 @@ const VERDICTS = [
   ["תור מאחורי אוטובוס בנתיב", "[[queue_min]] עד [[queue_max]] מכוניות", "סן פרנסיסקו: ממוצע 1–3, עד 6 <span class='src read'>נקרא</span>", "part", "תואם רק בעצירות קצרות"],
   ["כניסת מכוניות", "0.34 לשנייה (1,231 לשעה)", "רוויה: 1,900 לשעה <span class='src sum'>סיכום בלבד</span>", "bad", "נמוך בכשליש"],
   ["הפסד המכוניות מעצירה בנתיב", "2–4 שנ' למכונית ב-15 שנ'", "אוטווה: כ-4 שנ' הפרש <span class='src sum'>סיכום בלבד</span>", "open", "אותו סדר גודל"],
-  ["זמן עצירה", "0 עד 45 שנ': זמן קבוע + נוסעים × זמן לנוסע × מקדם דלתות", "סן פרנסיסקו: 3.93 שנ' לנוסע בדלת אחת, 2.45 בכל הדלתות <span class='src read'>נקרא</span>. ישראל: עלייה מכל הדלתות מאז 2015 <span class='src read'>נקרא</span>", "ok", "מתואם למקורות"],
+  ["זמן עצירה", "0 עד 45 שנ', נקבע ישירות", "אין מדידה ישראלית. מדידות זרות הן ממערכות אחרות; בישראל אפליקציית תיקוף ועלייה מכל הדלתות מאז 2015 <span class='src read'>נקרא</span>", "open", "אין נתונים, הכלי לא מנחש"],
   ["אנשים במכונית", "1.35 (אמצע 1.2–1.5)", "ישראל: 1.44–1.52 בסקרים <span class='src read'>נקרא</span>, 1.2 בכתבות <span class='src sum'>בלי מקור</span>. ארה\"ב: 1.18 לעבודה, 1.67 לכל הנסיעות", "ok", "בתוך הטווח"],
   ["אנשים באוטובוס", "20 (הערכה גסה)", "ארה\"ב: ממוצע 10.7 <span class='src read'>נקרא</span>. ישראל: מקדם מילוי בלבד, כ-20 לנסיעה בקו עירוני <span class='src sum'>סיכום בלבד</span>", "part", "הערכה, לא מדידה"],
 ];
