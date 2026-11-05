@@ -1,6 +1,6 @@
 # The simulation against published field data
 
-**Status:** first comparison, 2026-11-01. It checks the stop-design experiment (`stop_design_v1`, see
+**Status:** updated 2026-11-05 for the explorer's model (passengers and doors set the dwell time, short stops of 0 to 6 s added in `stop_design_v2`, a penalty for the bay). First written 2026-11-01. It checks the stop-design experiment (`stop_design_v1` and `v2`, see
 the results page, `docs-v3/en/RESULTS.md`) against what could be found in published studies. It is a literature check,
 not a calibration: nothing in the simulation was changed because of it.
 
@@ -21,20 +21,20 @@ The simulation's numbers come from `scripts/compare_with_real_data.py`
 | # | Question | Simulation | Field data | Verdict |
 |---|---|---|---|---|
 | 1 | How much longer is the bus's trip with a bay stop than with an in-lane stop? | +5.3 to +10.5 s, mean about 7 s | Singapore: acceleration with re-entry 11.35 s against 9.73 s, +1.6 s, at sites without heavy congestion (read). Ottawa: acceleration and re-entry 4 to 5 s longer (quoted in the Singapore paper; other summaries say 13 s per stop) | **Simulation at the top of the measured range** (about 2 to 6 s) |
-| 2 | How long does the bus take to merge back? | 12.7 s on average (median 12.4, 90% under 15.6, none above 28.4 s) | San Francisco: 4 to 13 s average wait before moving, up to 52 s (read). Florida: 36 s average, 29 s when a car yields, 39 s when not (read) | **Average plausible; the long tail is missing** |
+| 2 | How long does the bus take to merge back? | 12.9 s on average (median 12.5, 90% under 16.2, longest 37.4 s) | San Francisco: 4 to 13 s average wait before moving, up to 52 s (read). Florida: 36 s average, 29 s when a car yields, 39 s when not (read) | **Average plausible; the long tail is missing** |
 | 3 | How long is the queue behind a bus stopped in the lane? | 1.1 cars (10 s stop, 0.1 cars/s) to 22.3 cars (45 s, 0.5 cars/s); one lane, nobody passes | San Francisco: 1 to 3 cars on average, 6 at most; drivers change lanes about once per bus (read) | **Matches at short stops only; long queues are an artefact of one lane** |
 | 4 | How many cars does the entry let in? | 0.34 cars/s (1,231 per hour) once a queue stands at it | Standard saturation flow 1,900 per hour per lane, about 1.9 s per car (summary) | **Simulation about a third below** |
 | 5 | How much do cars lose to an in-lane stop, compared with a bay? | 2 to 4 s per car at a 15 s stop, 3 to 9 s at 20 s, 14 to 36 s at 45 s | Ottawa: about 8 s per stop at the kerb against about 4 s for a bus leaving a bay (summary) | **Same order at 15 to 20 s; cannot be checked finer** |
-| 6 | Dwell times | grid of 10, 15, 20, 30, 45 s, fixed | London: 9 to 16 s on average. San Francisco: 16 to 22 s at a bay. Portland: 12.4 s, standard deviation 9.2 s (read) | **Typical stops are in the lower half of the grid; the spread is missing** |
-| 7 | Is a stop in the lane quicker than a stop in a bay? | assumed possible, tried as a pairing | Singapore: 1.33 s per boarding or alighting passenger at the kerb against 1.52 s in a bay, fixed part 6.5 s against 5.6 s: about 1 s in 20 for ten passengers (read). San Francisco: the in-lane stop was *slower* (18 to 43 s against 16 to 22 s) (read). Ottawa: no difference (second-hand) | **Difference small and of unclear sign; a lane stop 5 s or more shorter is not supported** |
-| 8 | People per car | 1.2 | US 2017: 1.18 to or from work, 1.67 over all trips (read). Israel: 1.52 and 1.44 in household travel surveys (Ministry of Transport, 2021, read); 1.2 in news articles without a source report (see below) | **Matches commuting and the articles; below the Israeli surveys** |
-| 9 | People per bus | 50 | US 2016: 10.7 per bus on average, 5.1 to 16.8 across 33 metropolitan areas (read) | **Far above the average** |
+| 6 | Dwell times | 0 to 45 s (explorer: fixed 4 s + passengers x 3 s x a door factor, 0 with no passengers; simulated at 0, 3, 6, 10, 15, 20, 30, 45 s) | San Francisco: 3.93 s per passenger with one door, 2.45 s with all doors (read); Israel: boarding at all doors since 2015 (State Comptroller 2017, read) | **The model follows the sources; the spread of real dwell times is still missing** |
+| 7 | Does a bay stop take longer than a lane stop? | none in the simulation: the same braking time (bay minus lane: -0.03 s), the same distance from the stop pole (2.8 m) and a gap to the kerb of 0.46 m in the bay and 0.50 m in the lane. The explorer adds a field-based penalty (1 s to enter, 1 m more deviation, 0.4 m more gap) that can be changed | Singapore: 1.33 s per passenger at the kerb against 1.52 s in a bay, deceleration 8.53 against 8.84 s (read). Ottawa: deceleration 1 to 2 s longer in bays, Beijing 1.4 s (both second-hand) | **The simulation lacks the bay's extra difficulty; the explorer adds it as a visible assumption** |
+| 8 | People per car | 1.35 in the explorer (middle of the Israeli range 1.2 to 1.5) | US 2017: 1.18 to or from work, 1.67 over all trips (read). Israel: 1.52 and 1.44 in household travel surveys (Ministry of Transport, 2021, read); 1.2 in news articles without a source report (see below) | **Inside the Israeli range** |
+| 9 | People per bus | 20 in the explorer (a rough figure; 50 in the first experiment) | US 2016: 10.7 per bus on average, 5.1 to 16.8 across 33 metropolitan areas (read). Israel: only a fill factor (60% or less at the peak stop in over half of the trips, read) and about 20 per trip on city lines (news article, summary) | **A rough estimate, chosen by the reader in the explorer** |
 
 ## The simulation's outputs
 
 ### 1. The bus's extra time in a bay (5.3 to 10.5 s)
 
-The simulation gives 5.3 to 10.5 s per run in all 25 cells (mean about 7 s). In Ottawa's review of bus bays
+The simulation gives 5.3 to 10.5 s per run in all 40 cells (dwell times 0 to 45 s) (mean about 7 s). In Ottawa's review of bus bays
 (consultant Genivar, 2011) the executive summary is quoted, in the search summaries, as: total stop delay without
 dwell 7.6 s at the kerb against 14.75 s in a bay, an extra 5 to 6 s per stop, 4 to 5 s of it in clearance (start-up,
 re-entry and acceleration). Other lines of the same review are quoted as "13 seconds per bay stop" and "12 s at
@@ -55,9 +55,9 @@ advantage in the results is larger than shown.
 ### 2. The time to merge back
 
 What the simulation measures: from the end of boarding until the bus is fully back in the lane, including the
-sideways movement. Over the 7,500 bay runs: mean 12.7 s, median 12.4 s, 90% under 15.6 s, 99% under 19.9 s, longest
-28.4 s; 0.9% above 20 s, none above 30 s. The mean grows from 11.3 s at 0.1 cars/s to 13.2 s at 0.3 cars/s and stays
-there. It does not depend on the dwell time.
+sideways movement. Over the 9,750 bay runs: mean 12.9 s, median 12.5 s, 90% under 16.2 s, 99% under 20.7 s, longest
+37.4 s; 1.4% above 20 s, 1 run in 9,750 above 30 s. The mean grows from 11.4 s at 0.1 cars/s to 13.4 s at 0.3 cars/s and stays
+there.
 
 | Study | Where | What was timed | Result |
 |---|---|---|---|
@@ -171,21 +171,21 @@ bus. It is an average over the whole route and day, not the load at a stop in th
 between the two.
 
 Because the verdict is linear in the occupancies, it was recomputed from the stored runs (bay wins / lane wins / tie, out
-of 25 cells):
+of 40 cells: five inflows and dwell times of 0, 3, 6, 10, 15, 20, 30 and 45 s, the same dwell time in both designs):
 
 | People per car | People per bus | Bay | Lane | Tie |
 |---|---|---|---|---|
-| 1.2 | 50 (default) | 10 | 13 | 2 |
-| 1.7 | 50 | 13 | 11 | 1 |
-| 1.2 | 20 | 16 | 8 | 1 |
-| 1.7 | 20 | 17 | 7 | 1 |
-| 1.2 | 10.7 | 18 | 6 | 1 |
-| 1.7 | 10.7 | 19 | 5 | 1 |
+| 1.2 | 20 | 16 | 23 | 1 |
+| 1.35 | 20 | 16 | 23 | 1 |
+| 1.5 | 20 | 17 | 23 | 0 |
+| 1.7 | 10.7 | 19 | 20 | 1 |
+| 1.2 | 50 | 10 | 28 | 2 |
 
-**Verdict:** this is the largest sensitivity found. The default bus of 50 passengers is the choice most favourable to
-the in-lane stop. With a bus of the national average load, the bay wins in 18 to 19 of 25 cells, including stops of 15 to
-20 s from 0.2 cars/s; only the 10 s stops stay with the lane. The sentence "a short stop favours the lane" survives
-(10 s stops), "20 s at light traffic favours the lane" does not.
+**Verdict:** the number of people in the bus decides more than the number in the car (the Israeli range of 1.2 to 1.5
+moves the count by one cell). With dwell times down to 0 s the lane wins more cells than in the first experiment, whose
+shortest stop was 10 s: very short stops cost the lane stop nothing and the bay stop the merge, and in the first
+experiment's 10 to 45 s range the bay won most cells at an average bus load. The explorer
+(`docs/tools/stop_design_explorer.he.html`) lets the reader choose all of these.
 
 ## What this means for the experiment's conclusions
 
@@ -194,8 +194,8 @@ the in-lane stop. With a bus of the national average load, the bay wins in 18 to
    same order of magnitude.
 2. **The long-stop corner is not transferable.** Queues of 10 to 22 cars come from one lane without passing. Observed
    queues are 1 to 3 cars. The two-lane experiment is the most important next step.
-3. **The default occupancies decide many cells.** The experiment's default of 50 people per bus should be shown next to
-   a realistic average load, not alone. The data already supports this; no new run is needed.
+3. **The occupancies and the dwell time decide many cells.** The explorer therefore lets the reader choose them, with
+   the Israeli range for cars (1.2 to 1.5) and a rough 20 for a city bus as defaults.
 4. **Two model gaps push the same way.** The simulation has no long waits for a gap, and it has no variation in dwell time.
    The first understates the bay's cost, the second understates the lane's. They do not cancel by design.
 5. **Not tested here:** the arrival process (Poisson in the simulation, platooned by signals in cities); yielding to

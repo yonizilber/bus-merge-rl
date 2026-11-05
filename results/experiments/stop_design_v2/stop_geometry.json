@@ -1,0 +1,24 @@
+{
+ "seeds": 40,
+ "rate": 0.3,
+ "dwell_s": 6.0,
+ "arrival_time_from_braking_s": {
+  "lane_mean": 7.43,
+  "bay_mean": 7.4,
+  "bay_minus_lane_mean": -0.03,
+  "bay_minus_lane_sd": 0.12,
+  "bay_minus_lane_min": -0.2,
+  "bay_minus_lane_max": 0.2
+ },
+ "distance_from_stop_pole_m": {
+  "lane_mean": 2.8,
+  "bay_mean": 2.8
+ },
+ "gap_between_bus_side_and_pavement_edge_m": {
+  "lane_mean": 0.5,
+  "bay_mean": 0.46,
+  "lane_sd": 0.0,
+  "bay_sd": 0.01
+ },
+ "note": "paired by seed: the same entry speed and stop point in both designs"
+}

@@ -2,12 +2,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=IBM+Plex+Sans+Hebrew:wght@500;600;700&display=swap">
 <style>
-/* Layout: intro, one controls panel, a live verdict, two charts, then our summary and the field reference values. */
+/* Layout: intro, basic controls, advanced assumptions, live verdict, two charts, our summary, field reference values. */
 :root {
   --bg: #f2f5f7; --surface: #ffffff; --ink: #15212c; --muted: #55646f; --line: #d5dde3;
   --bay: #2b6cb0; --bay-soft: #dbe8f5; --lane: #c2571a; --lane-soft: #f7e1d4; --tie: #7b8791; --tie-soft: #e6eaed;
-  --field: #0c7a69; --warn: #a8610f; --accent: #3a4fb6;
-  --chip-ok-bg: #d8efe9; --chip-ok-fg: #0a5c4f; --chip-sum-bg: #f8e8c9; --chip-sum-fg: #7a4709;
+  --field: #0c7a69; --warn: #a8610f; --accent: #3a4fb6; --band: #cfe9e3;
   --font-body: "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
   --font-display: "IBM Plex Sans Hebrew", "Heebo", system-ui, Arial, sans-serif;
 }
@@ -15,15 +14,13 @@
   :root:not([data-theme="light"]) {
     --bg: #0f171e; --surface: #17222b; --ink: #e6edf2; --muted: #9bacb8; --line: #2b3a46;
     --bay: #6aaaf0; --bay-soft: #1b3350; --lane: #f0925c; --lane-soft: #4a2a19; --tie: #8c9aa5; --tie-soft: #26343e;
-    --field: #4cc2ad; --warn: #e2a14f; --accent: #8b9cf0;
-    --chip-ok-bg: #12413a; --chip-ok-fg: #8fe0cf; --chip-sum-bg: #4a3512; --chip-sum-fg: #f2cf94; color-scheme: dark;
+    --field: #4cc2ad; --warn: #e2a14f; --accent: #8b9cf0; --band: #1d4a42; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f171e; --surface: #17222b; --ink: #e6edf2; --muted: #9bacb8; --line: #2b3a46;
   --bay: #6aaaf0; --bay-soft: #1b3350; --lane: #f0925c; --lane-soft: #4a2a19; --tie: #8c9aa5; --tie-soft: #26343e;
-  --field: #4cc2ad; --warn: #e2a14f; --accent: #8b9cf0;
-  --chip-ok-bg: #12413a; --chip-ok-fg: #8fe0cf; --chip-sum-bg: #4a3512; --chip-sum-fg: #f2cf94; color-scheme: dark;
+  --field: #4cc2ad; --warn: #e2a14f; --accent: #8b9cf0; --band: #1d4a42; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.7; margin: 0;
@@ -42,19 +39,33 @@ a { color: var(--accent); text-underline-offset: 3px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; min-width: 0; }
 .scroll { overflow-x: auto; }
 .banner { border-inline-start: 4px solid var(--warn); padding: 6px 14px; max-width: 68ch; background: var(--surface); border-radius: 0 6px 6px 0; }
-.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px 28px; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px 28px; }
 .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.ctl label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 500; font-size: 15px; }
+.ctl > label, .ctl .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 500; font-size: 15px; }
 .ctl .val { font-family: var(--font-display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ctl .hint { font-size: 13px; color: var(--muted); }
-input[type=range] { width: 100%; accent-color: var(--accent); direction: ltr; }
+.track { position: relative; direction: ltr; }
+.track .band { position: absolute; top: 50%; height: 10px; margin-top: -5px; border-radius: 5px; background: var(--band); pointer-events: none; }
+input[type=range] { width: 100%; accent-color: var(--accent); direction: ltr; position: relative; background: transparent; }
 input[type=range]:disabled { opacity: 0.45; }
-input[type=range]:focus-visible, button:focus-visible, input[type=checkbox]:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input[type=range]:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.presets button { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
-.presets button:hover { border-color: var(--accent); }
+.presets button, .btn { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.presets button:hover, .btn:hover { border-color: var(--accent); }
 .presets button[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; direction: ltr; align-self: flex-start; }
+.seg button { font: inherit; font-size: 15px; padding: 5px 16px; border: 0; background: var(--surface); color: var(--ink); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
 .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+details.adv { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 20px 14px; }
+details.adv > summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; padding: 12px 0; }
+.advgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px 24px; }
+.adv .f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.adv .f label { font-size: 14px; font-weight: 500; }
+.adv .f .why { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.adv input[type=number] { font: inherit; width: 100%; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); direction: ltr; text-align: right; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 0 6px; border-radius: 4px; border: 1px solid currentColor; margin-inline-start: 6px; white-space: nowrap; }
+.tag.sim { color: var(--accent); } .tag.src { color: var(--field); } .tag.guess { color: var(--warn); }
 #verdict-box { border-radius: 12px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; border: 2px solid var(--tie); background: var(--tie-soft); }
 #verdict-box.bay { border-color: var(--bay); background: var(--bay-soft); }
 #verdict-box.lane { border-color: var(--lane); background: var(--lane-soft); }
@@ -64,6 +75,14 @@ input[type=range]:focus-visible, button:focus-visible, input[type=checkbox]:focu
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 24px; }
 .fact .k { font-size: 13px; color: var(--muted); }
 .fact .v { font-family: var(--font-display); font-weight: 700; font-size: 21px; font-variant-numeric: tabular-nums; }
+.pens { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.pen { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pen h3 { font-size: 16px; }
+.pen .who { font-size: 13px; color: var(--muted); }
+.pen .big { font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.pen.bayp { border-top: 4px solid var(--bay); } .pen.lanep { border-top: 4px solid var(--lane); }
+.pen dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; font-size: 14px; }
+.pen dt { color: var(--muted); } .pen dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .parts { display: flex; flex-direction: column; gap: 8px; }
 .part { display: grid; grid-template-columns: minmax(140px, 32%) 1fr 130px; gap: 10px; align-items: center; font-size: 15px; }
 .part .tr { position: relative; height: 16px; background: var(--line); border-radius: 4px; direction: ltr; }
@@ -79,7 +98,7 @@ svg text { fill: var(--ink); font-family: var(--font-body); direction: rtl; unic
 svg .muted { fill: var(--muted); }
 .map { display: grid; grid-template-columns: auto repeat(9, minmax(0, 1fr)); gap: 3px; direction: ltr; font-size: 12px; }
 .map .h { color: var(--muted); text-align: center; align-self: center; font-variant-numeric: tabular-nums; padding-inline: 2px; }
-.map .c { text-align: center; padding: 7px 0; border-radius: 4px; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; color: #fff; }
+.map .c { text-align: center; padding: 6px 0; border-radius: 4px; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; color: #fff; }
 .map .c.bay { background: var(--bay); } .map .c.lane { background: var(--lane); } .map .c.tie { background: var(--tie); }
 :root[data-theme="dark"] .map .c { color: #0b1117; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .map .c { color: #0b1117; } }
@@ -101,35 +120,42 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
   <header style="display:flex;flex-direction:column;gap:14px">
     <div class="kicker">כלי חקירה · ניסוי תכנון התחנה</div>
     <h1>מפרץ או נתיב</h1>
-    <p class="lead">בחרו את התנאים: כמה אנשים באוטובוס ובמכונית, כמה זמן האוטובוס עומד, וכמה צפופה התנועה. הכלי יגיד מה מביא יותר אנשים מהר יותר לקצה הדרך, לפי <span class="num">15,000</span> הרצות סימולציה של אוטובוס שעוצר במפרץ או בנתיב.</p>
-    <div class="banner"><b>חשוב לדעת:</b> הניסוי רץ על כביש עם <b>נתיב אחד, בלי עקיפות</b>. ברחוב עם נתיב נוסף מכוניות עוקפות את האוטובוס העומד, ולכן עצירה בנתיב עולה פחות. בסוף העמוד מפורט מה עוד לא מייצג את המציאות.</div>
+    <p class="lead">בחרו את התנאים: כמה אנשים באוטובוס ובמכונית, כמה נוסעים עולים ויורדים בתחנה, כמה דלתות משמשות, וכמה צפופה התנועה. הכלי יגיד מה מביא יותר אנשים מהר יותר לקצה הדרך, לפי <span class="num">[[runs]]</span> הרצות סימולציה של אוטובוס שעוצר במפרץ או בנתיב.</p>
+    <div class="banner"><b>חשוב לדעת:</b> הניסוי רץ על כביש עם <b>נתיב אחד, בלי עקיפות</b>. ברחוב עם נתיב נוסף מכוניות עוקפות את האוטובוס העומד, ולכן עצירה בנתיב עולה פחות. בסוף העמוד מפורט מה עוד לא מייצג את המציאות. ההנחות שאינן מהסימולציה מסומנות <span class="tag guess">הערכה</span> או <span class="tag src">ממקור</span>, והנמדדות בסימולציה <span class="tag sim">מהסימולציה</span>.</div>
   </header>
 
   <section id="controls-sec">
     <h2>התנאים</h2>
     <div class="presets" role="group" aria-label="ערכות מוכנות">
       <span style="font-size:14px;color:var(--muted)">ערכות:</span>
-      <button type="button" data-p="il" aria-pressed="false">ישראל (הערכה גסה): 1.5 · 20</button>
-      <button type="button" data-p="ilpeak" aria-pressed="false">ישראל, שעות שיא (הערכה): 1.2 · 20</button>
-      <button type="button" data-p="us" aria-pressed="false">ממוצע בארה"ב: 1.7 · 10.7</button>
-      <button type="button" data-p="exp" aria-pressed="false">ברירת המחדל של הניסוי: 1.2 · 50</button>
-      <button type="button" data-p="crowd" aria-pressed="false">אוטובוס עמוס: 1.5 · 60</button>
+      <button type="button" data-p="il" aria-pressed="false">ישראל, ממוצע (הערכה)</button>
+      <button type="button" data-p="ilpeak" aria-pressed="false">ישראל, שעות שיא (הערכה)</button>
+      <button type="button" data-p="us" aria-pressed="false">ארה"ב, דלת אחת</button>
     </div>
     <div class="panel">
       <div class="controls">
         <div class="ctl"><label for="rate"><span>עומס תנועה</span><span class="val" id="rate-v"></span></label>
           <input type="range" id="rate" min="0.1" max="0.5" step="0.01" value="0.3"><span class="hint" id="rate-h"></span></div>
+        <div class="ctl"><span class="lab"><label for="pcar">אנשים בכל מכונית</label><span class="val" id="pcar-v"></span></span>
+          <div class="track"><span class="band" id="pcar-band"></span><input type="range" id="pcar" min="1" max="2" step="0.05" value="1.35"></div>
+          <span class="hint">כולל הנהג. הרצועה הירוקה: הטווח בישראל, <span class="num">1.2–1.5</span> (ברירת המחדל באמצע)</span></div>
         <div class="ctl"><label for="pbus"><span>נוסעים באוטובוס</span><span class="val" id="pbus-v"></span></label>
           <input type="range" id="pbus" min="2" max="80" step="1" value="20"><span class="hint">נוסעים על האוטובוס בזמן הנסיעה, כולל אלה שעולים בתחנה</span></div>
-        <div class="ctl"><label for="pcar"><span>אנשים בכל מכונית</span><span class="val" id="pcar-v"></span></label>
-          <input type="range" id="pcar" min="1" max="2.5" step="0.05" value="1.5"><span class="hint">כולל הנהג</span></div>
-        <div class="ctl"><label for="dbay"><span>זמן עצירה במפרץ</span><span class="val" id="dbay-v"></span></label>
-          <input type="range" id="dbay" min="10" max="45" step="1" value="15"><span class="hint">מרגע שהאוטובוס נעצר ועד שהעלייה מסתיימת</span></div>
-        <div class="ctl"><label for="dlane"><span>זמן עצירה בנתיב</span><span class="val" id="dlane-v"></span></label>
-          <input type="range" id="dlane" min="10" max="45" step="1" value="15" disabled>
-          <span class="check"><input type="checkbox" id="linked" checked><label for="linked" style="display:inline;font-weight:400">זהה לזמן במפרץ</label></span></div>
+        <div class="ctl"><label for="npax"><span>נוסעים שעולים או יורדים בתחנה</span><span class="val" id="npax-v"></span></label>
+          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">0 אומר שאין נוסעים: האוטובוס רק נעצר ויוצא</span></div>
+        <div class="ctl"><span class="lab"><span>דלתות שמשמשות לעלייה וירידה</span></span>
+          <span class="seg" id="doors" role="group" aria-label="מספר דלתות"><button type="button" data-d="1" aria-pressed="false">1</button><button type="button" data-d="2" aria-pressed="true">2</button><button type="button" data-d="3" aria-pressed="false">3</button></span>
+          <span class="hint">בישראל אפשר לעלות מכל הדלתות מאז 2015; שלוש בעיקר באוטובוס מפרקי</span></div>
+        <div class="ctl"><span class="lab"><span>זמן העצירה הבסיסי</span><span class="val" id="dw-v"></span></span>
+          <span class="check"><input type="checkbox" id="direct"><label for="direct">הגדרה ישירה בשניות במקום לפי נוסעים</label></span>
+          <input type="range" id="dir" min="0" max="45" step="1" value="10" disabled><span class="hint" id="dw-h"></span></div>
       </div>
     </div>
+    <details class="adv" id="adv">
+      <summary>הנחות מתקדמות: זמן עצירה, עונש המפרץ ודיוק העצירה</summary>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:12px">כל הערכים ניתנים לשינוי. <button type="button" class="btn" id="reset-adv">איפוס לברירות המחדל</button></p>
+      <div class="advgrid" id="advgrid"></div>
+    </details>
   </section>
 
   <section id="result-sec" aria-live="polite">
@@ -138,7 +164,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
       <div id="verdict-title"></div>
       <div class="explain" id="verdict-text"></div>
       <div class="facts" id="facts"></div>
-      <div class="parts" id="parts"></div>
+      <div class="pens" id="pens"></div>
     </div>
     <p id="interp-note" style="font-size:14px;color:var(--muted)"></p>
   </section>
@@ -147,7 +173,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     <h2>מה קורה כשהנוסעים באוטובוס יורדים</h2>
     <figure>
       <svg id="chart-pbus" viewBox="0 0 760 360" role="img" aria-label="ההפרש בזמן האנשים כפונקציה של מספר הנוסעים באוטובוס"></svg>
-      <figcaption><b>ההפרש בין מפרץ לנתיב, באדם-דקות להרצה, לפי מספר הנוסעים באוטובוס.</b> שאר התנאים כפי שבחרתם למעלה. הקו הוא הממוצע על 300 זוגות הרצות עם אותן מכוניות; הרצועה סביבו היא רווח סמך של 95%. מתחת לאפס (רקע כחול) המפרץ מביא יותר אנשים מהר יותר, מעל אפס (רקע כתום) הנתיב. הנקודה היא הבחירה שלכם. הקווים המקווקווים: 10.7 נוסעים (ממוצע ארה"ב), 20 (הערכה גסה לאוטובוס עירוני בישראל), 50 (ברירת המחדל של הניסוי).</figcaption>
+      <figcaption><b>ההפרש בין מפרץ לנתיב, באדם-דקות להרצה, לפי מספר הנוסעים באוטובוס.</b> שאר התנאים כפי שבחרתם למעלה. הקו הוא הממוצע על זוגות הרצות עם אותן מכוניות; הרצועה סביבו היא רווח סמך של 95%. מתחת לאפס (רקע כחול) המפרץ מביא יותר אנשים מהר יותר, מעל אפס (רקע כתום) הנתיב. הנקודה היא הבחירה שלכם. הקווים המקווקווים: 10.7 נוסעים (ממוצע ארה"ב) ו-20 (הערכה גסה לאוטובוס עירוני בישראל).</figcaption>
     </figure>
   </section>
 
@@ -156,29 +182,46 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     <figure>
       <div class="map" id="map"></div>
       <div class="legend"><span><i style="background:var(--bay)"></i>המפרץ עדיף</span><span><i style="background:var(--lane)"></i>הנתיב עדיף</span><span><i style="background:var(--tie)"></i>אין הכרעה (הרווח כולל אפס)</span></div>
-      <figcaption><b>מי עדיף בכל צירוף של תנועה וזמן עצירה, עם התפוסות שבחרתם.</b> עמודות: מכוניות לשנייה מגיעות לכביש. שורות: זמן העצירה במפרץ בשניות (45 למעלה). בכל משבצת: ההפרש באדם-דקות להרצה, מפרץ פחות נתיב, כך ששלילי פירושו שהמפרץ עדיף. זמן העצירה בנתיב הוא כפי שבחרתם (זהה למפרץ, או באותו הפרש). המשבצת עם המסגרת היא הבחירה שלכם, והערכים בין נקודות הניסוי מחושבים בהשלמה לינארית.</figcaption>
+      <figcaption><b>מי עדיף בכל צירוף של תנועה וזמן עצירה בסיסי, עם שאר התנאים שבחרתם.</b> עמודות: מכוניות לשנייה מגיעות לכביש. שורות: זמן העצירה הבסיסי בשניות, לפני תוספות הדיוק (45 למעלה, 0 למטה). בכל משבצת: ההפרש באדם-דקות להרצה, מפרץ פחות נתיב, כך ששלילי פירושו שהמפרץ עדיף. המשבצת עם המסגרת היא הבחירה שלכם. הערכים בין נקודות הניסוי מחושבים בהשלמה לינארית.</figcaption>
     </figure>
   </section>
 
   <section>
     <h2>הסיכום שלנו</h2>
     <ul class="plain">
-      <li><b>המחיר של המפרץ הוא כמה שניות של האוטובוס.</b> כשהאוטובוס יוצא ממפרץ הוא צריך למצוא רווח, ובניסוי זה הוסיף לו <span class="num">5.3</span> עד <span class="num">10.5</span> שניות לנסיעה, בכל התנאים שנבדקו.</li>
-      <li><b>המחיר של העצירה בנתיב משלמות המכוניות שמאחור.</b> הוא גדל עם זמן העצירה ועם צפיפות התנועה, ובעצירה של <span class="num">45</span> שניות ב-<span class="num">0.5</span> מכוניות לשנייה הוא מגיע לכ-<span class="num">45</span> דקות רכב בהרצה אחת.</li>
-      <li><b>ככל שהאוטובוס ריק יותר, המפרץ משתלם יותר.</b> ההפסד של האוטובוס נמדד באנשים, והחיסכון של המכוניות לא תלוי בכמה אנשים נסעו באוטובוס. בעצירה של <span class="num">15</span> שניות ו-<span class="num">0.3</span> מכוניות לשנייה (ו-<span class="num">1.5</span> אנשים במכונית) המפרץ עדיף כשבאוטובוס פחות מכ-<span class="num">25</span> נוסעים. ב-<span class="num">0.5</span> מכוניות לשנייה, פחות מכ-<span class="num">59</span>.</li>
-      <li><b>עצירה קצרה (10 שניות) בתנועה צפופה: הנתיב.</b> שם המפרץ מאט גם את המכוניות, כי הן מאטות כשהאוטובוס חוזר לנתיב. הנתיב לא מפסיד בשום תפוסה.</li>
-      <li><b>עם ההערכה הגסה לישראל</b> (1.5 אנשים במכונית, 20 באוטובוס) ובזמן עצירה זהה בשני התכנונים, המפרץ עדיף ב-<span class="num">17</span> מתוך <span class="num">25</span> הצירופים של תנועה וזמן עצירה והנתיב ב-<span class="num">8</span>. עם ברירת המחדל של הניסוי (1.2 ו-50): <span class="num">10</span> למפרץ, <span class="num">13</span> לנתיב ו-<span class="num">2</span> ללא הכרעה.</li>
+      [[summary]]
     </ul>
     <div class="panel">
       <h3 style="margin-bottom:6px">באיזה כיוון הכלי מטעה</h3>
-      <p>שלוש מגבלות של הסימולציה מטות לטובת המפרץ ואחת לטובת הנתיב. לא כימתנו אותן.</p>
+      <p>מגבלות של הסימולציה מטות לטובת המפרץ ואחת לטובת הנתיב. לא כימתנו אותן.</p>
       <ul class="plain" style="margin-top:8px">
-        <li><b>נתיב אחד בלי עקיפות</b> (לטובת המפרץ): התור מאחורי אוטובוס בנתיב מגיע בסימולציה עד <span class="num">22</span> מכוניות, ובשטח (סן פרנסיסקו) נצפו בממוצע <span class="num">1</span> עד <span class="num">3</span>, כי נהגים עוקפים.</li>
+        <li><b>נתיב אחד בלי עקיפות</b> (לטובת המפרץ): התור מאחורי אוטובוס בנתיב מגיע בסימולציה עד <span class="num">22</span> מכוניות בעצירות הארוכות, ובשטח (סן פרנסיסקו) נצפו בממוצע <span class="num">1</span> עד <span class="num">3</span>, כי נהגים עוקפים.</li>
         <li><b>אין המתנות ארוכות לרווח</b> (לטובת המפרץ): בסימולציה ההשתלבות אורכת לכל היותר כ-<span class="num">28</span> שניות. בשטח נמדדו המתנות של <span class="num">30</span> עד <span class="num">50</span> שניות.</li>
-        <li><b>כניסה איטית</b> (כנראה לטובת המפרץ): הסימולציה מכניסה כשליש פחות מכוניות לשעה מערך הרוויה הסטנדרטי, ותורים נוצרים בה מוקדם יותר.</li>
-        <li><b>זמן עצירה קבוע</b> (לטובת הנתיב): בשטח הוא משתנה מאוד, והשונות הזו מאריכה תורים.</li>
+        <li><b>המחיר של המפרץ לאוטובוס</b> (כנראה לטובת הנתיב): בסימולציה <span class="num">[[bus_cost_range]]</span> שניות, ובשטח נמדד כ-<span class="num">2</span> עד <span class="num">6</span>. ראו בדוח ההשוואה לנתוני שטח.</li>
+        <li><b>כניסה איטית</b> (כנראה לטובת המפרץ): הסימולציה מכניסה כשליש פחות מכוניות לשעה מערך הרוויה הסטנדרטי.</li>
+        <li><b>זמן עצירה קבוע בכל הרצה</b> (לטובת הנתיב): בשטח הוא משתנה מאוד, והשונות הזו מאריכה תורים.</li>
       </ul>
-      <p style="margin-top:8px">לכן כשהכלי אומר "הנתיב עדיף", כדאי לסמוך עליו יותר מאשר כשהוא אומר "המפרץ עדיף". ההשוואה המלאה לנתוני שטח היא בדוח נפרד: <span class="path">docs/reports/REAL_DATA_COMPARISON.he.html</span>.</p>
+      <p style="margin-top:8px">כשהכלי אומר "הנתיב עדיף", כדאי לסמוך עליו יותר מאשר כשהוא אומר "המפרץ עדיף". ההשוואה המלאה לנתוני שטח היא בדוח נפרד: <span class="path">docs/reports/REAL_DATA_COMPARISON.he.html</span>.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>איך נגזר זמן העצירה ועונש המפרץ</h2>
+    <p>זמן העצירה הבסיסי הוא <b>זמן קבוע + נוסעים × זמן לנוסע × מקדם דלתות</b>, ו-0 כשאין נוסעים. לכל תכנון מתווספים אחר כך שני עונשי דיוק: סטייה לאורך הרחוב מנקודת העצירה, ומרווח בין דופן האוטובוס לשפת המדרכה. כך המפרץ והנתיב מקבלים זמני עצירה שונים כשהדיוק שלהם שונה.</p>
+    <div class="scroll panel" style="padding:4px 6px">
+      <table>
+        <thead><tr><th>הנחה</th><th>ברירת מחדל</th><th>מקור</th><th>סטטוס</th></tr></thead>
+        <tbody>
+          <tr><td>זמן לנוסע, דלת אחת</td><td><span class="num">3.0</span> שנ'</td><td>סן פרנסיסקו לפני עלייה מכל הדלתות: <span class="num">3.93</span> שנ' לנוסע (<a href="https://sfmta.com/media/4419/download" target="_blank" rel="noopener">SFMTA, מצגת על עלייה מכל הדלתות</a>)</td><td><span class="src read">נקרא</span> הערך 3.0 הוא הערכה בין מדידות</td></tr>
+          <tr><td>מקדם לשתי דלתות / שלוש</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-<span class="num">38%</span> בסן פרנסיסקו (<span class="num">3.93</span> ל-<span class="num">2.45</span>), ב-<span class="num">17%</span> בוונקובר וב-<span class="num">16%</span> בלוס אנג'לס (<a href="https://council.vancouver.ca/20090217/documents/ttra2.pdf" target="_blank" rel="noopener">ונקובר</a>, מסיכומי חיפוש)</td><td><span class="src read">נקרא</span> סן פרנסיסקו, <span class="src sum">סיכום בלבד</span> השאר</td></tr>
+          <tr><td>עלייה מכל הדלתות בישראל</td><td>2 דלתות</td><td>אגד ודן הנהיגו עלייה מהדלתות האחוריות, באישור משרד התחבורה, "כדי לקצר את זמן השהייה של האוטובוס בתחנה" (<a href="https://library.mevaker.gov.il/sites/DigitalLibrary/Documents/2017-68a-208-RavKav.pdf" target="_blank" rel="noopener">מבקר המדינה, 2017</a>; התחילה ב-2015 בגוש דן)</td><td><span class="src read">נקרא</span></td></tr>
+          <tr><td>זמן קבוע (פתיחה וסגירה)</td><td><span class="num">4</span> שנ'</td><td>סינגפור: חלק קבוע של <span class="num">5.6</span> במפרץ ו-<span class="num">6.5</span> ליד המדרכה, אבל כולל זמן שלא נוצל (<a href="https://doi.org/10.5038/2375-0901.20.1.6" target="_blank" rel="noopener">Liu ואחרים, 2017</a>)</td><td><span class="src read">נקרא</span> הערך 4 הוא הערכה</td></tr>
+          <tr><td>מרווח מהמדרכה, לכל נוסע ולכל <span class="num">10</span> ס"מ</td><td><span class="num">0.05</span> שנ'</td><td>בסינגפור נוסע במפרץ לוקח <span class="num">0.19</span> שנ' יותר מאשר ליד המדרכה (<span class="num">1.52</span> מול <span class="num">1.33</span>), בעיקר בגלל מרווח ופעולה נוספת להתקרבות. נניח הפרש מרווח של כ-<span class="num">40</span> ס"מ</td><td><span class="src read">נקרא</span> <span class="tag guess">הערכה</span> לגבי ההפרש</td></tr>
+          <tr><td>סטייה לאורך הרחוב, לכל מטר</td><td><span class="num">0.4</span> שנ' (דלת אחת)</td><td>הליכה של נוסעים לאורך האוטובוס אל הדלת, כ-<span class="num">1.3</span> מ' לשנייה, כשרק חלקם מושפעים. עם יותר דלתות הדלת הקרובה קרובה יותר, ולכן העונש מוכפל במקדם הדלתות</td><td><span class="tag guess">הערכה</span> בלי מקור</td></tr>
+          <tr><td>זמן הכניסה למפרץ עצמה, מעבר לנתיב</td><td><span class="num">1.0</span> שנ' (בסימולציה <span class="num">[[entry_sim]]</span>)</td><td>בסימולציה האוטובוס נכנס למפרץ ועומד באותו זמן כמו בנתיב (הפרש בין מפרץ לנתיב בזמן מתחילת הבלימה עד שהוא עומד, <span class="num">[[geom_seeds]]</span> זוגות הרצות עם אותה מהירות כניסה ואותה נקודת עצירה). בשטח ההאטה במפרץ ארוכה ב-<span class="num">0.3</span> שנ' בסינגפור וב-<span class="num">1–2</span> באוטווה ו-<span class="num">1.4</span> בבייג'ינג</td><td><span class="src read">נקרא</span> סינגפור; <span class="src sum">מיד שנייה</span> השאר</td></tr>
+          <tr><td>סטייה לאורך הרחוב והמרווח מהמדרכה, מפרץ מול נתיב</td><td>סטייה: מפרץ <span class="num">[[dev_bay]]</span> מ' בסימולציה, נתיב <span class="num">[[dev_lane]]</span> מ'<br>מרווח: מפרץ <span class="num">[[gap_bay]]</span> מ', נתיב <span class="num">[[gap_lane]]</span> מ'<br>ברירת המחדל: <span class="num">+1.0</span> מ' סטייה ו-<span class="num">+0.4</span> מ' מרווח במפרץ</td><td>הסימולציה נותנת את אותה סטייה (המרחק מעמוד התחנה, <span class="num">300</span> מ') ואותו מרווח בשני התכנונים, כלומר היא לא מדמה את הקושי הנוסף ליישר אוטובוס במפרץ. התוספות הן הערכה, והמרווח נשען על <span class="num">0.19</span> שנ' לנוסע בסינגפור</td><td><span class="tag sim">מהסימולציה</span> <span class="tag guess">הערכה</span> לתוספות</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -191,38 +234,17 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
           <tr><td>אנשים ברכב פרטי</td><td><span class="num">1.52</span> (מטרופולין תל אביב, 2014, 3,000 משקי בית)<br><span class="num">1.44</span> (ירושלים, תל אביב, חיפה והצפון, באר שבע, 2010–2019, 38,500 משקי בית)</td><td><a href="https://www.gov.il/BlobFolder/reports/special_reports/he/%D7%A8%D7%99%D7%9B%D7%95%D7%96%20%D7%A0%D7%AA%D7%95%D7%A0%D7%99%D7%9D%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%99%D7%9D%20%D7%91%D7%AA%D7%97%D7%91%D7%95%D7%A8%D7%94%20%D7%94%D7%A6%D7%99%D7%91%D7%95%D7%A8%D7%99%D7%AA-%20%D7%99%D7%95%D7%9C%D7%99%202021.pdf" target="_blank" rel="noopener">משרד התחבורה, הרשות הארצית לתחבורה ציבורית, ריכוז נתונים מרכזיים, יולי 2021, עמ' 21</a> (סקרי הרגלי נסיעה)</td><td><span class="src read">נקרא</span></td></tr>
           <tr><td>אנשים ברכב פרטי (מצוטט בתקשורת, 2019)</td><td><span class="num">1.2</span>: "ממוצע הנוסעים בכלי רכב פרטיים בישראל עומד כיום על 1.2 נוסעים בלבד"</td><td><a href="https://www.walla.co.il/news/israel/3321228" target="_blank" rel="noopener">וואלה, "תם עידן האזהרות", 3.11.2019</a>, מיוחס ל"נתוני משרד התחבורה"</td><td><span class="src sum">נקרא בכתבה</span> הדוח שמאחורי הנתון לא צוין</td></tr>
           <tr><td>אנשים ברכב (מצוטט בתקשורת, 2016)</td><td><span class="num">1.2</span>: "נוסעים בה בממוצע 1.2 אנשים במשך כ-50 דקות בלבד ביום"</td><td><a href="https://www.globes.co.il/news/article.aspx?did=1001108288" target="_blank" rel="noopener">גלובס, 6.3.2016</a>, מיוחס לפורום התחבורה הבינלאומי של ה-OECD</td><td><span class="src sum">נקרא בכתבה</span> אמירה כללית על מכוניות, לא נתון ישראלי, בלי הגדרה</td></tr>
-          <tr><td>אנשים ברכב (מצוטט בתקשורת, 2020)</td><td><span class="num">1.2</span></td><td><a href="https://www.jpost.com/Israel-News/Ridesharing-are-Israelis-ready-to-not-travel-solo-to-save-environment-616651" target="_blank" rel="noopener">Jerusalem Post, 5.2.2020</a>, מיוחס למשרד התחבורה</td><td><span class="src sum">סיכום בלבד</span> גוף הכתבה לא נקרא</td></tr>
-          <tr><td>מילוי אוטובוסים עירוניים, שעות שיא בוקר 2019</td><td>ביותר ממחצית הנסיעות מקדם המילוי בתחנות השיא הוא <span class="num">60%</span> ומטה</td><td>אותו מסמך, עמ' 20 (מערכת ספירת נוסעים)</td><td><span class="src read">נקרא</span></td></tr>
+          <tr><td>מילוי אוטובוסים עירוניים, שעות שיא בוקר 2019</td><td>ביותר ממחצית הנסיעות מקדם המילוי בתחנות השיא הוא <span class="num">60%</span> ומטה</td><td>אותו מסמך של משרד התחבורה, עמ' 20 (מערכת ספירת נוסעים)</td><td><span class="src read">נקרא</span></td></tr>
           <tr><td>נוסעים לנסיעה באוטובוס</td><td>כ-<span class="num">20</span> בקו עירוני, כ-<span class="num">11</span> בבין-עירוני, ללא תאריך</td><td><a href="https://www.israelhayom.co.il/news/transportation/article/17877267" target="_blank" rel="noopener">ישראל היום</a></td><td><span class="src sum">סיכום בלבד</span> הדף לא נפתח</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="panel"><h3 style="margin-bottom:6px">למה יש גם 1.2 וגם 1.5?</h3>
-      <p>המספר היחיד שנשען על מדידה שראינו הוא <span class="num">1.44–1.52</span> מסקרי הרגלי נסיעה. <span class="num">1.2</span> מופיע בשלוש כתבות, ובאף אחת לא צוין הדוח או ההגדרה. בגלובס המשפט הוא אמירה כללית של ה-OECD על מכוניות, ולא נתון על ישראל. בוואלה הוא מיוחס למשרד התחבורה, אבל בלי מקור. ייתכן שהפער הוא הגדרה של סוג נסיעה: בארה"ב הפער דומה, <span class="num">1.18</span> לנסיעות עבודה מול <span class="num">1.67</span> לכל הנסיעות (NHTS 2017). זו השערה, כי לא מצאנו מקור ישראלי שמפרק לפי מטרת נסיעה. לכן יש שתי ערכות: <span class="num">1.5</span> לממוצע על כל הנסיעות, ו-<span class="num">1.2</span> לשעות שיא.</p></div>
-    <p style="font-size:14px;color:var(--muted);max-width:72ch">מקדם מילוי הוא שיעור התפוסה, ובמסמך אין מספר המקומות באוטובוס, ולכן אי אפשר להמיר אותו לנוסעים בלי הנחה על הקיבולת. הערכת "20 נוסעים ו-1.5 במכונית" בערכה הראשונה היא לכן הערכה גסה ולא מדידה. בטבלה המלאה של המסמך יש גם התפלגות של מקדם המילוי בשבע קבוצות. מקדם המילוי בו נמדד ביחס למקומות ישיבה, ולמקומות ישיבה ועמידה, ולא ראינו את הגרף עצמו אלא רק את הטקסט שחולץ מהקובץ, ולכן לא ציטטנו אותו כאן.</p>
-  </section>
-
-  <section>
-    <h2>זמן עצירה במפרץ ובנתיב: מה יש במקורות</h2>
-    <div class="scroll panel" style="padding:4px 6px">
-      <table>
-        <thead><tr><th>מקור</th><th>מפרץ</th><th>עצירה בנתיב / ליד המדרכה</th><th>סטטוס</th></tr></thead>
-        <tbody>
-          <tr><td>סינגפור, 16 תחנות ב-8 זוגות, שעות שיא, 2014 (Liu ואחרים, 2017)</td><td>לכל נוסע (עלייה או ירידה): <span class="num">1.52</span> שנ'<br>חלק קבוע: <span class="num">5.6</span> שנ'<br>האצה כולל יציאה: <span class="num">11.35</span> שנ' (סטיית תקן <span class="num">4.3</span>)</td><td>לכל נוסע: <span class="num">1.33</span> שנ'<br>חלק קבוע: <span class="num">6.5</span> שנ'<br>האצה: <span class="num">9.73</span> שנ' (סטיית תקן <span class="num">1.9</span>)</td><td><span class="src read">נקרא</span> מעותק מאורכב של המאמר</td></tr>
-          <tr><td>סן פרנסיסקו, רחוב מיסיון, 1999 (TCRP, נספח C)</td><td>זמן עצירה ממוצע <span class="num">16–22</span> שנ' (טווח <span class="num">4–95</span>)</td><td>ב-bulb, תחנה בנתיב על מדרכה מורחבת: <span class="num">18–43</span> שנ'</td><td><span class="src read">נקרא</span></td></tr>
-          <tr><td>אוטווה, Genivar 2011 (כפי שמצוטט אצל Liu)</td><td>לנוסע <span class="num">3.5</span> שנ', יציאה והאצה ארוכות ב-<span class="num">4–5</span> שנ'</td><td>לנוסע <span class="num">3.5</span> שנ', בלי הבדל</td><td><span class="src sum">מיד שנייה</span></td></tr>
-          <tr><td>בייג'ינג, Chen ואחרים 2013 (דרך Liu)</td><td>לנוסע <span class="num">2.2–2.4</span> שנ'</td><td>לנוסע <span class="num">1.8–2.5</span> שנ'</td><td><span class="src sum">מיד שנייה</span></td></tr>
-          <tr><td>לונדון, TfL 2006 (דרך Liu)</td><td>לנוסע <span class="num">2.6–3.8</span> שנ' (בטבלה במאמר: 2.8–3.8)</td><td>המרת מפרצים לתחנות ליד המדרכה קיצרה ב-<span class="num">0.5–1</span> שנ' לנוסע</td><td><span class="src sum">מיד שנייה</span></td></tr>
-          <tr><td>ישראל</td><td colspan="2">לא נמצא. מה שפורסם הוא זמן המתנה של נוסעים בתחנה, ולא זמן העצירה של האוטובוס.</td><td><span class="src sum">אין</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p>הפער בין שני התכנונים בזמן העצירה קטן במחקר המבוקר ביותר שקראנו: לעשרה נוסעים שעולים או יורדים הוא <span class="num">5.6 + 1.52 × 10 = 20.8</span> שניות במפרץ מול <span class="num">6.5 + 1.33 × 10 = 19.8</span> שניות ליד המדרכה, כשנייה. מכאן שהחלטת ברירת המחדל של הכלי (זמן זהה בשני התכנונים) קרובה למה שנמדד. סן פרנסיסקו מראה כיוון הפוך, אבל שם נרשם שמפקחים עצרו לשיחה עם הנהגים, והתחנות שונות. עצירה בנתיב קצרה בחמש שניות או יותר, כמו בכמה מהצירופים בניסוי, לא נתמכת באף מקור שמצאנו.</p>
+    <p style="font-size:14px;color:var(--muted);max-width:72ch">טווח האנשים במכונית שבכלי הוא <span class="num">1.2–1.5</span>: המספר הרשמי מהסקרים (<span class="num">1.44–1.52</span>) והמספר שמצוטט בכתבות (<span class="num">1.2</span>), שלא נמצא מאחוריו דוח. ייתכן שהפער הוא שעות שיא מול כל הנסיעות, כמו בארה"ב (<span class="num">1.18</span> מול <span class="num">1.67</span>), אבל זו השערה. מקדם מילוי הוא שיעור התפוסה, ובמסמך אין מספר מקומות באוטובוס, ולכן "20 נוסעים" באוטובוס היא הערכה גסה ולא מדידה.</p>
   </section>
 
   <section>
     <h2>איך הכלי עובד</h2>
-    <p>לכל תנועה וכל צירוף של זמן עצירה בנתיב ובמפרץ (<span class="num">5 × 5 × 5</span> = <span class="num">125</span> צירופים) שמרנו, על <span class="num">300</span> זרעים שבהם לשני התכנונים אותן מכוניות בדיוק, את הפרש זמן הנסיעה של האוטובוס (a) ושל כל המכוניות (b), ואת השונות שלהם. ההפרש באדם-שניות הוא <span class="num">נוסעי האוטובוס × a + אנשים במכונית × b</span>, ולכן אפשר לחשב אותו לכל תפוסה בדפדפן, בלי להריץ מחדש. רווח הסמך הוא קירוב נורמלי לממוצע. בין נקודות הניסוי הכלי מחשב בהשלמה לינארית, ואינו יוצא מעבר לטווח שנבדק (תנועה <span class="num">0.1–0.5</span>, עצירה <span class="num">10–45</span> שניות).</p>
+    <p>לכל תנועה וכל צירוף של זמן עצירה בנתיב ובמפרץ שמרנו, על זרעים שבהם לשני התכנונים אותן מכוניות בדיוק, את הפרש זמן הנסיעה של האוטובוס (a) ושל כל המכוניות (b), ואת השונות שלהם. ההפרש באדם-שניות הוא <span class="num">נוסעי האוטובוס × a + אנשים במכונית × b</span>, ולכן אפשר לחשב אותו לכל תפוסה בדפדפן, בלי להריץ מחדש. זמני העצירה בשני התכנונים הם הזמן הבסיסי ועונשי הדיוק של כל אחד. תוספת לזמן הכניסה למפרץ נוספת ל-a. רווח הסמך הוא קירוב נורמלי לממוצע. בין נקודות הניסוי הכלי מחשב בהשלמה לינארית, ואינו יוצא מעבר לטווח שנבדק (תנועה <span class="num">0.1–0.5</span>, עצירה <span class="num">0–45</span> שניות).</p>
     <p style="font-size:14px;color:var(--muted)" id="prov"></p>
   </section>
 </main>
@@ -248,8 +270,8 @@ function stats(rate, dl, db) {            // trilinear interpolation of [n, a, b
   }
   return out;
 }
-function evaluate(pc, pb, rate, dl, db) {
-  const [n, a, b, va, vb, c] = stats(rate, dl, db);
+function evaluate(pc, pb, rate, dl, db, entryExtra = 0) {
+  const [n, a0, b, va, vb, c] = stats(rate, dl, db), a = a0 + entryExtra;
   const mean = pb * a + pc * b, se = Z * Math.sqrt(Math.max(pb * pb * va + pc * pc * vb + 2 * pb * pc * c, 0) / n);
   const verdict = mean + se < 0 ? "bay" : mean - se > 0 ? "lane" : "tie";
   const persons = pb + pc * rate * WINDOW_S;
@@ -257,7 +279,17 @@ function evaluate(pc, pb, rate, dl, db) {
            perPerson: mean / persons, breakEvenBus: a * b < 0 ? -pc * b / a : null, breakEvenCar: a * b < 0 ? -pb * a / b : null,
            laneAlways: a > 0 && b > 0, bayAlways: a < 0 && b < 0 };
 }
-window.Explorer = { evaluate, stats, DATA };
+/* stop times of the two designs from the page's assumptions */
+const DEFAULT_ADV = { fixed: 4, tpax: 3.0, m2: 0.7, m3: 0.6, longPen: 0.4, latPen: 0.05,
+  devLane: DATA.geometry.dev_lane_m, devBay: +(DATA.geometry.dev_bay_m + 1.0).toFixed(2), gapLane: DATA.geometry.gap_lane_m, gapBay: +(DATA.geometry.gap_bay_m + 0.4).toFixed(2), entryExtra: 1.0 };
+const doorMult = (S, A) => S.doors === 1 ? 1 : S.doors === 2 ? A.m2 : A.m3;
+function baseDwell(S, A) { return S.direct ? S.dir : (S.npax <= 0 ? 0 : A.fixed + S.npax * A.tpax * doorMult(S, A)); }
+function geometryPenalty(S, A, dev, gap) { const m = doorMult(S, A); return A.longPen * dev * m + A.latPen * S.npax * m * (gap / 0.1); }
+function dwells(S, A) {
+  const base = baseDwell(S, A), cl = x => Math.min(AXIS_D[AXIS_D.length - 1], Math.max(0, x));
+  return { base, lane: cl(base + geometryPenalty(S, A, A.devLane, A.gapLane)), bay: cl(base + geometryPenalty(S, A, A.devBay, A.gapBay)) };
+}
+window.Explorer = { evaluate, stats, dwells, baseDwell, geometryPenalty, DEFAULT_ADV, DATA };
 
 /* ---- the page ---- */
 const $ = id => document.getElementById(id);
@@ -267,55 +299,84 @@ const f0 = x => Math.round(x).toLocaleString("en-US").replace("-", "−");
 const NS = "http://www.w3.org/2000/svg";
 const el = (name, attrs = {}, text) => { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const PRESETS = { il: [1.5, 20], ilpeak: [1.2, 20], us: [1.7, 10.7], exp: [1.2, 50], crowd: [1.5, 60] };
-const S = { rate: 0.3, pbus: 20, pcar: 1.5, dbay: 15, dlane: 15, linked: true };
-
-function laneDwell(dbay) { return S.linked ? dbay : Math.min(45, Math.max(10, dbay + (S.dlane - S.dbay))); }
-function current() { return evaluate(S.pcar, S.pbus, S.rate, S.linked ? S.dbay : S.dlane, S.dbay); }
+const PRESETS = { il: { pcar: 1.35, pbus: 20, npax: 6, doors: 2 }, ilpeak: { pcar: 1.2, pbus: 20, npax: 10, doors: 2 }, us: { pcar: 1.7, pbus: 10.7, npax: 6, doors: 1 } };
+const S = { rate: 0.3, pbus: 20, pcar: 1.35, npax: 6, doors: 2, direct: false, dir: 10 };
+const A = Object.assign({}, DEFAULT_ADV);
+const ADV_FIELDS = [
+  ["fixed", "זמן קבוע לעצירה עם נוסעים (שנ')", "0.5", "guess", "פתיחה וסגירה של דלתות. 0 כשאין נוסעים."],
+  ["tpax", "זמן לנוסע שעולה או יורד, דלת אחת (שנ')", "0.1", "src", "סן פרנסיסקו לפני עלייה מכל הדלתות: 3.93."],
+  ["m2", "מקדם שתי דלתות", "0.05", "src", "סן פרנסיסקו: 0.62; ונקובר: 0.83; לוס אנג'לס: 0.84."],
+  ["m3", "מקדם שלוש דלתות", "0.05", "guess", "שלוש דלתות מחלקות את העומס עוד קצת."],
+  ["longPen", "עונש לכל מטר סטייה מנקודת העצירה (שנ', דלת אחת)", "0.05", "guess", "מוכפל במקדם הדלתות."],
+  ["latPen", "עונש לכל 10 ס\"מ מרווח מהמדרכה, לכל נוסע (שנ')", "0.01", "guess", "מבוסס על 0.19 שנ' בסינגפור בהנחת הפרש של כ-40 ס\"מ."],
+  ["devLane", "סטייה ממוצעת מנקודת העצירה בנתיב (מ')", "0.1", "sim", "נמדד בסימולציה."],
+  ["devBay", "סטייה ממוצעת מנקודת העצירה במפרץ (מ')", "0.1", "guess", `בסימולציה ${DATA.geometry.dev_bay_m}, כמו בנתיב: הסימולציה לא מדמה קושי נוסף ליישר את האוטובוס במפרץ. ברירת המחדל מוסיפה מטר אחד.`],
+  ["gapLane", "מרווח מדופן האוטובוס לשפת המדרכה, בנתיב (מ')", "0.05", "sim", "נמדד בסימולציה."],
+  ["gapBay", "מרווח מדופן האוטובוס לקיר המפרץ (מ')", "0.05", "guess", `בסימולציה ${DATA.geometry.gap_bay_m}, כמו בנתיב. ברירת המחדל מוסיפה 0.4 מ', בהתאם ל-0.19 שנ' לנוסע שנמדדו בסינגפור.`],
+  ["entryExtra", `תוספת לזמן הכניסה למפרץ מעבר לסימולציה (שנ'; בסימולציה ${DATA.geometry.entry_s})`, "0.5", "src", "הסימולציה לא מוסיפה זמן לכניסה למפרץ. בשטח האטה ארוכה ב-0.3 שנ' בסינגפור, ב-1.4 בבייג'ינג וב-1 עד 2 באוטווה. ברירת המחדל: שנייה אחת. מתווסף לזמן האוטובוס במפרץ."],
+];
+const TAGS = { sim: ["sim", "מהסימולציה"], src: ["src", "ממקור"], guess: ["guess", "הערכה"] };
+function buildAdv() {
+  $("advgrid").innerHTML = ADV_FIELDS.map(([k, label, step, tag, why]) => `<div class="f"><label for="adv-${k}">${label}<span class="tag ${TAGS[tag][0]}">${TAGS[tag][1]}</span></label><input type="number" id="adv-${k}" step="${step}" value="${A[k]}"><span class="why">${why}</span></div>`).join("");
+  ADV_FIELDS.forEach(([k]) => $("adv-" + k).addEventListener("input", () => { const v = parseFloat($("adv-" + k).value); if (!isNaN(v)) { A[k] = v; renderAll(); } }));
+}
+function current() { const d = dwells(S, A); return { d, r: evaluate(S.pcar, S.pbus, S.rate, d.lane, d.bay, A.entryExtra) }; }
 
 function readControls() {
-  S.rate = +$("rate").value; S.pbus = +$("pbus").value; S.pcar = +$("pcar").value; S.dbay = +$("dbay").value;
-  S.linked = $("linked").checked; $("dlane").disabled = S.linked; if (S.linked) $("dlane").value = S.dbay; S.dlane = +$("dlane").value;
-  document.querySelectorAll(".presets button").forEach(b => { const [pc, pb] = PRESETS[b.dataset.p]; b.setAttribute("aria-pressed", String(Math.abs(pc - S.pcar) < 0.01 && Math.abs(pb - S.pbus) < 0.01)); });
+  S.rate = +$("rate").value; S.pbus = +$("pbus").value; S.pcar = +$("pcar").value; S.npax = +$("npax").value;
+  S.direct = $("direct").checked; $("dir").disabled = !S.direct; S.dir = +$("dir").value; $("npax").disabled = S.direct;
+  document.querySelectorAll("#doors button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.d === S.doors)));
+  document.querySelectorAll(".presets button").forEach(b => { const p = PRESETS[b.dataset.p]; b.setAttribute("aria-pressed", String(Math.abs(p.pcar - S.pcar) < 0.01 && Math.abs(p.pbus - S.pbus) < 0.01 && p.npax === S.npax && p.doors === S.doors && !S.direct)); });
 }
-
 function renderControls() {
   $("rate-v").innerHTML = N(S.rate.toFixed(2)); $("rate-h").textContent = `מכוניות לשנייה, בערך ${f0(S.rate * 3600)} מכוניות בשעה`;
-  $("pbus-v").innerHTML = N(S.pbus); $("pcar-v").innerHTML = N(S.pcar.toFixed(2));
-  $("dbay-v").innerHTML = N(S.dbay) + " שנ'"; $("dlane-v").innerHTML = N(S.dlane) + " שנ'";
+  $("pbus-v").innerHTML = N(S.pbus); $("pcar-v").innerHTML = N(S.pcar.toFixed(2)); $("npax-v").innerHTML = N(S.npax);
+  const d = dwells(S, A);
+  $("dw-v").innerHTML = `${N(f1(d.base))} שנ'`;
+  $("dw-h").innerHTML = S.direct ? `זמן עצירה בסיסי בשניות: ${N(S.dir)}` : (S.npax <= 0 ? "בלי נוסעים: אין עצירה ארוכה" : `${N(A.fixed)} + ${N(S.npax)} × ${N((A.tpax * doorMult(S, A)).toFixed(2))} שנ' לנוסע`);
+  $("pcar-band").style.left = "20%"; $("pcar-band").style.right = "50%";
 }
-
 function renderResult() {
-  const r = current(), box = $("verdict-box"); box.className = r.verdict;
-  const title = { bay: "המפרץ עדיף", lane: "הנתיב עדיף", tie: "אין הכרעה בין השניים" }[r.verdict];
-  $("verdict-title").textContent = title;
+  const { d, r } = current(), box = $("verdict-box"); box.className = r.verdict;
+  $("verdict-title").textContent = { bay: "המפרץ עדיף", lane: "הנתיב עדיף", tie: "אין הכרעה בין השניים" }[r.verdict];
   const mins = Math.abs(r.mean) / 60, per = Math.abs(r.perPerson);
-  let text;
-  if (r.verdict === "tie") text = `בתנאים האלה ההבדל קטן מהרעש של הסימולציה: הממוצע הוא ${f1(r.mean / 60)} אדם-דקות להרצה, ורווח הסמך של 95% כולל אפס.`;
-  else text = `בתנאים האלה ${r.verdict === "bay" ? "המפרץ" : "הנתיב"} מביא את האנשים לקצה הדרך מהר יותר: בממוצע ${f1(mins)} אדם-דקות פחות בהרצה, כ-${f1(per)} שניות לכל אדם על הכביש.`;
+  let text = r.verdict === "tie"
+    ? `בתנאים האלה ההבדל קטן מהרעש של הסימולציה: הממוצע הוא ${f1(r.mean / 60)} אדם-דקות להרצה, ורווח הסמך של 95% כולל אפס.`
+    : `בתנאים האלה ${r.verdict === "bay" ? "המפרץ" : "הנתיב"} מביא את האנשים לקצה הדרך מהר יותר: בממוצע ${f1(mins)} אדם-דקות פחות בהרצה, כ-${f1(per)} שניות לכל אדם על הכביש.`;
+  text += ` זמן העצירה: ${f1(d.lane)} שניות בנתיב ו-${f1(d.bay)} במפרץ.`;
+  if (r.laneAlways) text += " בתנאים האלה המפרץ מאט גם את המכוניות (ולא רק את האוטובוס), ולכן הנתיב לא יפסיד בשום מספר נוסעים.";
+  else if (r.bayAlways) text += " בתנאים האלה המפרץ מקצר גם את זמן האוטובוס ואת זמן המכוניות.";
+  else if (r.breakEvenBus !== null) text += ` נקודת האיזון: המפרץ עדיף כשבאוטובוס פחות מ-${f1(r.breakEvenBus)} נוסעים, או כשבכל מכונית יותר מ-${r.breakEvenCar < 10 ? r.breakEvenCar.toFixed(2) : f0(r.breakEvenCar)} אנשים.`;
   $("verdict-text").textContent = text;
-  const be = [];
-  if (r.laneAlways) be.push("בתנאים האלה המפרץ מאט גם את המכוניות (ולא רק את האוטובוס), ולכן הנתיב לא יפסיד בשום מספר נוסעים.");
-  else if (r.bayAlways) be.push("בתנאים האלה המפרץ מקצר גם את זמן האוטובוס ואת זמן המכוניות.");
-  else if (r.breakEvenBus !== null) be.push(`נקודת האיזון: המפרץ עדיף כשבאוטובוס פחות מ-${f1(r.breakEvenBus)} נוסעים, או כשבכל מכונית יותר מ-${r.breakEvenCar < 10 ? r.breakEvenCar.toFixed(2) : f0(r.breakEvenCar)} אנשים.`);
-  $("verdict-text").textContent += " " + be.join(" ");
   $("facts").innerHTML = [
     ["ההפרש, מפרץ פחות נתיב", `${N(f1(r.mean / 60))} אדם-דקות`], ["רווח סמך 95%", `${N(f1(r.lo / 60))} עד ${N(f1(r.hi / 60))}`],
-    ["האוטובוס מפסיד במפרץ", `${N(f1(r.a))} שנ'`], ["כל המכוניות ביחד, במפרץ", `${N(f1(r.b / 60))} דקות-רכב`]].map(([k, v]) => `<div class="fact"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
-  const scale = Math.max(Math.abs(r.busPart), Math.abs(r.carPart), 1);
-  const bar = (v, color) => { const w = 50 * Math.abs(v) / scale; return `<span class="bar" style="background:${color};${v >= 0 ? `left:50%;width:${w}%` : `right:50%;width:${w}%`}"></span>`; };
-  $("parts").innerHTML = `
-    <div class="part"><span>נוסעי האוטובוס (מפרץ פחות נתיב)</span><span class="tr"><span class="zero" style="left:50%"></span>${bar(r.busPart, "var(--lane)")}</span><span class="n">${v2(r.busPart)}</span></div>
-    <div class="part"><span>האנשים במכוניות (מפרץ פחות נתיב)</span><span class="tr"><span class="zero" style="left:50%"></span>${bar(r.carPart, "var(--bay)")}</span><span class="n">${v2(r.carPart)}</span></div>`;
-  function v2(x) { return `${N(f1(x / 60))} אדם-דקות`; }
-  const inGrid = AXIS_R.some(x => Math.abs(x - S.rate) < 1e-9) && AXIS_D.includes(S.dbay) && AXIS_D.includes(S.linked ? S.dbay : S.dlane);
-  $("interp-note").textContent = inGrid ? "הנקודה הזו נמדדה ישירות בניסוי." : "הנקודה הזו נמצאת בין נקודות שנמדדו בניסוי, והערך מחושב בהשלמה לינארית ביניהן.";
+    ].map(([k, v]) => `<div class="fact"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  const q = queueAt(S.rate, d.lane), carsLose = r.b < 0, carMin = Math.abs(r.carPart) / 60;
+  $("pens").innerHTML = `
+    <div class="pen bayp"><h3>עונש המפרץ</h3><div class="who">משלמים נוסעי האוטובוס</div>
+      <div class="big">${N(f1(r.busPart / 60))} אדם-דקות</div>
+      <dl><dt>עצירה ארוכה יותר במפרץ (דיוק)</dt><dd>${N(f1(d.bay - d.lane))} שנ'</dd>
+          <dt>כניסה למפרץ (תוספת)</dt><dd>${N(f1(A.entryExtra))} שנ'</dd>
+          <dt>יציאה והשתלבות (מהסימולציה)</dt><dd>${N(f1(r.a - (d.bay - d.lane) - A.entryExtra))} שנ'</dd>
+          <dt>סך הכול לנוסע באוטובוס</dt><dd>${N(f1(r.a))} שנ'</dd></dl></div>
+    <div class="pen lanep"><h3>${carsLose ? "עונש העצירה בנתיב" : "המפרץ מאט את המכוניות"}</h3><div class="who">${carsLose ? "משלמים נהגי המכוניות שמאחורי האוטובוס" : "במקום להרוויח, המכוניות מפסידות במפרץ"}</div>
+      <div class="big">${N(f1(carMin))} אדם-דקות</div>
+      <dl><dt>זמן העצירה בנתיב</dt><dd>${N(f1(d.lane))} שנ'</dd>
+          <dt>תור מקסימלי מאחורי האוטובוס בנתיב</dt><dd>${N(f1(q))} מכוניות</dd>
+          <dt>סך זמן הנסיעה של כל המכוניות</dt><dd>${N(f1(Math.abs(r.b) / 60))} דקות-רכב ${carsLose ? "יותר בנתיב" : "יותר במפרץ"}</dd></dl></div>`;
+  const onGrid = AXIS_R.some(x => Math.abs(x - S.rate) < 1e-9) && AXIS_D.some(x => Math.abs(x - d.lane) < 1e-9) && AXIS_D.some(x => Math.abs(x - d.bay) < 1e-9);
+  $("interp-note").textContent = onGrid ? "הנקודה הזו נמדדה ישירות בניסוי." : "הנקודה הזו נמצאת בין נקודות שנמדדו בניסוי, והערך מחושב בהשלמה לינארית ביניהן.";
 }
-
+function queueAt(rate, d) {
+  const [r0, r1, wr] = bracket(AXIS_R, rate), [d0, d1, wd] = bracket(AXIS_D, d), Q = DATA.lane_queue_cars;
+  const at = (ri, di) => Q[key(AXIS_R[ri])][String(AXIS_D[di])];
+  return (1 - wr) * ((1 - wd) * at(r0, d0) + wd * at(r0, d1)) + wr * ((1 - wd) * at(r1, d0) + wd * at(r1, d1));
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p; }
 function renderPbusChart() {
   const svg = $("chart-pbus"); svg.innerHTML = "";
-  const x0 = 70, x1 = 730, yt = 20, yb = 300, XMAX = 80;
-  const pts = []; for (let pb = 0; pb <= XMAX; pb += 2) pts.push([pb, evaluate(S.pcar, pb, S.rate, S.linked ? S.dbay : S.dlane, S.dbay)]);
+  const x0 = 70, x1 = 730, yt = 20, yb = 300, XMAX = 80, d = dwells(S, A);
+  const pts = []; for (let pb = 0; pb <= XMAX; pb += 2) pts.push([pb, evaluate(S.pcar, pb, S.rate, d.lane, d.bay, A.entryExtra)]);
   const vals = pts.flatMap(([, r]) => [r.lo / 60, r.hi / 60, r.mean / 60]); let ymin = Math.min(...vals, -1), ymax = Math.max(...vals, 1);
   const pad = (ymax - ymin) * 0.08; ymin -= pad; ymax += pad;
   const sx = v => x0 + (x1 - x0) * v / XMAX, sy = v => yb - (yb - yt) * (v - ymin) / (ymax - ymin);
@@ -330,7 +391,7 @@ function renderPbusChart() {
   const band = pts.map(([pb, r]) => `${sx(pb)},${sy(r.hi / 60)}`).concat(pts.slice().reverse().map(([pb, r]) => `${sx(pb)},${sy(r.lo / 60)}`)).join(" ");
   svg.appendChild(el("polygon", { points: band, fill: css("--accent"), opacity: 0.22 }));
   svg.appendChild(el("polyline", { points: pts.map(([pb, r]) => `${sx(pb)},${sy(r.mean / 60)}`).join(" "), fill: "none", stroke: css("--accent"), "stroke-width": 2.8 }));
-  [[10.7, "10.7"], [20, "20"], [50, "50"]].forEach(([v, t]) => {
+  [[10.7, "10.7"], [20, "20"]].forEach(([v, t]) => {
     svg.appendChild(el("line", { x1: sx(v), x2: sx(v), y1: yt, y2: yb, stroke: css("--muted"), "stroke-width": 1, "stroke-dasharray": "4 4" }));
     svg.appendChild(el("text", { x: sx(v), y: yt + 12, "text-anchor": "middle", "font-size": 11, class: "muted" }, t)); });
   [0, 20, 40, 60, 80].forEach(v => svg.appendChild(el("text", { x: sx(v), y: yb + 20, "text-anchor": "middle", "font-size": 12, class: "muted" }, String(v))));
@@ -338,24 +399,25 @@ function renderPbusChart() {
   svg.appendChild(el("text", { x: 16, y: (yt + yb) / 2, "text-anchor": "middle", "font-size": 13, class: "muted", transform: `rotate(-90 16 ${(yt + yb) / 2})` }, "אדם-דקות להרצה"));
   svg.appendChild(el("text", { x: x1 - 6, y: yt + 30, "text-anchor": "end", "font-size": 13, style: "fill:" + css("--lane") }, "הנתיב עדיף"));
   svg.appendChild(el("text", { x: x1 - 6, y: yb - 10, "text-anchor": "end", "font-size": 13, style: "fill:" + css("--bay") }, "המפרץ עדיף"));
-  const cur = current(); svg.appendChild(el("circle", { cx: sx(Math.min(S.pbus, XMAX)), cy: sy(cur.mean / 60), r: 7, fill: css("--surface"), stroke: css("--ink"), "stroke-width": 3 }));
+  const cur = current().r; svg.appendChild(el("circle", { cx: sx(Math.min(S.pbus, XMAX)), cy: sy(cur.mean / 60), r: 7, fill: css("--surface"), stroke: css("--ink"), "stroke-width": 3 }));
 }
-function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p; }
-
 function renderMap() {
-  const map = $("map"), cols = [], rows = []; for (let i = 0; i < 9; i++) cols.push(+(0.1 + 0.05 * i).toFixed(2)); for (let d = 45; d >= 10; d -= 5) rows.push(d);
-  const offset = S.linked ? 0 : S.dlane - S.dbay; let html = '<span></span>' + cols.map(c => `<span class="h">${c.toFixed(2)}</span>`).join("");
-  const nearR = cols.reduce((a, c) => Math.abs(c - S.rate) < Math.abs(a - S.rate) ? c : a), nearD = rows.reduce((a, d) => Math.abs(d - S.dbay) < Math.abs(a - S.dbay) ? d : a);
-  rows.forEach(d => { html += `<span class="h">${d}</span>`; cols.forEach(c => { const r = evaluate(S.pcar, S.pbus, c, Math.min(45, Math.max(10, d + offset)), d);
-    html += `<span class="c ${r.verdict}${c === nearR && d === nearD ? " now" : ""}" title="${r.verdict}">${f1(r.mean / 60)}</span>`; }); });
+  const map = $("map"), cols = [], rows = AXIS_D.slice().reverse();
+  for (let i = 0; i < 9; i++) cols.push(+(0.1 + 0.05 * i).toFixed(2));
+  let html = '<span></span>' + cols.map(c => `<span class="h">${c.toFixed(2)}</span>`).join("");
+  const cur = dwells(S, A), nearR = cols.reduce((a, c) => Math.abs(c - S.rate) < Math.abs(a - S.rate) ? c : a), nearD = rows.reduce((a, d) => Math.abs(d - cur.base) < Math.abs(a - cur.base) ? d : a);
+  const extraLane = cur.lane - cur.base, extraBay = cur.bay - cur.base, cl = x => Math.min(45, Math.max(0, x));
+  rows.forEach(dd => { html += `<span class="h">${dd}</span>`; cols.forEach(c => { const r = evaluate(S.pcar, S.pbus, c, cl(dd + extraLane), cl(dd + extraBay), A.entryExtra);
+    html += `<span class="c ${r.verdict}${c === nearR && dd === nearD ? " now" : ""}" title="${r.verdict}">${f1(r.mean / 60)}</span>`; }); });
   map.innerHTML = html;
 }
-
 function renderAll() { readControls(); renderControls(); renderResult(); renderPbusChart(); renderMap(); }
-["rate", "pbus", "pcar", "dbay", "dlane", "linked"].forEach(id => $(id).addEventListener("input", renderAll));
-document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => { const [pc, pb] = PRESETS[b.dataset.p]; $("pcar").value = pc; $("pbus").value = pb; renderAll(); }));
-$("prov").textContent = `הנתונים: ${DATA.provenance.experiment}, ${DATA.provenance.runs_stored.toLocaleString("en-US")} הרצות, קומיט ${DATA.provenance.commit}, מוח ${DATA.provenance.brain_version}, ${DATA.provenance.date.slice(0, 10)}.`;
-renderAll();
+["rate", "pbus", "pcar", "npax", "dir", "direct"].forEach(id => $(id).addEventListener("input", renderAll));
+document.querySelectorAll("#doors button").forEach(b => b.addEventListener("click", () => { S.doors = +b.dataset.d; renderAll(); }));
+document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => { const p = PRESETS[b.dataset.p]; $("pcar").value = p.pcar; $("pbus").value = p.pbus; $("npax").value = p.npax; S.doors = p.doors; $("direct").checked = false; renderAll(); }));
+$("reset-adv").addEventListener("click", () => { Object.assign(A, DEFAULT_ADV); ADV_FIELDS.forEach(([k]) => { $("adv-" + k).value = A[k]; }); renderAll(); });
+$("prov").textContent = `הנתונים: ${DATA.provenance.map(p => `${p.experiment} (${p.runs_stored.toLocaleString("en-US")} הרצות, קומיט ${p.commit}, מוח ${p.brain_version}, ${p.date.slice(0, 10)})`).join("; ")}.`;
+buildAdv(); renderAll();
 if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
 new MutationObserver(renderAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 </script>

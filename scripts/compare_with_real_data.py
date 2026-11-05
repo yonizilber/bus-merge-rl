@@ -24,13 +24,14 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import analyze_stop_experiment as an  # noqa: E402
 
-DATA = REPO / "outputs" / "experiments" / "stop_design_v1"
+DATA_DIRS = [REPO / "outputs" / "experiments" / n for n in ("stop_design_v1", "stop_design_v2")]
 OUT = REPO / "results" / "experiments" / "stop_design_v1" / "real_data_comparison.json"
 RATES = (0.1, 0.2, 0.3, 0.4, 0.5)
-DWELLS = (10, 15, 20, 30, 45)
-# (cars, bus): the experiment's default, then field values: FHWA/NHTS 2017 all trips 1.7 per car and to/from work 1.18,
-# FHWA/NTD 2016 national mean 10.7 passengers per bus, and a fuller bus of 20.
-OCCUPANCIES = ((1.2, 50.0), (1.7, 50.0), (1.2, 10.7), (1.7, 10.7), (1.2, 20.0), (1.7, 20.0))
+DWELLS: tuple = ()          # the dwell times of the stored runs, set in main()
+# (cars, bus): the Israeli range for cars (1.2 in the news, 1.44-1.52 in the surveys; the page's default is the middle,
+# 1.35) with a rough 20 passengers on a city bus, then the US averages (FHWA/NHTS 2017: 1.7 per car; FHWA/NTD 2016: 10.7
+# per bus) and the first experiment's own default (1.2 and 50).
+OCCUPANCIES = ((1.2, 20.0), (1.35, 20.0), (1.5, 20.0), (1.7, 10.7), (1.2, 50.0))
 
 
 def merge_time(runs: pd.DataFrame) -> dict:
@@ -47,6 +48,12 @@ def merge_time(runs: pd.DataFrame) -> dict:
             "by_rate": {str(r): stats(b[b.traffic_rate == r]["merge_time_s"].dropna()) for r in RATES},
             "outcomes": {k: int(v) for k, v in b["outcome"].value_counts().items()},
             "no_timeline": int(b["merge_time_s"].isna().sum())}
+
+
+def bay_cost(runs: pd.DataFrame) -> dict:
+    """What the bay costs the bus (bay minus lane trip time, s), over the cells with the same dwell time in both designs."""
+    d = an.cell_table(runs, 1.35, 20.0)["delta_bus_time_s"]
+    return {"min": round(float(d.min()), 1), "max": round(float(d.max()), 1), "mean": round(float(d.mean()), 1), "cells": int(len(d))}
 
 
 def lane_queue(runs: pd.DataFrame) -> dict:
@@ -95,9 +102,13 @@ def delay_per_car(runs: pd.DataFrame) -> dict:
 
 
 def main() -> None:
-    runs, trips = an.load(DATA)
-    result = {"source": "outputs/experiments/stop_design_v1 (15,000 runs; commit in provenance.json)",
-              "merge_time": merge_time(runs), "lane_queue": lane_queue(runs), "entry_flow": entry_flow(trips),
+    loaded = [an.load(d) for d in DATA_DIRS]
+    runs = pd.concat([r for r, _ in loaded], ignore_index=True)
+    trips = pd.concat([t for _, t in loaded], ignore_index=True)
+    global DWELLS
+    DWELLS = tuple(sorted(int(d) for d in runs["dwell_s"].unique()))
+    result = {"source": f"outputs/experiments/stop_design_v1 and stop_design_v2 ({len(runs):,} runs; commits in their provenance.json)", "dwells_s": list(DWELLS),
+              "bay_cost_s": bay_cost(runs), "merge_time": merge_time(runs), "lane_queue": lane_queue(runs), "entry_flow": entry_flow(trips),
               "verdict_by_occupancy": verdict_by_occupancy(runs), "lane_minus_bay_s_per_car": delay_per_car(runs)}
     OUT.write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     m = result["merge_time"]["all_bay_runs"]
