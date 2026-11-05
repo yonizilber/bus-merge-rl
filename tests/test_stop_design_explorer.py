@@ -190,13 +190,41 @@ def test_the_browser_calculation_matches_an_independent_one(browser_page, pc, pb
 @pytest.mark.parametrize("npax,doors", [(0, 2), (6, 2), (6, 1), (10, 3)])
 def test_the_browser_dwell_model_matches_the_one_here(browser_page, npax, doors):
     page, _ = browser_page
-    got = page.evaluate("([n, d]) => { const A = Explorer.DEFAULT_ADV; const S = {npax: n, doors: d, direct: false, dir: 0};"
+    got = page.evaluate("([n, d]) => { const A = Explorer.DEFAULT_ADV; const S = {mode: 'pax', npax: n, doors: d};"
                         " return Explorer.dwells(S, A); }", [npax, doors])
     g = DATA["geometry"]
     base = base_dwell(npax, doors)
     assert got["base"] == pytest.approx(base)
     assert got["lane"] == pytest.approx(min(45, base + geometry_penalty(npax, doors, g["dev_lane_m"], g["gap_lane_m"])))
     assert got["bay"] == pytest.approx(min(45, base + geometry_penalty(npax, doors, g["dev_bay_m"] + 1.0, g["gap_bay_m"] + 0.4)))
+
+
+@pytest.mark.parametrize("link", ["free", "same", "pen"])
+def test_a_directly_chosen_dwell_time_follows_the_link_between_the_designs(browser_page, link):
+    """Lane time as typed; bay time independent (free), equal (same), or the lane's plus the bay's extra accuracy penalty (pen)."""
+    page, _ = browser_page
+    got = page.evaluate("([link]) => Explorer.dwells({mode: 'direct', link, dLane: 8, dBay: 14, npax: 6, doors: 2}, Explorer.DEFAULT_ADV)", [link])
+    g = DATA["geometry"]
+    extra = (geometry_penalty(6, 2, g["dev_bay_m"] + 1.0, g["gap_bay_m"] + 0.4) - geometry_penalty(6, 2, g["dev_lane_m"], g["gap_lane_m"]))
+    assert got["lane"] == pytest.approx(8)
+    assert got["bay"] == pytest.approx({"free": 14, "same": 8, "pen": 8 + extra}[link])
+    assert extra > 0                                    # with the default assumptions the bay stop is the less precise one
+
+
+def test_the_dwell_controls_switch_between_passengers_and_seconds(browser_page):
+    page, errors = browser_page
+    page.click("#dmode button[data-m=direct]")
+    assert page.is_visible("#dsecs") and page.is_disabled("#dbay")                 # default link: same + the bay's penalty
+    page.click("#dlink button[data-l=free]")
+    assert not page.is_disabled("#dbay")
+    page.evaluate("() => { const a = document.getElementById('dlane'); a.value = 5; a.dispatchEvent(new Event('input'));"
+                  " const b = document.getElementById('dbay'); b.value = 20; b.dispatchEvent(new Event('input')); }")
+    assert "5.0" in page.inner_text("#dw-v") and "20.0" in page.inner_text("#dw-v")
+    page.click("#dlink button[data-l=same]")
+    assert page.is_disabled("#dbay") and page.input_value("#dbay") == "5"
+    page.click("#dmode button[data-m=pax]")
+    assert not page.is_visible("#dsecs")
+    assert errors == []
 
 
 def test_the_page_renders_and_reacts_to_the_controls(browser_page):

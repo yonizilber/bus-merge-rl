@@ -45,6 +45,9 @@ a { color: var(--accent); text-underline-offset: 3px; }
 .scroll { overflow-x: auto; }
 .banner { border-inline-start: 4px solid var(--warn); padding: 6px 14px; max-width: 68ch; background: var(--surface); border-radius: 0 6px 6px 0; }
 .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px 28px; }
+.ctl.wide { grid-column: 1 / -1; }
+.twosl { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 28px; }
+.twosl > div { display: flex; flex-direction: column; gap: 3px; }
 .ctl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .ctl > label, .ctl .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 500; font-size: 15px; }
 .ctl .val { font-family: var(--font-display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -149,13 +152,21 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
         <div class="ctl"><label for="pbus"><span>נוסעים באוטובוס</span><span class="val" id="pbus-v"></span></label>
           <input type="range" id="pbus" min="2" max="80" step="1" value="20"><span class="hint">נוסעים על האוטובוס בזמן הנסיעה, כולל אלה שעולים בתחנה</span></div>
         <div class="ctl"><label for="npax"><span>נוסעים שעולים או יורדים בתחנה</span><span class="val" id="npax-v"></span></label>
-          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">0 אומר שאין נוסעים: האוטובוס רק נעצר ויוצא</span></div>
+          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">0 אומר שאין נוסעים: האוטובוס רק נעצר ויוצא. בהגדרה ישירה משפיע רק על עונש הדיוק</span></div>
         <div class="ctl"><span class="lab"><span>דלתות שמשמשות לעלייה וירידה</span></span>
           <span class="seg" id="doors" role="group" aria-label="מספר דלתות"><button type="button" data-d="1" aria-pressed="false">1</button><button type="button" data-d="2" aria-pressed="true">2</button><button type="button" data-d="3" aria-pressed="false">3</button></span>
           <span class="hint">בישראל אפשר לעלות מכל הדלתות מאז 2015; שלוש בעיקר באוטובוס מפרקי</span></div>
-        <div class="ctl"><span class="lab"><span>זמן העצירה הבסיסי</span><span class="val" id="dw-v"></span></span>
-          <span class="check"><input type="checkbox" id="direct"><label for="direct">הגדרה ישירה בשניות במקום לפי נוסעים</label></span>
-          <input type="range" id="dir" min="0" max="45" step="1" value="10" disabled><span class="hint" id="dw-h"></span></div>
+        <div class="ctl wide"><span class="lab"><span>זמן העצירה</span><span class="val" id="dw-v"></span></span>
+          <span class="seg" style="direction:rtl" id="dmode" role="group" aria-label="איך נקבע זמן העצירה"><button type="button" data-m="pax" aria-pressed="true">לפי נוסעים ודלתות</button><button type="button" data-m="direct" aria-pressed="false">בשניות, ישירות</button></span>
+          <div id="dsecs" hidden style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+            <span class="lab"><span>הקשר בין זמן העצירה בנתיב ובמפרץ</span></span>
+            <span class="seg" style="direction:rtl" id="dlink" role="group" aria-label="קישור בין זמני העצירה"><button type="button" data-l="free" aria-pressed="false">נפרדים</button><button type="button" data-l="same" aria-pressed="false">זהים</button><button type="button" data-l="pen" aria-pressed="true">זהים בתוספת עונש למפרץ</button></span>
+            <div class="twosl">
+              <div><label class="lab" for="dlane"><span>זמן עצירה בנתיב</span><span class="val" id="dlane-v"></span></label><input type="range" id="dlane" min="0" max="45" step="1" value="10"></div>
+              <div><label class="lab" for="dbay"><span>זמן עצירה במפרץ</span><span class="val" id="dbay-v"></span></label><input type="range" id="dbay" min="0" max="45" step="1" value="10" disabled></div>
+            </div>
+          </div>
+          <span class="hint" id="dw-h"></span></div>
       </div>
     </div>
     <details class="adv" id="adv">
@@ -294,10 +305,15 @@ function evaluate(pc, pb, rate, dl, db, entryExtra = 0) {
 const DEFAULT_ADV = { fixed: 4, tpax: 3.0, m2: 0.7, m3: 0.6, longPen: 0.4, latPen: 0.05,
   devLane: DATA.geometry.dev_lane_m, devBay: +(DATA.geometry.dev_bay_m + 1.0).toFixed(2), gapLane: DATA.geometry.gap_lane_m, gapBay: +(DATA.geometry.gap_bay_m + 0.4).toFixed(2), entryExtra: 1.0 };
 const doorMult = (S, A) => S.doors === 1 ? 1 : S.doors === 2 ? A.m2 : A.m3;
-function baseDwell(S, A) { return S.direct ? S.dir : (S.npax <= 0 ? 0 : A.fixed + S.npax * A.tpax * doorMult(S, A)); }
+function baseDwell(S, A) { return S.mode === "direct" ? S.dLane : (S.npax <= 0 ? 0 : A.fixed + S.npax * A.tpax * doorMult(S, A)); }
 function geometryPenalty(S, A, dev, gap) { const m = doorMult(S, A); return A.longPen * dev * m + A.latPen * S.npax * m * (gap / 0.1); }
 function dwells(S, A) {
   const base = baseDwell(S, A), cl = x => Math.min(AXIS_D[AXIS_D.length - 1], Math.max(0, x));
+  if (S.mode === "direct") {                       // the lane time is taken as typed; the bay time follows the chosen link
+    const extra = geometryPenalty(S, A, A.devBay, A.gapBay) - geometryPenalty(S, A, A.devLane, A.gapLane);
+    const bay = S.link === "free" ? S.dBay : S.link === "same" ? S.dLane : S.dLane + extra;
+    return { base, lane: cl(S.dLane), bay: cl(bay), extra };
+  }
   return { base, lane: cl(base + geometryPenalty(S, A, A.devLane, A.gapLane)), bay: cl(base + geometryPenalty(S, A, A.devBay, A.gapBay)) };
 }
 window.Explorer = { evaluate, stats, dwells, baseDwell, geometryPenalty, DEFAULT_ADV, DATA };
@@ -311,7 +327,7 @@ const NS = "http://www.w3.org/2000/svg";
 const el = (name, attrs = {}, text) => { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const PRESETS = { il: { pcar: 1.35, pbus: 20, npax: 6, doors: 2 }, ilpeak: { pcar: 1.2, pbus: 20, npax: 10, doors: 2 }, us: { pcar: 1.7, pbus: 10.7, npax: 6, doors: 1 } };
-const S = { rate: 0.3, pbus: 20, pcar: 1.35, npax: 6, doors: 2, direct: false, dir: 10 };
+const S = { rate: 0.3, pbus: 20, pcar: 1.35, npax: 6, doors: 2, mode: "pax", link: "pen", dLane: 10, dBay: 10 };
 const A = Object.assign({}, DEFAULT_ADV);
 const ADV_FIELDS = [
   ["fixed", "זמן קבוע לעצירה עם נוסעים (שנ')", "0.5", "guess", "פתיחה וסגירה של דלתות. 0 כשאין נוסעים."],
@@ -335,16 +351,24 @@ function current() { const d = dwells(S, A); return { d, r: evaluate(S.pcar, S.p
 
 function readControls() {
   S.rate = +$("rate").value; S.pbus = +$("pbus").value; S.pcar = +$("pcar").value; S.npax = +$("npax").value;
-  S.direct = $("direct").checked; $("dir").disabled = !S.direct; S.dir = +$("dir").value; $("npax").disabled = S.direct;
+  S.dLane = +$("dlane").value; S.dBay = +$("dbay").value;
+  const direct = S.mode === "direct"; $("dsecs").hidden = !direct; $("dsecs").style.display = direct ? "flex" : "none";
+  if (direct && S.link !== "free") { const d = dwells(S, A); $("dbay").value = Math.round(d.bay); }
+  $("dbay").disabled = !(direct && S.link === "free");
+  document.querySelectorAll("#dmode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === S.mode)));
+  document.querySelectorAll("#dlink button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.l === S.link)));
   document.querySelectorAll("#doors button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.d === S.doors)));
-  document.querySelectorAll(".presets button").forEach(b => { const p = PRESETS[b.dataset.p]; b.setAttribute("aria-pressed", String(Math.abs(p.pcar - S.pcar) < 0.01 && Math.abs(p.pbus - S.pbus) < 0.01 && p.npax === S.npax && p.doors === S.doors && !S.direct)); });
+  document.querySelectorAll(".presets button").forEach(b => { const p = PRESETS[b.dataset.p]; b.setAttribute("aria-pressed", String(Math.abs(p.pcar - S.pcar) < 0.01 && Math.abs(p.pbus - S.pbus) < 0.01 && p.npax === S.npax && p.doors === S.doors && S.mode === "pax")); });
 }
 function renderControls() {
   $("rate-v").innerHTML = N(S.rate.toFixed(2)); $("rate-h").textContent = `מכוניות לשנייה, בערך ${f0(S.rate * 3600)} מכוניות בשעה`;
   $("pbus-v").innerHTML = N(S.pbus); $("pcar-v").innerHTML = N(S.pcar.toFixed(2)); $("npax-v").innerHTML = N(S.npax);
   const d = dwells(S, A);
-  $("dw-v").innerHTML = `${N(f1(d.base))} שנ'`;
-  $("dw-h").innerHTML = S.direct ? `זמן עצירה בסיסי בשניות: ${N(S.dir)}` : (S.npax <= 0 ? "בלי נוסעים: אין עצירה ארוכה" : `${N(A.fixed)} + ${N(S.npax)} × ${N((A.tpax * doorMult(S, A)).toFixed(2))} שנ' לנוסע`);
+  $("dw-v").innerHTML = `נתיב ${N(f1(d.lane))} · מפרץ ${N(f1(d.bay))} שנ'`;
+  $("dlane-v").innerHTML = `${N(S.dLane)} שנ'`; $("dbay-v").innerHTML = `${N(f1(d.bay))} שנ'`;
+  $("dw-h").innerHTML = S.mode === "direct"
+    ? (S.link === "pen" ? `במפרץ: ${N(S.dLane)} + עונש דיוק ${N(f1(d.extra))} שנ' (סטייה ומרווח, לפי ${N(S.npax)} נוסעים שמשפיעים על העונש)` : S.link === "same" ? "אותו זמן בשני התכנונים, בלי עונשי דיוק." : "שני זמנים בלתי תלויים, בלי עונשי דיוק.")
+    : (S.npax <= 0 ? "בלי נוסעים: אין עצירה ארוכה" : `${N(A.fixed)} + ${N(S.npax)} × ${N((A.tpax * doorMult(S, A)).toFixed(2))} שנ' לנוסע, ועונשי דיוק לכל תכנון`);
   $("pcar-band").style.left = "20%"; $("pcar-band").style.right = "50%";
 }
 function renderResult() {
@@ -423,9 +447,11 @@ function renderMap() {
   map.innerHTML = html;
 }
 function renderAll() { readControls(); renderControls(); renderResult(); renderPbusChart(); renderMap(); }
-["rate", "pbus", "pcar", "npax", "dir", "direct"].forEach(id => $(id).addEventListener("input", renderAll));
+["rate", "pbus", "pcar", "npax", "dlane", "dbay"].forEach(id => $(id).addEventListener("input", renderAll));
+document.querySelectorAll("#dmode button").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.m; renderAll(); }));
+document.querySelectorAll("#dlink button").forEach(b => b.addEventListener("click", () => { S.link = b.dataset.l; renderAll(); }));
 document.querySelectorAll("#doors button").forEach(b => b.addEventListener("click", () => { S.doors = +b.dataset.d; renderAll(); }));
-document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => { const p = PRESETS[b.dataset.p]; $("pcar").value = p.pcar; $("pbus").value = p.pbus; $("npax").value = p.npax; S.doors = p.doors; $("direct").checked = false; renderAll(); }));
+document.querySelectorAll(".presets button").forEach(b => b.addEventListener("click", () => { const p = PRESETS[b.dataset.p]; $("pcar").value = p.pcar; $("pbus").value = p.pbus; $("npax").value = p.npax; S.doors = p.doors; S.mode = "pax"; renderAll(); }));
 $("reset-adv").addEventListener("click", () => { Object.assign(A, DEFAULT_ADV); ADV_FIELDS.forEach(([k]) => { $("adv-" + k).value = A[k]; }); renderAll(); });
 $("prov").textContent = `הנתונים: ${DATA.provenance.map(p => `${p.experiment} (${p.runs_stored.toLocaleString("en-US")} הרצות, קומיט ${p.commit}, מוח ${p.brain_version}, ${p.date.slice(0, 10)})`).join("; ")}.`;
 buildAdv(); renderAll();
