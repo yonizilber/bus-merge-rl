@@ -1,0 +1,186 @@
+<title>Bay or lane</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=IBM+Plex+Sans:wght@500;600;700&display=swap">
+<style>/*STYLE*/
+:root { --font-display: "IBM Plex Sans", "Heebo", system-ui, Arial, sans-serif; }</style>
+
+<main>
+  <header style="display:flex;flex-direction:column;gap:14px">
+    <div class="kicker">EXPLORER · THE STOP-DESIGN EXPERIMENT</div>
+    <h1>Bay or lane</h1>
+    <p class="lead">Pick the conditions: how many people ride on the bus and in each car, how many passengers get on or off at the stop, how many doors are used, and how dense the traffic is. The tool tells you which design moves more people to the end of the road faster, from <span class="num">[[runs]]</span> simulated runs of a bus stopping in a bay or in the lane.</p>
+    <div class="banner"><b>Good to know:</b> the experiment ran on a road with <b>one lane and no overtaking</b>. On a street with another lane, cars pass a bus standing in the lane, so the in-lane stop costs less. The end of the page lists what else does not represent reality. Assumptions that do not come from the simulation are marked <span class="tag guess">estimate</span> or <span class="tag src">from a source</span>; those measured in the simulation, <span class="tag sim">simulation</span>.</div>
+  </header>
+
+  <section id="controls-sec">
+    <h2>The conditions</h2>
+    <div class="presets" role="group" aria-label="Presets">
+      <span style="font-size:14px;color:var(--muted)">Presets:</span>
+      <button type="button" data-p="il" aria-pressed="false">Israel, average (estimate)</button>
+      <button type="button" data-p="ilpeak" aria-pressed="false">Israel, peak hours (estimate)</button>
+      <button type="button" data-p="us" aria-pressed="false">USA, one door</button>
+    </div>
+    <div class="panel">
+      <div class="controls">
+        <div class="ctl"><label for="rate"><span>Traffic</span><span class="val" id="rate-v"></span></label>
+          <input type="range" id="rate" min="0.1" max="0.5" step="0.01" value="0.3"><span class="hint" id="rate-h"></span></div>
+        <div class="ctl"><span class="lab"><label for="pcar">People in each car</label><span class="val" id="pcar-v"></span></span>
+          <div class="track"><span class="band" id="pcar-band"></span><input type="range" id="pcar" min="1" max="2" step="0.05" value="1.35"></div>
+          <span class="hint">Including the driver. The green band is the Israeli range, <span class="num">1.2–1.5</span> (the starting value is its middle)</span></div>
+        <div class="ctl"><label for="pbus"><span>Passengers on the bus</span><span class="val" id="pbus-v"></span></label>
+          <input type="range" id="pbus" min="2" max="80" step="1" value="20"><span class="hint">Passengers on board while the bus drives, including those boarding at the stop. There is no single right value: choose it for the line and the hour you have in mind</span></div>
+        <div class="ctl"><label for="npax"><span>Passengers getting on or off at the stop</span><span class="val" id="npax-v"></span></label>
+          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">Only affects the bay's accuracy penalty: every passenger has to cross the gap to the kerb. The stop time itself is set below</span></div>
+        <div class="ctl"><span class="lab"><span>Doors used for boarding and alighting</span></span>
+          <span class="seg" id="doors" role="group" aria-label="Number of doors"><button type="button" data-d="1" aria-pressed="false">1</button><button type="button" data-d="2" aria-pressed="true">2</button><button type="button" data-d="3" aria-pressed="false">3</button></span>
+          <span class="hint">Affects the accuracy penalty: with more doors a small misalignment matters less. In Israel passengers may board at every door since 2015</span></div>
+        <div class="ctl wide"><span class="lab"><span>Stop time (seconds, chosen directly)</span><span class="val" id="dw-v"></span></span>
+          <div id="dsecs" style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+            <span class="lab"><span>How the lane and bay stop times are linked</span></span>
+            <span class="seg" id="dlink" role="group" aria-label="Link between the stop times"><button type="button" data-l="free" aria-pressed="false">Separate</button><button type="button" data-l="same" aria-pressed="false">Equal</button><button type="button" data-l="pen" aria-pressed="true">Equal plus the bay's penalty</button></span>
+            <div class="twosl">
+              <div><label class="lab" for="dlane"><span>Stop time in the lane</span><span class="val" id="dlane-v"></span></label><input type="range" id="dlane" min="0" max="45" step="1" value="6"></div>
+              <div><label class="lab" for="dbay"><span>Stop time in the bay</span><span class="val" id="dbay-v"></span></label><input type="range" id="dbay" min="0" max="45" step="1" value="6" disabled></div>
+            </div>
+          </div>
+          <span class="hint" id="dw-h"></span></div>
+      </div>
+    </div>
+    <details class="adv" id="adv">
+      <summary>Advanced assumptions: stop time, the bay's penalty and stopping accuracy</summary>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:12px">Every value can be changed. <button type="button" class="btn" id="reset-adv">Reset to the starting values</button></p>
+      <div class="advgrid" id="advgrid"></div>
+    </details>
+  </section>
+
+  <section id="result-sec" aria-live="polite">
+    <h2>Which is better</h2>
+    <div id="verdict-box" class="tie">
+      <div id="verdict-title"></div>
+      <div class="explain" id="verdict-text"></div>
+      <div class="facts" id="facts"></div>
+      <div class="pens" id="pens"></div>
+    </div>
+    <p id="interp-note" style="font-size:14px;color:var(--muted)"></p>
+  </section>
+
+  <section>
+    <h2>What happens as the bus empties</h2>
+    <figure>
+      <svg id="chart-pbus" viewBox="0 0 760 360" role="img" aria-label="The person-time difference as a function of the number of bus passengers"></svg>
+      <figcaption><b>The difference between bay and lane, in person-minutes per run, by the number of passengers on the bus.</b> The other conditions are as you set them above. The line is the mean over pairs of runs with the same cars; the band around it is the 95% confidence interval. Below zero (blue background) the bay moves people faster; above zero (orange) the lane does. The dot is your choice. Dashed lines: 10.7 passengers (the US average) and 20 (a rough figure for an Israeli city bus).</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>How it changes with traffic and stop time</h2>
+    <figure>
+      <div class="map" id="map"></div>
+      <div class="legend"><span><i style="background:var(--bay)"></i>The bay is better</span><span><i style="background:var(--lane)"></i>The lane is better</span><span><i style="background:var(--tie)"></i>Undecided (the interval includes zero)</span></div>
+      <figcaption><b>Which design is better at each combination of traffic and base stop time, with the rest of your conditions.</b> Columns: cars per second arriving at the road. Rows: the base stop time in seconds, before the accuracy extras (45 at the top, 0 at the bottom). In each cell: the difference in person-minutes per run, bay minus lane, so negative means the bay is better. The framed cell is your choice. Values between the experiment's points are interpolated linearly.</figcaption>
+    </figure>
+  </section>
+
+  <p class="embed-only" style="font-size:14px;color:var(--muted)">The tool's own summary, its assumptions with their sources, and the data from Israel are in the full window (the link below the tool).</p>
+  <section class="full-only">
+    <h2>Our summary</h2>
+    <ul class="plain">
+      [[summary]]
+    </ul>
+    <div class="panel">
+      <h3 style="margin-bottom:6px">Which way the tool may mislead</h3>
+      <p>Three of these limitations favour the bay and two favour the lane. We have not quantified them.</p>
+      <ul class="plain" style="margin-top:8px">
+        <li><b>One lane, no overtaking</b> (favours the bay): behind a bus in the lane the queue reaches <span class="num">22</span> cars in the long stops of the simulation, while in the field (San Francisco) <span class="num">1</span> to <span class="num">3</span> were observed on average, because drivers overtake.</li>
+        <li><b>No long waits for a gap</b> (favours the bay): in the simulation a merge takes at most <span class="num">[[mt_max]]</span> s, and only <span class="num">[[mt_n30]]</span> of <span class="num">[[mt_n]]</span> bay runs passed <span class="num">30</span>. In the field, waits of <span class="num">30</span> to <span class="num">50</span> s were measured.</li>
+        <li><b>The bay's cost to the bus</b> (probably favours the lane): <span class="num">[[bus_cost_range]]</span> s in the simulation, about <span class="num">2</span> to <span class="num">6</span> measured in the field. See the comparison with field data.</li>
+        <li><b>A slow entry</b> (probably favours the bay): the simulation lets about a third fewer cars per hour onto the road than the standard saturation flow.</li>
+        <li><b>The same stop time in every run</b> (favours the lane): in the field it varies a lot, and that variation lengthens queues.</li>
+      </ul>
+      <p style="margin-top:8px">When the tool says "the lane is better", trust it more than when it says "the bay is better". The full comparison with field data is on the results page of the documentation.</p>
+    </div>
+  </section>
+
+  <section class="full-only">
+    <h2>The stop time and the bay's penalty</h2>
+    <p><b>The stop time is chosen directly, not from the number of passengers.</b> We did not derive it from passenger counts, because the measurements we found come from other systems (for example about <span class="num">3.9</span> s per passenger in San Francisco before all-door boarding) and do not represent an Israeli city bus, with app validation and boarding at every door, which stops much more briefly. We found no Israeli measurement, so there is no "right" value here. Choose the time that fits the stop you have in mind, from 0 s: separately for the lane and the bay, equal in both, or equal plus a penalty for the bay.</p>
+    <p>Each design has accuracy penalties that make up the bay's penalty when you choose "equal plus the bay's penalty": the distance along the street from the stopping point, and the gap between the side of the bus and the kerb. An extra for entering the bay is added to them.</p>
+    <div class="scroll panel" style="padding:4px 6px">
+      <table>
+        <thead><tr><th>Assumption</th><th>Starting value</th><th>Source</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Gap to the kerb, per passenger and per <span class="num">10</span> cm</td><td><span class="num">0.05</span> s</td><td>In Singapore a passenger at a bay stop takes <span class="num">0.19</span> s longer than at a kerbside stop (<span class="num">1.52</span> against <span class="num">1.33</span>), mostly because of the gap and the extra step. We assume a gap difference of about <span class="num">40</span> cm (<a href="https://doi.org/10.5038/2375-0901.20.1.6" target="_blank" rel="noopener">Liu et al., 2017</a>)</td><td><span class="src read">read</span> <span class="tag guess">estimate</span> for the difference</td></tr>
+          <tr><td>Distance along the street, per metre</td><td><span class="num">0.4</span> s (one door)</td><td>Passengers walking along the bus to the door, at about <span class="num">1.3</span> m/s, when only some of them are affected</td><td><span class="tag guess">estimate</span> with no source</td></tr>
+          <tr><td>Door factor for the accuracy penalties (two / three)</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>All-door boarding cut the time per passenger by <span class="num">17%</span> to <span class="num">38%</span> (San Francisco, Vancouver, Los Angeles). In Israel boarding at every door has been allowed since 2015 (<a href="https://library.mevaker.gov.il/sites/DigitalLibrary/Documents/2017-68a-208-RavKav.pdf" target="_blank" rel="noopener">State Comptroller, 2017</a>)</td><td><span class="tag guess">estimate</span> as a factor</td></tr>
+          <tr><td>Time to enter the bay itself, beyond the lane</td><td><span class="num">1.0</span> s (simulation: <span class="num">[[entry_sim]]</span>)</td><td>In the simulation the bus enters the bay and stands still in the same time as in the lane (bay minus lane, from the start of braking until it stands, <span class="num">[[geom_seeds]]</span> pairs of runs with the same entry speed and stopping point). In the field, deceleration into a bay is longer by <span class="num">0.3</span> s in Singapore, <span class="num">1–2</span> in Ottawa and <span class="num">1.4</span> in Beijing</td><td><span class="src read">read</span> Singapore; <span class="src sum">second-hand</span> the others</td></tr>
+          <tr><td>Distance along the street and gap to the kerb, bay against lane</td><td>Distance: bay <span class="num">[[dev_bay]]</span> m in the simulation, lane <span class="num">[[dev_lane]]</span> m<br>Gap: bay <span class="num">[[gap_bay]]</span> m, lane <span class="num">[[gap_lane]]</span> m<br>Starting value: <span class="num">+1.0</span> m distance and <span class="num">+0.4</span> m gap in the bay</td><td>The simulation gives the same distance from the stop pole and the same gap in both designs, so it does not model the extra difficulty of aligning a bus in a bay. The extras are an estimate; the gap rests on Singapore's <span class="num">0.19</span> s per passenger</td><td><span class="tag sim">simulation</span> <span class="tag guess">estimate</span> for the extras</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="full-only">
+    <h2>Data from Israel</h2>
+    <div class="scroll panel" style="padding:4px 6px">
+      <table>
+        <thead><tr><th>Figure</th><th>Value</th><th>Source</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>People per private car</td><td><span class="num">1.52</span> (Tel Aviv metropolitan area, 2014, 3,000 households)<br><span class="num">1.44</span> (Jerusalem, Tel Aviv, Haifa and the north, Be'er Sheva, 2010–2019, 38,500 households)</td><td><a href="https://www.gov.il/BlobFolder/reports/special_reports/he/%D7%A8%D7%99%D7%9B%D7%95%D7%96%20%D7%A0%D7%AA%D7%95%D7%A0%D7%99%D7%9D%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%99%D7%9D%20%D7%91%D7%AA%D7%97%D7%91%D7%95%D7%A8%D7%94%20%D7%94%D7%A6%D7%99%D7%91%D7%95%D7%A8%D7%99%D7%AA-%20%D7%99%D7%95%D7%9C%D7%99%202021.pdf" target="_blank" rel="noopener">Ministry of Transport, National Public Transport Authority, key figures, July 2021, p. 21</a> (travel-habit surveys)</td><td><span class="src read">read</span></td></tr>
+          <tr><td>People per private car (quoted in the press, 2019)</td><td><span class="num">1.2</span>: "the average number of occupants of private vehicles in Israel is only 1.2"</td><td><a href="https://www.walla.co.il/news/israel/3321228" target="_blank" rel="noopener">Walla, 3.11.2019</a>, attributed to "Ministry of Transport data"</td><td><span class="src sum">read in the article</span> no report named</td></tr>
+          <tr><td>People per car (quoted in the press, 2016)</td><td><span class="num">1.2</span>: "on average 1.2 people ride in it, for only about 50 minutes a day"</td><td><a href="https://www.globes.co.il/news/article.aspx?did=1001108288" target="_blank" rel="noopener">Globes, 6.3.2016</a>, attributed to the OECD's International Transport Forum</td><td><span class="src sum">read in the article</span> a general statement about cars, not Israeli data, no definition</td></tr>
+          <tr><td>Load of city buses, morning peak 2019</td><td>In more than half of the trips the load factor at the peak stops is <span class="num">60%</span> or less</td><td>The same Ministry of Transport document, p. 20 (passenger-counting system)</td><td><span class="src read">read</span></td></tr>
+          <tr><td>Passengers per bus trip</td><td>About <span class="num">20</span> on a city line, about <span class="num">11</span> on an intercity line, undated</td><td><a href="https://www.israelhayom.co.il/news/transportation/article/17877267" target="_blank" rel="noopener">Israel Hayom</a></td><td><span class="src sum">summary only</span> the page did not open</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:14px;color:var(--muted);max-width:72ch">The tool's range for people per car is <span class="num">1.2–1.5</span>: the official survey figure (<span class="num">1.44–1.52</span>) and the figure quoted in the press (<span class="num">1.2</span>), behind which no report was found. The gap may be peak hours against all trips, as in the USA (<span class="num">1.18</span> against <span class="num">1.67</span>), but that is a guess. A load factor is a share of capacity, and the document gives no number of places on a bus, so "20 passengers" on a bus is a rough figure, not a measurement.</p>
+  </section>
+
+  <section class="full-only">
+    <h2>How the tool works</h2>
+    <p>For every traffic rate and every combination of a stop time in the lane and in the bay we stored, over seeds in which both designs see exactly the same cars, the difference in the bus's trip time (a) and in all the cars' trip times (b), with their variances. The difference in person-seconds is <span class="num">bus passengers × a + people per car × b</span>, so the browser can compute it for any occupancy without a new run. The stop times of the two designs are the base time and each design's accuracy penalties. The extra time to enter the bay is added to a. The confidence interval is a normal approximation of the mean. Between the experiment's points the tool interpolates linearly, and it never goes beyond the range that was tested (traffic <span class="num">0.1–0.5</span>, stop time <span class="num">0–45</span> s).</p>
+    <p style="font-size:14px;color:var(--muted)" id="prov"></p>
+  </section>
+</main>
+
+<script>
+const DATA = /*DATA*/null;
+/*MODEL*/
+const T = {
+  s: "s", pmin: "person-minutes", carsWord: "cars",
+  verdict: { bay: "The bay is better", lane: "The lane is better", tie: "Neither is clearly better" },
+  tags: { sim: "simulation", src: "from a source", guess: "estimate" },
+  rateHint: n => `cars per second, about ${n} cars an hour`,
+  dwBoth: (l, b) => `lane ${l} · bay ${b} s`,
+  dwPen: (l, e, p, d) => `In the bay: ${l} + an accuracy penalty of ${e} s (distance and gap to the kerb, for ${p} passengers and ${d} doors)`,
+  dwSame: "The same time in both designs, with no accuracy penalties.", dwFree: "Two independent times, with no accuracy penalties.",
+  tieText: m => `Under these conditions the difference is smaller than the simulation's noise: the mean is ${m} person-minutes per run, and the 95% confidence interval includes zero.`,
+  winText: (v, m, p) => `Under these conditions the ${v === "bay" ? "bay" : "lane"} gets people to the end of the road faster: on average ${m} person-minutes less per run, about ${p} s for every person on the road.`,
+  stopText: (l, b) => ` Stop time: ${l} s in the lane and ${b} s in the bay.`,
+  laneAlways: " Under these conditions the bay slows the cars too (not only the bus), so the lane wins at any number of passengers.",
+  bayAlways: " Under these conditions the bay shortens both the bus's time and the cars' time.",
+  breakEven: (b, c) => ` The tipping point: the bay is better when the bus carries fewer than ${b} passengers, or when each car carries more than ${c} people.`,
+  factDiff: "The difference, bay minus lane", factCi: "95% confidence interval", range: (a, b) => `${a} to ${b}`,
+  penBay: "The bay's penalty", penBayWho: "Paid by the bus passengers", penBayLonger: "Longer stop in the bay (accuracy)",
+  penBayEntry: "Entering the bay (extra)", penBayMerge: "Leaving and merging (simulation)", penBayTotal: "Total per bus passenger",
+  penLane: "The in-lane stop's penalty", penLaneWho: "Paid by the drivers of the cars behind the bus",
+  penLaneSlower: "The bay slows the cars", penLaneSlowerWho: "Instead of gaining, the cars lose in the bay",
+  penLaneDwell: "Stop time in the lane", penLaneQueue: "Longest queue behind the bus in the lane", penLaneTotal: "All the cars' trip time",
+  vminMoreLane: "vehicle-minutes more in the lane", vminMoreBay: "vehicle-minutes more in the bay",
+  onGrid: "This point was measured directly in the experiment.", offGrid: "This point lies between points measured in the experiment; the value is interpolated linearly between them.",
+  axisBus: "passengers on the bus", axisPmin: "person-minutes per run",
+  prov: x => `The data: ${x}.`, provItem: (e, n, c, b, d) => `${e} (${n} runs, commit ${c}, brain ${b}, ${d})`,
+  adv: {
+    m2: ["Two-door factor for the accuracy penalties", "All-door boarding cut the time per passenger by 17% to 38% (San Francisco, Vancouver, Los Angeles). Used here only to shrink the accuracy penalties."],
+    m3: ["Three-door factor for the accuracy penalties", "Three doors spread the load a little more."],
+    longPen: ["Penalty per metre from the stopping point (s, one door)", "Multiplied by the door factor."],
+    latPen: ["Penalty per 10 cm of gap to the kerb, per passenger (s)", "Based on Singapore's 0.19 s, assuming a difference of about 40 cm."],
+    devLane: ["Mean distance from the stopping point in the lane (m)", "Measured in the simulation."],
+    devBay: ["Mean distance from the stopping point in the bay (m)", `${DATA.geometry.dev_bay_m} in the simulation, as in the lane: the simulation does not model the extra difficulty of aligning a bus in a bay. The starting value adds one metre.`],
+    gapLane: ["Gap from the side of the bus to the kerb, in the lane (m)", "Measured in the simulation."],
+    gapBay: ["Gap from the side of the bus to the bay's kerb (m)", `${DATA.geometry.gap_bay_m} in the simulation, as in the lane. The starting value adds 0.4 m, in line with the 0.19 s per passenger measured in Singapore.`],
+    entryExtra: [`Extra time to enter the bay beyond the simulation (s; simulation: ${DATA.geometry.entry_s})`, "The simulation adds no time for entering the bay. In the field, deceleration is longer by 0.3 s in Singapore, 1.4 in Beijing and 1 to 2 in Ottawa. Starting value: one second. Added to the bus's time in the bay."],
+  },
+};
+/*PAGE*/
+</script>

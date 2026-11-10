@@ -56,7 +56,7 @@ def test_no_broken_links_and_no_link_leaves_the_site(sites):
             for url in re.findall(r'\b(?:href|src)="([^"]+)"', _text(page)):
                 if re.match(r"^(https?:|mailto:|#|data:)", url):
                     continue
-                target = (page.parent / url.split("#")[0]).resolve()
+                target = (page.parent / url.split("#")[0].split("?")[0]).resolve()   # "EXPLORER.html?embed=1"
                 assert target.exists(), (lang, page.name, url)
                 assert (root / lang).resolve() in target.parents or target == (root / lang).resolve(), \
                     f"{lang}/{page.name} links outside its site: {url}"

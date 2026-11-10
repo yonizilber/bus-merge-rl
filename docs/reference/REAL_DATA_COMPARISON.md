@@ -72,7 +72,7 @@ places), so we do not quote it.
 
 **Verdict:** the average is plausible next to San Francisco, a slow street like the one simulated, where a bus waits 4
 to 13 s and then merges. The simulation has no long tail: real waits of 30 to 50 s occur (the Florida mean of 36 s
-and San Francisco's maximum of 52 s), the simulation's longest is 28 s. A bus that rarely waits long makes the bay
+and San Francisco's maximum of 52 s), while in the simulation only 1 of 9,750 bay runs passed 30 s (the longest, 37.4 s). A bus that rarely waits long makes the bay
 look better than it is, so the bay's cost is probably a little understated. Also, the real wait is said to grow with the
 adjacent traffic (Ottawa, summary; the transit capacity manual has an exhibit for it that we did not read); ours is
 nearly flat from 0.3 cars/s on.
@@ -146,8 +146,8 @@ and 2.7 s per boarding with a smart card against 4.6 s with cash.
 **Verdict:** typical urban stops are 10 to 20 s, the lower half of the experiment's grid. The 30 and 45 s cells stand for
 busy stops. The grid covers the reality, but the simulation uses a fixed dwell where real dwell is very variable
 (standard deviation about three quarters of the mean in Portland), and the variation itself makes queues longer. Of all
-the results, the ones for 10 to 20 s are therefore the ones that describe typical stops: with the default occupancies
-the lane wins or ties there at most inflows, which is what the field practice of stopping in the lane suggests.
+the results, the ones for 10 to 20 s are therefore the ones that describe typical stops: with the occupancies the first
+analysis happened to use (1.2 per car, 50 on the bus; not data) the lane wins or ties there at most inflows, which is what the field practice of stopping in the lane suggests.
 
 ### 7. Is the in-lane stop quicker?
 
@@ -195,8 +195,8 @@ experiment's 10 to 45 s range the bay won most cells at an average bus load. The
 2. **The long-stop corner is not transferable.** Queues of 10 to 22 cars come from one lane without passing. Observed
    queues are 1 to 3 cars. The two-lane experiment is the most important next step.
 3. **The occupancies and the dwell time decide many cells.** The explorer therefore lets the reader choose them, with
-   the Israeli range for cars (1.2 to 1.5) and a rough 20 for a city bus as defaults.
-4. **Two model gaps push the same way.** The simulation has no long waits for a gap, and it has no variation in dwell time.
+   the Israeli range for cars (1.2 to 1.5) and a rough 20 for a city bus as starting values, not as data.
+4. **Two model gaps push opposite ways.** The simulation has no long waits for a gap, and it has no variation in dwell time.
    The first understates the bay's cost, the second understates the lane's. They do not cancel by design.
 5. **Not tested here:** the arrival process (Poisson in the simulation, platooned by signals in cities); yielding to
    buses (Florida: 33% of merges); the simulation's lower entry flow.

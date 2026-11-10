@@ -1,15 +1,16 @@
 # Research question
 
-> **Status: the first experiment has run.** This page states the question and how it was answered; the [results](RESULTS.md)
-> are on their own page, as a story. The planning below is kept as it was written, with what is done marked.
+> **Status: two experiments have run ({{stop:runs}} runs).** This page states the question and how it was answered; the
+> [results](RESULTS.md) are on their own page, as a story, with an interactive explorer and a check against field data. The planning below is kept as it was written, with what is done marked.
 
 ## The question
 
 **On a single-lane urban road, does a bus stop in a bay or in the travel lane move more people to their destination
 faster?**
 
-The unit is the person, not the vehicle. A design that saves a bus 20 seconds is worth 50 passengers × 20 s; a
-design that delays every car behind the bus by 20 seconds costs 1.2 people × 20 s per car. Both groups count.
+The unit is the person, not the vehicle. A design that saves a bus 20 seconds saves 20 s for every passenger on board;
+a design that delays every car behind the bus by 20 seconds costs 20 s for every person in those cars. Both groups count,
+and how many people each carries is the reader's choice, not the simulation's.
 
 ## Why it is not obvious
 

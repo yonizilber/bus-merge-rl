@@ -7,7 +7,7 @@ Reads scripts/real_data_report_template.html and results/experiments/stop_design
 simulation's side, written by scripts/compare_with_real_data.py) and writes docs/reports/REAL_DATA_COMPARISON.he.html:
 one self-contained page (fonts come from Google Fonts when online) that opens in any browser. The field numbers and the
 verdicts are written in the template by hand, each with its source; the simulation's numbers and the charts come from the
-JSON. The page is not linked from the documentation sites.
+JSON. The documentation site copies it next to the results page.
 """
 import json
 import re
@@ -30,7 +30,8 @@ def tokens(d: dict) -> dict:
     mt, bay, queue = d["merge_time"]["all_bay_runs"], d["bay_cost_s"], d["lane_queue"]["mean_max_queue_cars"]
     q = [v for row in queue.values() for v in row.values()]
     entry = g["arrival_time_from_braking_s"]["bay_minus_lane_mean"]
-    return {"[[a_min]]": f"{bay['min']:.1f}", "[[a_max]]": f"{bay['max']:.1f}", "[[a_mean]]": f"{bay['mean']:.1f}",
+    runs = json.loads((REPO / "results" / "experiments" / "stop_design" / "combined.json").read_text(encoding="utf-8"))["runs"]
+    return {"[[runs]]": f"{runs:,}", "[[mt_n30]]": str(mt["n_over_30s"]), "[[a_min]]": f"{bay['min']:.1f}", "[[a_max]]": f"{bay['max']:.1f}", "[[a_mean]]": f"{bay['mean']:.1f}",
             "[[mt_mean]]": f"{mt['mean']:.1f}", "[[mt_median]]": f"{mt['median']:.1f}", "[[mt_p90]]": f"{mt['p90']:.1f}",
             "[[mt_p99]]": f"{mt['p99']:.1f}", "[[mt_max]]": f"{mt['max']:.1f}", "[[mt_max_int]]": str(int(mt["max"])),
             "[[mt_over20]]": f"{100 * mt['share_over_20s']:.1f}%", "[[mt_n]]": f"{mt['n']:,}",

@@ -1,0 +1,185 @@
+<title>מפרץ או נתיב</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=IBM+Plex+Sans+Hebrew:wght@500;600;700&display=swap">
+<style>/*STYLE*/</style>
+
+<main>
+  <header style="display:flex;flex-direction:column;gap:14px">
+    <div class="kicker">כלי חקירה · ניסוי תכנון התחנה</div>
+    <h1>מפרץ או נתיב</h1>
+    <p class="lead">בחרו את התנאים: כמה אנשים באוטובוס ובמכונית, כמה נוסעים עולים ויורדים בתחנה, כמה דלתות משמשות, וכמה צפופה התנועה. הכלי יגיד מה מביא יותר אנשים מהר יותר לקצה הדרך, לפי <span class="num">[[runs]]</span> הרצות סימולציה של אוטובוס שעוצר במפרץ או בנתיב.</p>
+    <div class="banner"><b>חשוב לדעת:</b> הניסוי רץ על כביש עם <b>נתיב אחד, בלי עקיפות</b>. ברחוב עם נתיב נוסף מכוניות עוקפות את האוטובוס העומד, ולכן עצירה בנתיב עולה פחות. בסוף העמוד מפורט מה עוד לא מייצג את המציאות. ההנחות שאינן מהסימולציה מסומנות <span class="tag guess">הערכה</span> או <span class="tag src">ממקור</span>, והנמדדות בסימולציה <span class="tag sim">מהסימולציה</span>.</div>
+  </header>
+
+  <section id="controls-sec">
+    <h2>התנאים</h2>
+    <div class="presets" role="group" aria-label="ערכות מוכנות">
+      <span style="font-size:14px;color:var(--muted)">ערכות:</span>
+      <button type="button" data-p="il" aria-pressed="false">ישראל, ממוצע (הערכה)</button>
+      <button type="button" data-p="ilpeak" aria-pressed="false">ישראל, שעות שיא (הערכה)</button>
+      <button type="button" data-p="us" aria-pressed="false">ארה"ב, דלת אחת</button>
+    </div>
+    <div class="panel">
+      <div class="controls">
+        <div class="ctl"><label for="rate"><span>עומס תנועה</span><span class="val" id="rate-v"></span></label>
+          <input type="range" id="rate" min="0.1" max="0.5" step="0.01" value="0.3"><span class="hint" id="rate-h"></span></div>
+        <div class="ctl"><span class="lab"><label for="pcar">אנשים בכל מכונית</label><span class="val" id="pcar-v"></span></span>
+          <div class="track"><span class="band" id="pcar-band"></span><input type="range" id="pcar" min="1" max="2" step="0.05" value="1.35"></div>
+          <span class="hint">כולל הנהג. הרצועה הירוקה: הטווח בישראל, <span class="num">1.2–1.5</span> (ערך ההתחלה באמצע)</span></div>
+        <div class="ctl"><label for="pbus"><span>נוסעים באוטובוס</span><span class="val" id="pbus-v"></span></label>
+          <input type="range" id="pbus" min="2" max="80" step="1" value="20"><span class="hint">נוסעים על האוטובוס בזמן הנסיעה, כולל אלה שעולים בתחנה. אין לזה ערך אחד נכון: בחרו לפי הקו והשעה שאתם מדמיינים</span></div>
+        <div class="ctl"><label for="npax"><span>נוסעים שעולים או יורדים בתחנה</span><span class="val" id="npax-v"></span></label>
+          <input type="range" id="npax" min="0" max="30" step="1" value="6"><span class="hint">משפיע רק על עונש הדיוק של המפרץ: כל נוסע צריך לעבור את המרווח מהמדרכה. זמן העצירה עצמו נקבע למטה</span></div>
+        <div class="ctl"><span class="lab"><span>דלתות שמשמשות לעלייה וירידה</span></span>
+          <span class="seg" id="doors" role="group" aria-label="מספר דלתות"><button type="button" data-d="1" aria-pressed="false">1</button><button type="button" data-d="2" aria-pressed="true">2</button><button type="button" data-d="3" aria-pressed="false">3</button></span>
+          <span class="hint">משפיע על עונש הדיוק: ככל שיש יותר דלתות, סטייה קטנה פחות מורגשת. בישראל אפשר לעלות מכל הדלתות מאז 2015</span></div>
+        <div class="ctl wide"><span class="lab"><span>זמן העצירה (שניות, נקבע ישירות)</span><span class="val" id="dw-v"></span></span>
+          <div id="dsecs" style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+            <span class="lab"><span>הקשר בין זמן העצירה בנתיב ובמפרץ</span></span>
+            <span class="seg" style="direction:rtl" id="dlink" role="group" aria-label="קישור בין זמני העצירה"><button type="button" data-l="free" aria-pressed="false">נפרדים</button><button type="button" data-l="same" aria-pressed="false">זהים</button><button type="button" data-l="pen" aria-pressed="true">זהים בתוספת עונש למפרץ</button></span>
+            <div class="twosl">
+              <div><label class="lab" for="dlane"><span>זמן עצירה בנתיב</span><span class="val" id="dlane-v"></span></label><input type="range" id="dlane" min="0" max="45" step="1" value="6"></div>
+              <div><label class="lab" for="dbay"><span>זמן עצירה במפרץ</span><span class="val" id="dbay-v"></span></label><input type="range" id="dbay" min="0" max="45" step="1" value="6" disabled></div>
+            </div>
+          </div>
+          <span class="hint" id="dw-h"></span></div>
+      </div>
+    </div>
+    <details class="adv" id="adv">
+      <summary>הנחות מתקדמות: זמן עצירה, עונש המפרץ ודיוק העצירה</summary>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:12px">כל הערכים ניתנים לשינוי. <button type="button" class="btn" id="reset-adv">איפוס לברירות המחדל</button></p>
+      <div class="advgrid" id="advgrid"></div>
+    </details>
+  </section>
+
+  <section id="result-sec" aria-live="polite">
+    <h2>מה עדיף</h2>
+    <div id="verdict-box" class="tie">
+      <div id="verdict-title"></div>
+      <div class="explain" id="verdict-text"></div>
+      <div class="facts" id="facts"></div>
+      <div class="pens" id="pens"></div>
+    </div>
+    <p id="interp-note" style="font-size:14px;color:var(--muted)"></p>
+  </section>
+
+  <section>
+    <h2>מה קורה כשהנוסעים באוטובוס יורדים</h2>
+    <figure>
+      <svg id="chart-pbus" viewBox="0 0 760 360" role="img" aria-label="ההפרש בזמן האנשים כפונקציה של מספר הנוסעים באוטובוס"></svg>
+      <figcaption><b>ההפרש בין מפרץ לנתיב, באדם-דקות להרצה, לפי מספר הנוסעים באוטובוס.</b> שאר התנאים כפי שבחרתם למעלה. הקו הוא הממוצע על זוגות הרצות עם אותן מכוניות; הרצועה סביבו היא רווח סמך של 95%. מתחת לאפס (רקע כחול) המפרץ מביא יותר אנשים מהר יותר, מעל אפס (רקע כתום) הנתיב. הנקודה היא הבחירה שלכם. הקווים המקווקווים: 10.7 נוסעים (ממוצע ארה"ב) ו-20 (הערכה גסה לאוטובוס עירוני בישראל).</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>איך זה משתנה עם התנועה וזמן העצירה</h2>
+    <figure>
+      <div class="map" id="map"></div>
+      <div class="legend"><span><i style="background:var(--bay)"></i>המפרץ עדיף</span><span><i style="background:var(--lane)"></i>הנתיב עדיף</span><span><i style="background:var(--tie)"></i>אין הכרעה (הרווח כולל אפס)</span></div>
+      <figcaption><b>מי עדיף בכל צירוף של תנועה וזמן עצירה בסיסי, עם שאר התנאים שבחרתם.</b> עמודות: מכוניות לשנייה מגיעות לכביש. שורות: זמן העצירה הבסיסי בשניות, לפני תוספות הדיוק (45 למעלה, 0 למטה). בכל משבצת: ההפרש באדם-דקות להרצה, מפרץ פחות נתיב, כך ששלילי פירושו שהמפרץ עדיף. המשבצת עם המסגרת היא הבחירה שלכם. הערכים בין נקודות הניסוי מחושבים בהשלמה לינארית.</figcaption>
+    </figure>
+  </section>
+
+  <p class="embed-only" style="font-size:14px;color:var(--muted)">הסיכום של הכלי, ההנחות שלו עם המקורות, והנתונים מישראל נמצאים בחלון המלא (הקישור מתחת לכלי).</p>
+  <section class="full-only">
+    <h2>הסיכום שלנו</h2>
+    <ul class="plain">
+      [[summary]]
+    </ul>
+    <div class="panel">
+      <h3 style="margin-bottom:6px">באיזה כיוון הכלי מטעה</h3>
+      <p>שלוש מהמגבלות האלה מטות לטובת המפרץ ושתיים לטובת הנתיב. לא כימתנו אותן.</p>
+      <ul class="plain" style="margin-top:8px">
+        <li><b>נתיב אחד בלי עקיפות</b> (לטובת המפרץ): התור מאחורי אוטובוס בנתיב מגיע בסימולציה עד <span class="num">22</span> מכוניות בעצירות הארוכות, ובשטח (סן פרנסיסקו) נצפו בממוצע <span class="num">1</span> עד <span class="num">3</span>, כי נהגים עוקפים.</li>
+        <li><b>אין המתנות ארוכות לרווח</b> (לטובת המפרץ): בסימולציה ההשתלבות אורכת לכל היותר <span class="num">[[mt_max]]</span> שניות, ורק <span class="num">[[mt_n30]]</span> מתוך <span class="num">[[mt_n]]</span> הרצות מפרץ עברו <span class="num">30</span>. בשטח נמדדו המתנות של <span class="num">30</span> עד <span class="num">50</span> שניות.</li>
+        <li><b>המחיר של המפרץ לאוטובוס</b> (כנראה לטובת הנתיב): בסימולציה <span class="num">[[bus_cost_range]]</span> שניות, ובשטח נמדד כ-<span class="num">2</span> עד <span class="num">6</span>. ראו בדוח ההשוואה לנתוני שטח.</li>
+        <li><b>כניסה איטית</b> (כנראה לטובת המפרץ): הסימולציה מכניסה כשליש פחות מכוניות לשעה מערך הרוויה הסטנדרטי.</li>
+        <li><b>זמן עצירה קבוע בכל הרצה</b> (לטובת הנתיב): בשטח הוא משתנה מאוד, והשונות הזו מאריכה תורים.</li>
+      </ul>
+      <p style="margin-top:8px">כשהכלי אומר "הנתיב עדיף", כדאי לסמוך עליו יותר מאשר כשהוא אומר "המפרץ עדיף". ההשוואה המלאה לנתוני שטח היא בעמוד התוצאות של התיעוד ובדוח נפרד: <span class="path">docs/reports/REAL_DATA_COMPARISON.he.html</span>.</p>
+    </div>
+  </section>
+
+  <section class="full-only">
+    <h2>זמן העצירה ועונש המפרץ</h2>
+    <p><b>זמן העצירה נקבע ישירות, ולא לפי מספר נוסעים.</b> לא גזרנו אותו ממספר הנוסעים, כי המדידות שמצאנו נעשו במערכות אחרות (למשל כ-<span class="num">3.9</span> שנ' לנוסע בסן פרנסיסקו לפני עלייה מכל הדלתות) ולא מייצגות אוטובוס עירוני בישראל, עם אפליקציית תיקוף ועלייה מכל הדלתות, שעוצר הרבה פחות. לא מצאנו מדידה ישראלית, ולכן אין כאן ערך "נכון". בחרו את הזמן שמתאים לתחנה שאתם מדמיינים, מ-0 שניות: בנפרד לנתיב ולמפרץ, זהה בשניהם, או זהה בתוספת עונש למפרץ.</p>
+    <p>לכל תכנון יש עונשי דיוק שמצטרפים לעונש של המפרץ כשבוחרים "זהים בתוספת עונש": סטייה לאורך הרחוב מנקודת העצירה, ומרווח בין דופן האוטובוס לשפת המדרכה. להם נוספת תוספת לכניסה למפרץ.</p>
+    <div class="scroll panel" style="padding:4px 6px">
+      <table>
+        <thead><tr><th>הנחה</th><th>ברירת מחדל</th><th>מקור</th><th>סטטוס</th></tr></thead>
+        <tbody>
+          <tr><td>מרווח מהמדרכה, לכל נוסע ולכל <span class="num">10</span> ס"מ</td><td><span class="num">0.05</span> שנ'</td><td>בסינגפור נוסע במפרץ לוקח <span class="num">0.19</span> שנ' יותר מאשר ליד המדרכה (<span class="num">1.52</span> מול <span class="num">1.33</span>), בעיקר בגלל מרווח ופעולה נוספת להתקרבות. נניח הפרש מרווח של כ-<span class="num">40</span> ס"מ (<a href="https://doi.org/10.5038/2375-0901.20.1.6" target="_blank" rel="noopener">Liu ואחרים, 2017</a>)</td><td><span class="src read">נקרא</span> <span class="tag guess">הערכה</span> לגבי ההפרש</td></tr>
+          <tr><td>סטייה לאורך הרחוב, לכל מטר</td><td><span class="num">0.4</span> שנ' (דלת אחת)</td><td>הליכה של נוסעים לאורך האוטובוס אל הדלת, כ-<span class="num">1.3</span> מ' לשנייה, כשרק חלקם מושפעים</td><td><span class="tag guess">הערכה</span> בלי מקור</td></tr>
+          <tr><td>מקדם דלתות לעונשי הדיוק (שתיים / שלוש)</td><td><span class="num">0.7</span> / <span class="num">0.6</span></td><td>עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-<span class="num">17%</span> עד <span class="num">38%</span> (סן פרנסיסקו, ונקובר, לוס אנג'לס). בישראל אפשר לעלות מכל הדלתות מאז 2015 (<a href="https://library.mevaker.gov.il/sites/DigitalLibrary/Documents/2017-68a-208-RavKav.pdf" target="_blank" rel="noopener">מבקר המדינה, 2017</a>)</td><td><span class="tag guess">הערכה</span> לשימוש כמקדם</td></tr>
+          <tr><td>זמן הכניסה למפרץ עצמה, מעבר לנתיב</td><td><span class="num">1.0</span> שנ' (בסימולציה <span class="num">[[entry_sim]]</span>)</td><td>בסימולציה האוטובוס נכנס למפרץ ועומד באותו זמן כמו בנתיב (הפרש בין מפרץ לנתיב בזמן מתחילת הבלימה עד שהוא עומד, <span class="num">[[geom_seeds]]</span> זוגות הרצות עם אותה מהירות כניסה ואותה נקודת עצירה). בשטח ההאטה במפרץ ארוכה ב-<span class="num">0.3</span> שנ' בסינגפור וב-<span class="num">1–2</span> באוטווה ו-<span class="num">1.4</span> בבייג'ינג</td><td><span class="src read">נקרא</span> סינגפור; <span class="src sum">מיד שנייה</span> השאר</td></tr>
+          <tr><td>סטייה לאורך הרחוב והמרווח מהמדרכה, מפרץ מול נתיב</td><td>סטייה: מפרץ <span class="num">[[dev_bay]]</span> מ' בסימולציה, נתיב <span class="num">[[dev_lane]]</span> מ'<br>מרווח: מפרץ <span class="num">[[gap_bay]]</span> מ', נתיב <span class="num">[[gap_lane]]</span> מ'<br>ברירת המחדל: <span class="num">+1.0</span> מ' סטייה ו-<span class="num">+0.4</span> מ' מרווח במפרץ</td><td>הסימולציה נותנת את אותה סטייה (המרחק מעמוד התחנה, <span class="num">300</span> מ') ואותו מרווח בשני התכנונים, כלומר היא לא מדמה את הקושי הנוסף ליישר אוטובוס במפרץ. התוספות הן הערכה, והמרווח נשען על <span class="num">0.19</span> שנ' לנוסע בסינגפור</td><td><span class="tag sim">מהסימולציה</span> <span class="tag guess">הערכה</span> לתוספות</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="full-only">
+    <h2>נתונים מישראל</h2>
+    <div class="scroll panel" style="padding:4px 6px">
+      <table>
+        <thead><tr><th>נתון</th><th>ערך</th><th>מקור</th><th>סטטוס</th></tr></thead>
+        <tbody>
+          <tr><td>אנשים ברכב פרטי</td><td><span class="num">1.52</span> (מטרופולין תל אביב, 2014, 3,000 משקי בית)<br><span class="num">1.44</span> (ירושלים, תל אביב, חיפה והצפון, באר שבע, 2010–2019, 38,500 משקי בית)</td><td><a href="https://www.gov.il/BlobFolder/reports/special_reports/he/%D7%A8%D7%99%D7%9B%D7%95%D7%96%20%D7%A0%D7%AA%D7%95%D7%A0%D7%99%D7%9D%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%99%D7%9D%20%D7%91%D7%AA%D7%97%D7%91%D7%95%D7%A8%D7%94%20%D7%94%D7%A6%D7%99%D7%91%D7%95%D7%A8%D7%99%D7%AA-%20%D7%99%D7%95%D7%9C%D7%99%202021.pdf" target="_blank" rel="noopener">משרד התחבורה, הרשות הארצית לתחבורה ציבורית, ריכוז נתונים מרכזיים, יולי 2021, עמ' 21</a> (סקרי הרגלי נסיעה)</td><td><span class="src read">נקרא</span></td></tr>
+          <tr><td>אנשים ברכב פרטי (מצוטט בתקשורת, 2019)</td><td><span class="num">1.2</span>: "ממוצע הנוסעים בכלי רכב פרטיים בישראל עומד כיום על 1.2 נוסעים בלבד"</td><td><a href="https://www.walla.co.il/news/israel/3321228" target="_blank" rel="noopener">וואלה, "תם עידן האזהרות", 3.11.2019</a>, מיוחס ל"נתוני משרד התחבורה"</td><td><span class="src sum">נקרא בכתבה</span> הדוח שמאחורי הנתון לא צוין</td></tr>
+          <tr><td>אנשים ברכב (מצוטט בתקשורת, 2016)</td><td><span class="num">1.2</span>: "נוסעים בה בממוצע 1.2 אנשים במשך כ-50 דקות בלבד ביום"</td><td><a href="https://www.globes.co.il/news/article.aspx?did=1001108288" target="_blank" rel="noopener">גלובס, 6.3.2016</a>, מיוחס לפורום התחבורה הבינלאומי של ה-OECD</td><td><span class="src sum">נקרא בכתבה</span> אמירה כללית על מכוניות, לא נתון ישראלי, בלי הגדרה</td></tr>
+          <tr><td>מילוי אוטובוסים עירוניים, שעות שיא בוקר 2019</td><td>ביותר ממחצית הנסיעות מקדם המילוי בתחנות השיא הוא <span class="num">60%</span> ומטה</td><td>אותו מסמך של משרד התחבורה, עמ' 20 (מערכת ספירת נוסעים)</td><td><span class="src read">נקרא</span></td></tr>
+          <tr><td>נוסעים לנסיעה באוטובוס</td><td>כ-<span class="num">20</span> בקו עירוני, כ-<span class="num">11</span> בבין-עירוני, ללא תאריך</td><td><a href="https://www.israelhayom.co.il/news/transportation/article/17877267" target="_blank" rel="noopener">ישראל היום</a></td><td><span class="src sum">סיכום בלבד</span> הדף לא נפתח</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:14px;color:var(--muted);max-width:72ch">טווח האנשים במכונית שבכלי הוא <span class="num">1.2–1.5</span>: המספר הרשמי מהסקרים (<span class="num">1.44–1.52</span>) והמספר שמצוטט בכתבות (<span class="num">1.2</span>), שלא נמצא מאחוריו דוח. ייתכן שהפער הוא שעות שיא מול כל הנסיעות, כמו בארה"ב (<span class="num">1.18</span> מול <span class="num">1.67</span>), אבל זו השערה. מקדם מילוי הוא שיעור התפוסה, ובמסמך אין מספר מקומות באוטובוס, ולכן "20 נוסעים" באוטובוס היא הערכה גסה ולא מדידה.</p>
+  </section>
+
+  <section class="full-only">
+    <h2>איך הכלי עובד</h2>
+    <p>לכל תנועה וכל צירוף של זמן עצירה בנתיב ובמפרץ שמרנו, על זרעים שבהם לשני התכנונים אותן מכוניות בדיוק, את הפרש זמן הנסיעה של האוטובוס (a) ושל כל המכוניות (b), ואת השונות שלהם. ההפרש באדם-שניות הוא <span class="num">נוסעי האוטובוס × a + אנשים במכונית × b</span>, ולכן אפשר לחשב אותו לכל תפוסה בדפדפן, בלי להריץ מחדש. זמני העצירה בשני התכנונים הם הזמן הבסיסי ועונשי הדיוק של כל אחד. תוספת לזמן הכניסה למפרץ נוספת ל-a. רווח הסמך הוא קירוב נורמלי לממוצע. בין נקודות הניסוי הכלי מחשב בהשלמה לינארית, ואינו יוצא מעבר לטווח שנבדק (תנועה <span class="num">0.1–0.5</span>, עצירה <span class="num">0–45</span> שניות).</p>
+    <p style="font-size:14px;color:var(--muted)" id="prov"></p>
+  </section>
+</main>
+
+<script>
+const DATA = /*DATA*/null;
+/*MODEL*/
+const T = {
+  s: "שנ'", pmin: "אדם-דקות", carsWord: "מכוניות",
+  verdict: { bay: "המפרץ עדיף", lane: "הנתיב עדיף", tie: "אין הכרעה בין השניים" },
+  tags: { sim: "מהסימולציה", src: "ממקור", guess: "הערכה" },
+  rateHint: n => `מכוניות לשנייה, בערך ${n} מכוניות בשעה`,
+  dwBoth: (l, b) => `נתיב ${l} · מפרץ ${b} שנ'`,
+  dwPen: (l, e, p, d) => `במפרץ: ${l} + עונש דיוק ${e} שנ' (סטייה ומרווח מהמדרכה, לפי ${p} נוסעים ו-${d} דלתות)`,
+  dwSame: "אותו זמן בשני התכנונים, בלי עונשי דיוק.", dwFree: "שני זמנים בלתי תלויים, בלי עונשי דיוק.",
+  tieText: m => `בתנאים האלה ההבדל קטן מהרעש של הסימולציה: הממוצע הוא ${m} אדם-דקות להרצה, ורווח הסמך של 95% כולל אפס.`,
+  winText: (v, m, p) => `בתנאים האלה ${v === "bay" ? "המפרץ" : "הנתיב"} מביא את האנשים לקצה הדרך מהר יותר: בממוצע ${m} אדם-דקות פחות בהרצה, כ-${p} שניות לכל אדם על הכביש.`,
+  stopText: (l, b) => ` זמן העצירה: ${l} שניות בנתיב ו-${b} במפרץ.`,
+  laneAlways: " בתנאים האלה המפרץ מאט גם את המכוניות (ולא רק את האוטובוס), ולכן הנתיב לא יפסיד בשום מספר נוסעים.",
+  bayAlways: " בתנאים האלה המפרץ מקצר גם את זמן האוטובוס ואת זמן המכוניות.",
+  breakEven: (b, c) => ` נקודת האיזון: המפרץ עדיף כשבאוטובוס פחות מ-${b} נוסעים, או כשבכל מכונית יותר מ-${c} אנשים.`,
+  factDiff: "ההפרש, מפרץ פחות נתיב", factCi: "רווח סמך 95%", range: (a, b) => `${a} עד ${b}`,
+  penBay: "עונש המפרץ", penBayWho: "משלמים נוסעי האוטובוס", penBayLonger: "עצירה ארוכה יותר במפרץ (דיוק)",
+  penBayEntry: "כניסה למפרץ (תוספת)", penBayMerge: "יציאה והשתלבות (מהסימולציה)", penBayTotal: "סך הכול לנוסע באוטובוס",
+  penLane: "עונש העצירה בנתיב", penLaneWho: "משלמים נהגי המכוניות שמאחורי האוטובוס",
+  penLaneSlower: "המפרץ מאט את המכוניות", penLaneSlowerWho: "במקום להרוויח, המכוניות מפסידות במפרץ",
+  penLaneDwell: "זמן העצירה בנתיב", penLaneQueue: "תור מקסימלי מאחורי האוטובוס בנתיב", penLaneTotal: "סך זמן הנסיעה של כל המכוניות",
+  vminMoreLane: "דקות-רכב יותר בנתיב", vminMoreBay: "דקות-רכב יותר במפרץ",
+  onGrid: "הנקודה הזו נמדדה ישירות בניסוי.", offGrid: "הנקודה הזו נמצאת בין נקודות שנמדדו בניסוי, והערך מחושב בהשלמה לינארית ביניהן.",
+  axisBus: "נוסעים באוטובוס", axisPmin: "אדם-דקות להרצה",
+  prov: x => `הנתונים: ${x}.`, provItem: (e, n, c, b, d) => `${e} (${n} הרצות, קומיט ${c}, מוח ${b}, ${d})`,
+  adv: {
+    m2: ["מקדם שתי דלתות לעונשי הדיוק", "עלייה מכל הדלתות קיצרה את הזמן לנוסע ב-17% עד 38% (סן פרנסיסקו, ונקובר, לוס אנג'לס). משמש כאן רק להקטנת עונשי הדיוק."],
+    m3: ["מקדם שלוש דלתות לעונשי הדיוק", "שלוש דלתות מחלקות את העומס עוד קצת."],
+    longPen: ["עונש לכל מטר סטייה מנקודת העצירה (שנ', דלת אחת)", "מוכפל במקדם הדלתות."],
+    latPen: ["עונש לכל 10 ס\"מ מרווח מהמדרכה, לכל נוסע (שנ')", "מבוסס על 0.19 שנ' בסינגפור בהנחת הפרש של כ-40 ס\"מ."],
+    devLane: ["סטייה ממוצעת מנקודת העצירה בנתיב (מ')", "נמדד בסימולציה."],
+    devBay: ["סטייה ממוצעת מנקודת העצירה במפרץ (מ')", `בסימולציה ${DATA.geometry.dev_bay_m}, כמו בנתיב: הסימולציה לא מדמה קושי נוסף ליישר את האוטובוס במפרץ. ברירת המחדל מוסיפה מטר אחד.`],
+    gapLane: ["מרווח מדופן האוטובוס לשפת המדרכה, בנתיב (מ')", "נמדד בסימולציה."],
+    gapBay: ["מרווח מדופן האוטובוס לקיר המפרץ (מ')", `בסימולציה ${DATA.geometry.gap_bay_m}, כמו בנתיב. ברירת המחדל מוסיפה 0.4 מ', בהתאם ל-0.19 שנ' לנוסע שנמדדו בסינגפור.`],
+    entryExtra: [`תוספת לזמן הכניסה למפרץ מעבר לסימולציה (שנ'; בסימולציה ${DATA.geometry.entry_s})`, "הסימולציה לא מוסיפה זמן לכניסה למפרץ. בשטח האטה ארוכה ב-0.3 שנ' בסינגפור, ב-1.4 בבייג'ינג וב-1 עד 2 באוטווה. ברירת המחדל: שנייה אחת. מתווסף לזמן האוטובוס במפרץ."],
+  },
+};
+/*PAGE*/
+</script>

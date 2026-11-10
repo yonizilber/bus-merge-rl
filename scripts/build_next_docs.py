@@ -36,8 +36,18 @@ import build_docs_html  # noqa: E402
 import build_test_report  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+from busmerge import stop_results  # noqa: E402
+
 NEXT = REPO / "docs" / "archive" / "v2-next"
 MEDIA = REPO / "docs" / "media"
+# Standalone pages copied next to the site's pages (site name -> source, per language), and where the GitHub export
+# points instead (the same files in the repository).
+COPIED = {"EXPLORER.html": "docs/tools/stop_design_explorer.{lang}.html",
+          "FIELD_REPORT.he.html": "docs/reports/REAL_DATA_COMPARISON.he.html"}
+EMBED = "<!-- embed: explorer -->"
+EMBED_TEXT = {"en": ("The interactive explorer: bay or lane", "Open the explorer in its own window"),
+              "he": ("הכלי האינטראקטיבי: מפרץ או נתיב", "לפתוח את הכלי בחלון נפרד")}
 
 # Output page -> source file (in <root>/<lang>/). The test report is generated, not written.
 PAGES = {
@@ -476,11 +486,23 @@ def _pop(cfg: dict) -> str:
     return f'<script type="application/json" id="pop-labels">{labels}</script>\n{POP_JS}'
 
 
+def embed_html(lang: str) -> str:
+    """The explorer inside a page: an iframe that takes the height the explorer reports, so it has no scroll bar."""
+    title, open_label = EMBED_TEXT[lang]
+    return (f'<div class="embed-wrap"><iframe class="embed" src="EXPLORER.html?embed=1" title="{title}" loading="lazy" '
+            'style="width:100%;height:1600px;border:1px solid var(--border);border-radius:12px;background:var(--surface)">'
+            '</iframe></div>\n'
+            f'<p class="embed-open"><a href="EXPLORER.html" target="_blank" rel="noopener">{open_label} ↗</a></p>\n'
+            '<script>window.addEventListener("message", function (e) { if (!e.data || e.data.type !== "stop-explorer-height") return; '
+            'document.querySelectorAll("iframe.embed").forEach(function (f) { if (f.contentWindow === e.source) '
+            '{ f.style.height = (e.data.h + 8) + "px"; } }); });</script>')
+
+
 def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dict], site: dict | None = None) -> str:
     site = site or site_config(NEXT)
     cfg = site["langs"][lang]
     source = site["root"] / lang / src_name
-    text = _fill_placeholders(source.read_text(encoding="utf-8"), lang, site)
+    text = _fill_placeholders(source.read_text(encoding="utf-8"), lang, site).replace(EMBED, embed_html(lang))
     used: dict[str, int] = {}
     if src_name == "GLOSSARY.md":
         text = _plain_links(text, "").replace(DETAILS_MARK, f"**{cfg['details']}**")
@@ -521,6 +543,7 @@ def _fill_placeholders(text: str, lang: str, site: dict, counts: dict | None = N
     counts = counts or test_counts()
     text = (text.replace("{{features_table}}", features_table(lang, site["feature_head"].get(lang)))
                 .replace("{{test_totals}}", test_totals(lang, counts)))
+    text = stop_results.fill(text, lang)
     if "{{n_" in text:
         for key, value in counts.items():
             text = text.replace("{{n_" + key + "}}", f"{value:,}")
@@ -540,6 +563,12 @@ def build_language(lang: str, out_dir: Path, root: Path = NEXT) -> list[Path]:
     media_out.mkdir(exist_ok=True)
     for f in MEDIA.glob("*"):
         shutil.copy2(f, media_out / f.name)
+    # The standalone pages are copied where a page links to them; they are not pages of the site (their own design,
+    # and the field report exists in Hebrew only), so they are not in the list of pages written.
+    sources = "".join((root / lang / s).read_text(encoding="utf-8") for s in site["pages"].values())
+    for name, src in COPIED.items():
+        if name in sources or (name == "EXPLORER.html" and EMBED in sources):
+            shutil.copy2(REPO / src.format(lang=lang), out_dir / name)
     cfg = site["langs"][lang]
     written.append(build_test_report.write(out_dir, lang, nav=cfg["nav"], toc_label=cfg["toc"]))
     return written
@@ -609,7 +638,18 @@ def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> 
         text = github_glossary(text, lang) if src_name == "GLOSSARY.md" else github_markdown(text, glossary, lang, src_name)
         # Images point at docs/media/ in the repository, so the GIFs are not copied once per language.
         media_rel = os.path.relpath(MEDIA, root / "github" / lang).replace(os.sep, "/")
-        text = text.replace('src="media/', f'src="{media_rel}/')
+        text = text.replace('src="media/', f'src="{media_rel}/').replace("](media/", f"]({media_rel}/")
+        # The standalone pages: GitHub shows HTML as source, so point at the files and say how to open them.
+        for name, src in COPIED.items():
+            rel = os.path.relpath(REPO / src.format(lang=lang), root / "github" / lang).replace(os.sep, "/")
+            text = text.replace(f"]({name}", f"]({rel}")
+        if EMBED in text:
+            text = text.replace(EMBED, "> " + ("**The interactive explorer** is an HTML page: download "
+                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['EXPLORER.html'].format(lang=lang), root / 'github' / lang)}) "
+                                               "and open it in a browser, or browse the HTML site." if lang == "en" else
+                                               "**הכלי האינטראקטיבי** הוא עמוד HTML: הורידו את "
+                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['EXPLORER.html'].format(lang=lang), root / 'github' / lang)}) "
+                                               "ופתחו אותו בדפדפן, או עיינו באתר ה-HTML."))
         target = out_dir / src_name
         target.write_text(text, encoding="utf-8")
         written.append(target)

@@ -109,7 +109,7 @@ How to read it:
 | Page | What it covers |
 |---|---|
 | [Research question](RESEARCH.md) | Bay or lane: the question, the measures, the factors and the experiment |
-| [Results](RESULTS.md) | What 15,000 simulated runs showed: what the bay costs, what it buys, and who wins where |
+| [Results](RESULTS.md) | What {{stop:runs}} simulated runs showed, an explorer to try your own conditions, a check against field data, and our conclusion |
 | [World model](WORLD.md) | The road, the cars, the bus and the bay, and the physics that holds it together |
 | [Agent](AGENT.md) | What the driver sees, what it decides, its network, how it learns, and every version |
 | [Case study](CASE_STUDY.md) | How an agent that exploited a steering bug was found out and replaced |

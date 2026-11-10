@@ -207,91 +207,6 @@ def case_study_table_semver(lang: str = "en") -> str:
     return "\n".join(table)
 
 
-# ── The stop-design experiment (docs/current results page) ────────────────────────────────────────────
-# results/experiments/stop_design_v1/summary.json is written by scripts/analyze_stop_experiment.py --publish.
-STOP_EXPERIMENT = "stop_design_v1"
-_STOP_TEXT = {
-    "en": {"bay": "bay", "lane": "lane", "tie": "tie", "always": "lane always", "dwell": "Dwell time", "inflow": "Inflow (cars/s)",
-           "pair": "Dwell in lane / in bay", "bus": "Bus delay, bay − lane (s)", "cars": "All cars, bay − lane (vehicle-min)"},
-    "he": {"bay": "מפרץ", "lane": "נתיב", "tie": "שווה", "always": "נתיב תמיד", "dwell": "זמן עצירה", "inflow": "תנועה (מכוניות/שנ')",
-           "pair": "עצירה בנתיב / במפרץ", "bus": "עיכוב האוטובוס, מפרץ − נתיב (שנ')", "cars": "כל המכוניות, מפרץ − נתיב (דקות-רכב)"},
-}
-
-
-def stop_summary() -> dict:
-    return json.loads((RESULTS_DIR / "experiments" / STOP_EXPERIMENT / "summary.json").read_text())
-
-
-def _mark(low: float, high: float, t: dict) -> str:
-    """Who wins in a cell: the bay (the interval is below zero), the lane (above zero) or neither (it spans zero)."""
-    return t["bay"] if high < 0 else t["lane"] if low > 0 else t["tie"]
-
-
-def _grid(rows: dict, cell, row_label: str, rates: list, dwells: list) -> str:
-    lines = [f"| {row_label} | " + " | ".join(f"{r:g}" for r in rates) + " |", "|---|" + "---|" * len(rates)]
-    for d in dwells:
-        lines.append(f"| **{d:g} s** | " + " | ".join(cell(rows[(r, d)]) for r in rates) + " |")
-    return "\n".join(lines)
-
-
-def stop_delta_grid(lang: str = "en") -> str:
-    """ΔPT (person-minutes per run, bay − lane) by dwell time (rows) and inflow (columns), with who wins."""
-    t, data = _STOP_TEXT[lang], stop_summary()["cells"]
-    rows = {(c["traffic_rate"], c["dwell_s"]): c for c in data}
-    rates, dwells = sorted({k[0] for k in rows}), sorted({k[1] for k in rows}, reverse=True)
-
-    def cell(c):
-        return f"{c['delta_pt_mean'] / 60:+.1f} {_mark(c['delta_pt_ci_low'], c['delta_pt_ci_high'], t)}".replace("-", "−")
-    return _grid(rows, cell, f"{t['dwell']} / {t['inflow']}", rates, dwells)
-
-
-def stop_pairs(lang: str = "en") -> str:
-    """ΔPT (person-minutes) when the lane stop is shorter than the bay stop."""
-    t, data = _STOP_TEXT[lang], stop_summary()["dwell_pairs"]
-    pairs = [(10, 15), (15, 20), (20, 30), (30, 45)]
-    by = {(p["traffic_rate"], p["dwell_lane_s"], p["dwell_bay_s"]): p for p in data}
-    rates = sorted({k[0] for k in by})
-    lines = [f"| {t['pair']} | " + " | ".join(f"{r:g}" for r in rates) + " |", "|---|" + "---|" * len(rates)]
-    for lane, bay in pairs:
-        cells = []
-        for r in rates:
-            c = by[(r, lane, bay)]
-            cells.append(f"{c['delta_pt_mean'] / 60:+.1f} {_mark(c['delta_pt_ci_low'], c['delta_pt_ci_high'], t)}".replace("-", "−"))
-        lines.append(f"| **{lane} s / {bay} s** | " + " | ".join(cells) + " |")
-    return "\n".join(lines)
-
-
-def stop_break_even(lang: str = "en") -> str:
-    """The car occupancy at which the designs tie (the bus carrying 50), by dwell time and inflow."""
-    t, data = _STOP_TEXT[lang], stop_summary()["cells"]
-    rows = {(c["traffic_rate"], c["dwell_s"]): c for c in data}
-    rates, dwells = sorted({k[0] for k in rows}), sorted({k[1] for k in rows}, reverse=True)
-
-    def cell(c):
-        v = c["break_even_pax_car"]
-        return t["always"] if v != v else (">3" if v > 3 else f"{v:.2f}")
-    return _grid(rows, cell, f"{t['dwell']} / {t['inflow']}", rates, dwells)
-
-
-def _stop_component(key: str, scale: float, fmt: str, label_key: str, lang: str) -> str:
-    t, data = _STOP_TEXT[lang], stop_summary()["cells"]
-    rows = {(c["traffic_rate"], c["dwell_s"]): c for c in data}
-    rates, dwells = sorted({k[0] for k in rows}), sorted({k[1] for k in rows}, reverse=True)
-    return _grid(rows, lambda c: (fmt.format(c[key] / scale)).replace("-", "−"), t[label_key], rates, dwells)
-
-
-def stop_bus_delay(lang: str = "en") -> str:
-    return _stop_component("delta_bus_time_s", 1.0, "{:+.1f}", "bus", lang)
-
-
-def stop_cars_time(lang: str = "en") -> str:
-    return _stop_component("delta_cars_time_s", 60.0, "{:+.1f}", "cars", lang)
-
-
-def _both(fn, name):
-    return {name: fn, name + "_he": (lambda f=fn: f("he"))}
-
-
 RENDERERS = {"headline": headline, "brain_table": brain_table, "stress_table": stress_table,
              "case_study_table": case_study_table,
              "headline_he": lambda: headline("he"), "brain_table_he": lambda: brain_table("he"),
@@ -299,10 +214,7 @@ RENDERERS = {"headline": headline, "brain_table": brain_table, "stress_table": s
              "brain_table_semver": brain_table_semver, "brain_table_semver_he": lambda: brain_table_semver("he"),
              "headline_semver": headline_semver, "headline_semver_he": lambda: headline_semver("he"),
              "case_study_table_semver": case_study_table_semver,
-             "case_study_table_semver_he": lambda: case_study_table_semver("he"),
-             **_both(stop_delta_grid, "stop_delta_grid"), **_both(stop_pairs, "stop_pairs"),
-             **_both(stop_break_even, "stop_break_even"), **_both(stop_bus_delay, "stop_bus_delay"),
-             **_both(stop_cars_time, "stop_cars_time")}
+             "case_study_table_semver_he": lambda: case_study_table_semver("he")}
 PUBLISHED = {"README.md": ["headline", "brain_table"],
              "README.he.md": ["headline_he", "brain_table_he"],
              "docs/archive/v2-next/en/README.md": ["headline", "brain_table"],
@@ -310,9 +222,6 @@ PUBLISHED = {"README.md": ["headline", "brain_table"],
              "docs/archive/v2-next/he/README.md": ["headline_he", "brain_table_he"],
              "docs/archive/v2-next/he/CASE_STUDY.md": ["case_study_table_he"],
              "docs/current/en/README.md": ["headline_semver", "brain_table_semver"],
-             "docs/current/en/RESULTS.md": ["stop_delta_grid", "stop_bus_delay", "stop_cars_time", "stop_pairs", "stop_break_even"],
-             "docs/current/he/RESULTS.md": ["stop_delta_grid_he", "stop_bus_delay_he", "stop_cars_time_he", "stop_pairs_he",
-                                       "stop_break_even_he"],
              "docs/current/en/CASE_STUDY.md": ["case_study_table_semver"],
              "docs/current/he/README.md": ["headline_semver_he", "brain_table_semver_he"],
              "docs/current/he/CASE_STUDY.md": ["case_study_table_semver_he"],

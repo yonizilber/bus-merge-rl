@@ -158,8 +158,11 @@ TEXT = {
 
 
 def _t(lang: str):
-    """A text-drawing helper: Hebrew needs right-to-left shaping (python-bidi) before matplotlib draws it."""
-    if lang != "he":
+    """A text-drawing helper: Hebrew needs right-to-left shaping (python-bidi) before matplotlib draws it.
+
+    From matplotlib 3.11 the text engine orders right-to-left text itself; shaping it again would reverse it."""
+    import matplotlib
+    if lang != "he" or tuple(int(x) for x in matplotlib.__version__.split(".")[:2]) >= (3, 11):
         return lambda x: x
     try:
         from bidi import get_display

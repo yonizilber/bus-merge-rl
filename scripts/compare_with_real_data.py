@@ -30,7 +30,7 @@ RATES = (0.1, 0.2, 0.3, 0.4, 0.5)
 DWELLS: tuple = ()          # the dwell times of the stored runs, set in main()
 # (cars, bus): the Israeli range for cars (1.2 in the news, 1.44-1.52 in the surveys; the page's default is the middle,
 # 1.35) with a rough 20 passengers on a city bus, then the US averages (FHWA/NHTS 2017: 1.7 per car; FHWA/NTD 2016: 10.7
-# per bus) and the first experiment's own default (1.2 and 50).
+# per bus) and the values the first experiment's analysis happened to use (1.2 and 50; not data).
 OCCUPANCIES = ((1.2, 20.0), (1.35, 20.0), (1.5, 20.0), (1.7, 10.7), (1.2, 50.0))
 
 
@@ -43,7 +43,7 @@ def merge_time(runs: pd.DataFrame) -> dict:
         return {"n": int(len(s)), "mean": round(float(s.mean()), 1), "median": round(float(s.median()), 1),
                 "p90": round(float(s.quantile(0.9)), 1), "p99": round(float(s.quantile(0.99)), 1),
                 "max": round(float(s.max()), 1), "share_over_20s": round(float((s > 20).mean()), 4),
-                "share_over_30s": round(float((s > 30).mean()), 4)}
+                "share_over_30s": round(float((s > 30).mean()), 4), "n_over_30s": int((s > 30).sum())}
     return {"all_bay_runs": stats(t),
             "by_rate": {str(r): stats(b[b.traffic_rate == r]["merge_time_s"].dropna()) for r in RATES},
             "outcomes": {k: int(v) for k, v in b["outcome"].value_counts().items()},

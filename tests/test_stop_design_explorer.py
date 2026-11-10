@@ -1,4 +1,6 @@
-"""The interactive explorer (docs/tools/stop_design_explorer.he.html) says what the stored measurements say.
+"""The interactive explorer (docs/tools/stop_design_explorer.{he,en}.html) says what the stored measurements say.
+
+- The Hebrew and English pages carry the same data and run the same calculation (scripts/explorer/model.js).
 
 - Its embedded table reproduces the published summary of the first experiment (same cars in both designs).
 - The numbers of its written summary are recomputed from the table, independently of the builder.
@@ -16,8 +18,9 @@ import pytest
 
 from busmerge.paths import REPO_ROOT
 
-PAGE_PATH = REPO_ROOT / "docs" / "tools" / "stop_design_explorer.he.html"
-PAGE = PAGE_PATH.read_text(encoding="utf-8")
+PAGE_PATHS = {lang: REPO_ROOT / "docs" / "tools" / f"stop_design_explorer.{lang}.html" for lang in ("he", "en")}
+PAGES = {lang: p.read_text(encoding="utf-8") for lang, p in PAGE_PATHS.items()}
+PAGE = PAGES["he"]
 DATA = json.loads(re.search(r"const DATA = (\{.*?\});\n", PAGE, re.S).group(1))
 SUMMARY = json.loads((REPO_ROOT / "results" / "experiments" / "stop_design_v1" / "summary.json").read_text())
 GEOM = json.loads((REPO_ROOT / "results" / "experiments" / "stop_design_v2" / "stop_geometry.json").read_text())
@@ -34,6 +37,37 @@ def verdict(pc, pb, v, extra=0.0):
     mean = pb * a + pc * b
     se = 1.96 * math.sqrt((pb * pb * va + pc * pc * vb + 2 * pb * pc * c) / n)
     return ("bay" if mean + se < 0 else "lane" if mean - se > 0 else "tie"), mean
+
+
+def test_both_languages_carry_the_same_data_and_the_same_controls():
+    en = json.loads(re.search(r"const DATA = (\{.*?\});\n", PAGES["en"], re.S).group(1))
+    assert en == DATA
+    for marker in ('id="dlane" min="0" max="45" step="1" value="6"', 'id="pcar" min="1" max="2" step="0.05" value="1.35"',
+                   "function evaluate(", "function dwells("):
+        assert marker in PAGES["en"] and marker in PAGES["he"], marker
+    assert '<html lang="en" dir="ltr">' in PAGES["en"] and '<html lang="he" dir="rtl">' in PAGES["he"]
+    for lang, page in PAGES.items():
+        assert not re.search(r"\[\[[a-z_0-9]+\]\]", page), lang
+        assert "/*STYLE*/" not in page and "/*MODEL*/" not in page and "/*PAGE*/" not in page, lang
+
+
+def test_the_english_summary_quotes_the_same_numbers():
+    eq = {(r, d): pair(r, d, d) for r in RATES for d in DWELLS}
+    a_all = [v[1] for v in eq.values()]
+    en = PAGES["en"]
+    assert f'<span class="num">{min(a_all):.1f}</span> to <span class="num">{max(a_all):.1f}</span> s to its trip' in en
+    counts = {"bay": 0, "lane": 0, "tie": 0}
+    for v in eq.values():
+        counts[verdict(1.35, 20.0, v)[0]] += 1
+    assert f'the bay is better in <span class="num">{counts["bay"]}</span>, the lane in <span class="num">{counts["lane"]}</span>' in en
+
+
+def test_the_summary_says_how_short_a_stop_always_goes_to_the_lane():
+    """The longest stop at which the bay costs both the bus and the cars at every inflow (0 to 6 s)."""
+    la = max(d for d in DWELLS if all(pair(r, d, d)[1] > 0 and pair(r, d, d)[2] > 0 for r in RATES))
+    assert la == 6
+    assert f"עצירה קצרה (0 עד {la} שניות): הנתיב, בכל מספר נוסעים." in PAGES["he"]
+    assert f"A short stop (0 to {la} s): the lane, at any number of passengers." in PAGES["en"]
 
 
 def test_the_dwell_axis_starts_at_zero_and_covers_the_first_experiment():
@@ -142,8 +176,8 @@ def test_the_summary_sentences_are_the_recomputed_numbers():
 
 
 # --- the browser -------------------------------------------------------------------------------------------------
-@pytest.fixture(scope="module")
-def browser_page():
+@pytest.fixture(scope="module", params=["he", "en"])
+def browser_page(request):
     sync = pytest.importorskip("playwright.sync_api")
     with sync.sync_playwright() as p:
         try:
@@ -153,8 +187,9 @@ def browser_page():
         page = browser.new_page()
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.goto(PAGE_PATH.as_uri())
+        page.goto(PAGE_PATHS[request.param].as_uri())
         page.wait_for_function("window.Explorer !== undefined")
+        page.lang = request.param
         yield page, errors
         browser.close()
 
@@ -218,9 +253,10 @@ def test_the_page_renders_and_reacts_to_the_controls(browser_page):
     set_ = ("(ids) => { for (const [id, v] of Object.entries(ids)) { const s = document.getElementById(id); s.value = v;"
             " s.dispatchEvent(new Event('input')); } }")
     page.evaluate(set_, {"dlane": 6, "pbus": 20})
-    assert page.inner_text("#verdict-title") == "הנתיב עדיף"                 # a 6 s stop in dense traffic: the lane
+    words = {"he": ("הנתיב עדיף", "המפרץ עדיף"), "en": ("The lane is better", "The bay is better")}[page.lang]
+    assert page.inner_text("#verdict-title") == words[0]                    # a 6 s stop in dense traffic: the lane
     page.evaluate(set_, {"dlane": 30, "pbus": 3})
-    assert page.inner_text("#verdict-title") == "המפרץ עדיף"                 # a long stop and an almost empty bus: the bay
+    assert page.inner_text("#verdict-title") == words[1]                    # a long stop and an almost empty bus: the bay
     assert page.locator("#map .c").count() == 9 * len(DWELLS)
     assert page.locator("#advgrid input").count() == 9
     assert errors == []
