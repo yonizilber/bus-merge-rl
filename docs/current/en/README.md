@@ -20,9 +20,11 @@ streamlit run streamlit_app.py
 
 Click **Run Simulation**. Tick **Fixed random seed** to replay any seed quoted in these pages.
 
-## Why this project
+## The story of the project
 
-Every city has to decide where its buses stop. Two designs compete:
+Every bus stop on a busy street hides a small dilemma. Pull the bus into a bay, and the cars keep flowing past while
+passengers board, but when the doors close the bus has to squeeze back into traffic. Stop it in the lane, and the bus
+leaves the moment it is ready, but everyone behind it waits.
 
 <p align="center">
   <img src="media/merge_v13_seed2000.gif" alt="A bus stopping in a bay and merging back into traffic (seed 2000)" width="100%">
@@ -37,15 +39,20 @@ then pulls out.</sub></p>
 <p align="center"><sub><b>Stopping in the lane.</b> The bus never has to merge, and can stop exactly at the kerb, but every
 car behind it waits until boarding ends: a queue forms.</sub></p>
 
-**The question is not which option is better for the bus, but which one moves more people faster**, counting the
-50 passengers on the bus and the 1.2 people in an average car. It depends on how dense the traffic is, how long the
-bus stands at the stop in each design, how many people ride in each car, and how long a merge really takes. The
-[research question](RESEARCH.md) page sets out the experiment, and the [results](RESULTS.md) tell what it showed: in short, **a
-short stop favours the lane, a long stop or dense traffic favours the bay, and the tipping point moves with every assumption.**
+So: **when does traffic move fastest, when the bus stops in a bay or when it stops in the lane?**
 
-**The hard part is the merge.** A comparison is only as good as its weakest model, and the weakest point of most
-traffic simulations is exactly here: a bus leaving a bay into live traffic, which depends on judgement, not on a
-formula. So the project has two parts:
+Traffic here means people, not vehicles. A bus carries many passengers and a car only one or two, so a few seconds
+lost by a full bus can outweigh a minute lost by a car, while a nearly empty bus tips the scale the other way. The
+answer depends on how dense the traffic is, how long the bus stands at the stop in each design, how full the bus is
+and how many people ride in each car. The [research question](RESEARCH.md) page sets out the experiment that varies
+them, and the [results](RESULTS.md) show where each design wins. In short: **a short stop favours the lane; a long
+stop, dense traffic or a bus with few passengers favours the bay; and the tipping point moves with every assumption.**
+
+**Answering it means simulating the hardest moment on the road.** The stop in the lane is easy to model: the bus
+stops and the cars queue. The bay is not. When boarding ends, the driver reads the traffic, waits for a gap and pulls
+out, a judgement call that no formula captures well. A driver that is too timid makes the bay look slow; one that is
+too bold makes it look fast, and would crash in real life. Instead of a hand-written rule, this project trains a
+driver for that moment and puts it in a world that hides nothing:
 - **A world:** a microscopic traffic simulation, every car an [[idm|IDM]] driver, every vehicle moving by a
   [[bicycle|kinematic bicycle model]], with no hidden corrections: anything physically impossible is checked for and
   reported. See [World model](WORLD.md).
