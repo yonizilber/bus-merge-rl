@@ -5,7 +5,7 @@
     python scripts/build_test_report.py --no-run      # rebuild the page from the last recorded run
 
 The run is recorded in outputs/test_results.xml (JUnit) and outputs/test_run.json (when, on which commit
-and environment, how long). The page is docs/html/TEST_REPORT.html, in the same site as the HTML docs
+and environment, how long). The page is docs/reference/html/TEST_REPORT.html, in the same site as the HTML docs
 (scripts/build_docs_html.py). Every number on it comes from the recorded run; the per-file descriptions
 below are the only hand-written part.
 """
@@ -571,7 +571,7 @@ def write(out_dir: Path, lang: str | None = None, **shell_args) -> Path:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--no-run", action="store_true", help="rebuild from the last recorded run")
-    ap.add_argument("--out", type=Path, default=REPO / "docs" / "html")
+    ap.add_argument("--out", type=Path, default=REPO / "docs" / "reference" / "html")
     args = ap.parse_args()
     if not args.no_run:
         run_tests()

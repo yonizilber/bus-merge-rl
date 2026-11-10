@@ -6,7 +6,7 @@ from busmerge.rl.merge_constants import BAY_DEPTH
 # success in training) once the bus centre is this close to the lane centre. At -0.25 m the 2.5 m wide
 # bus is wholly inside the 3.5 m lane, 0.25 m clear of the kerb; the lane-keeping controller then
 # centres it. It was -0.10 m until 2026-10-10, a margin that only an overshooting controller reached
-# quickly (docs/CASE_STUDY_REWARD_HACKING.md); the change was the project owner's decision.
+# quickly (docs/reference/CASE_STUDY_REWARD_HACKING.md); the change was the project owner's decision.
 PRODUCTION_MERGE_LATERAL_THRESHOLD = -0.25
 
 

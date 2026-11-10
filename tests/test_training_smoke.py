@@ -1,7 +1,7 @@
 """Two training epochs run end to end, change the weights, and produce a brain the app engine can drive.
 
 Nothing in the training loop was exercised by a test before: the PPO buffer bug and the rollback bug
-(docs/BUGS.md P17, P18) were found only when a fine-tune failed. Every file training writes (the
+(docs/reference/BUGS.md P17, P18) were found only when a fine-tune failed. Every file training writes (the
 checkpoints and its log) goes to a temporary folder.
 """
 import random

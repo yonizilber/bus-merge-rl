@@ -53,7 +53,7 @@ How to read the table:
 
 ## The case study: an agent that cheated its steering
 
-> **[Read the case study](docs/CASE_STUDY_REWARD_HACKING.md)**: the investigation, the fixes and the
+> **[Read the case study](docs/reference/CASE_STUDY_REWARD_HACKING.md)**: the investigation, the fixes and the
 > retraining, with every number measured.
 
 **The cheat.** The first agent merged in **97.9%** of unseen runs. Once every hidden correction was
@@ -115,12 +115,12 @@ its own plant. With the controller fixed, it merged in **0%** of runs.
 - **Nightly:** the default agent on unseen seeds used nowhere else: 200 at the app defaults, plus 50 at each of four
   traffic inflows (400 runs on 250 seeds).
 - **Known limitations:** documented as **strict `xfail`** tests. They do not hide a failure, and they
-  turn red the day the behaviour changes. See [docs/QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md)
+  turn red the day the behaviour changes. See [docs/reference/QA_TEST_SUMMARY.md](docs/reference/QA_TEST_SUMMARY.md)
   (English and Hebrew).
 
 ## Known limitations
 
-Measured and documented ([docs/BUGS.md](docs/BUGS.md), "Open"); most are tracked by tests:
+Measured and documented ([docs/reference/BUGS.md](docs/reference/BUGS.md), "Open"); most are tracked by tests:
 - **Contact with a car alongside (about 2%).** The agent sometimes pulls out while a car is beside the
   bay.
 - **Exit kerb (about 9%).** From the far end of the bay, after letting a car pass, the agent steers out
@@ -135,19 +135,19 @@ Measured and documented ([docs/BUGS.md](docs/BUGS.md), "Open"); most are tracked
 
 | Document | What it covers |
 |---|---|
-| [CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md) | The investigation, from 97.9% to 0% and back, with what was learned |
-| [SPECS.md](docs/SPECS.md) | The system: geometry, vehicles, physics, agent, training, evaluation and gates, brains |
-| [TRAINING.md](docs/TRAINING.md) | How each shipped brain was produced, with exact commands and the failed attempts |
-| [BUGS.md](docs/BUGS.md) | Every bug found and fixed (with evidence), and every open issue |
-| [TEST_STRATEGY.md](docs/TEST_STRATEGY.md) | Test coverage and the menu the suite was built from |
-| [QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md) | The testing and QA strategy, in English and Hebrew |
-| [JOURNAL.md](docs/JOURNAL.md) | The dated engineering journal |
-| [ROADMAP.md](docs/ROADMAP.md) | What comes next |
+| [CASE_STUDY_REWARD_HACKING.md](docs/reference/CASE_STUDY_REWARD_HACKING.md) | The investigation, from 97.9% to 0% and back, with what was learned |
+| [SPECS.md](docs/reference/SPECS.md) | The system: geometry, vehicles, physics, agent, training, evaluation and gates, brains |
+| [TRAINING.md](docs/reference/TRAINING.md) | How each shipped brain was produced, with exact commands and the failed attempts |
+| [BUGS.md](docs/reference/BUGS.md) | Every bug found and fixed (with evidence), and every open issue |
+| [TEST_STRATEGY.md](docs/reference/TEST_STRATEGY.md) | Test coverage and the menu the suite was built from |
+| [QA_TEST_SUMMARY.md](docs/reference/QA_TEST_SUMMARY.md) | The testing and QA strategy, in English and Hebrew |
+| [JOURNAL.md](docs/reference/JOURNAL.md) | The dated engineering journal |
+| [ROADMAP.md](docs/reference/ROADMAP.md) | What comes next |
 
 For a styled HTML version of all of these (navigation, light and dark themes, right-to-left Hebrew), run
-`python scripts/build_docs_html.py` and open `docs/html/index.html`.
+`python scripts/build_docs_html.py` and open `docs/reference/html/index.html`.
 `python scripts/build_test_report.py` runs the whole suite and adds a test report in English and Hebrew
-(`docs/html/TEST_REPORT.html`): every test case with its result, the known limitations, and the latest nightly gates.
+(`docs/reference/html/TEST_REPORT.html`): every test case with its result, the known limitations, and the latest nightly gates.
 
 ## Reproducing the numbers
 
@@ -157,7 +157,7 @@ python scripts/publish_results.py          # regenerate the tables above from re
 pytest --nightly -m nightly                # the nightly gates
 ```
 
-To train, see [docs/TRAINING.md](docs/TRAINING.md). v13 is v11 fine-tuned for 300 epochs, about 45
+To train, see [docs/reference/TRAINING.md](docs/reference/TRAINING.md). v13 is v11 fine-tuned for 300 epochs, about 45
 minutes on a CPU.
 
 ## Project layout
@@ -171,7 +171,7 @@ models/                shipped brains (v13 default; v9-v11 kept for the case stu
 results/               published measurements (per-seed rows + provenance)
 scripts/               verify_brain, acceptance, train, publish_results, diagnostics
 tests/                 pytest suite (CI) and nightly gates
-docs/                  the documents above
+docs/                  the documents: current/ (newest), reference/ (the documents above), archive/, reports/, tools/; see docs/README.md
 ```
 
 ## License

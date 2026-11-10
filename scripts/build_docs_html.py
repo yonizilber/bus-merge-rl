@@ -6,7 +6,7 @@ navigation bar, a table of contents per page, styled tables and code, light and 
 right-to-left layout for the Hebrew sections. Links between documents point to the HTML pages;
 links to code, results and media point back into the repository.
 
-    python scripts/build_docs_html.py              # writes docs/html/ (ignored by git)
+    python scripts/build_docs_html.py              # writes docs/reference/html/ (ignored by git)
     python scripts/build_docs_html.py --out site/
 
 Needs the `markdown` package (in the dev extras).
@@ -30,16 +30,16 @@ REPO = Path(__file__).resolve().parent.parent
 PAGES = [
     ("README.md", "index.html", "Overview"),
     ("README.he.md", "README.he.html", "סקירה בעברית"),
-    ("docs/CASE_STUDY_REWARD_HACKING.md", "CASE_STUDY_REWARD_HACKING.html", "Case study"),
-    ("docs/QA_TEST_SUMMARY.md", "QA_TEST_SUMMARY.html", "QA summary"),
-    ("docs/SPECS.md", "SPECS.html", "Specification"),
-    ("docs/TRAINING.md", "TRAINING.html", "Training"),
-    ("docs/BUGS.md", "BUGS.html", "Bugs"),
-    ("docs/TEST_STRATEGY.md", "TEST_STRATEGY.html", "Test strategy"),
-    ("docs/JOURNAL.md", "JOURNAL.html", "Journal"),
-    ("docs/ROADMAP.md", "ROADMAP.html", "Roadmap"),
-    ("docs/EXPERIMENT_STOP_DESIGN.md", "EXPERIMENT_STOP_DESIGN.html", "Experiment"),
-    ("docs/REAL_DATA_COMPARISON.md", "REAL_DATA_COMPARISON.html", "Real data"),
+    ("docs/reference/CASE_STUDY_REWARD_HACKING.md", "CASE_STUDY_REWARD_HACKING.html", "Case study"),
+    ("docs/reference/QA_TEST_SUMMARY.md", "QA_TEST_SUMMARY.html", "QA summary"),
+    ("docs/reference/SPECS.md", "SPECS.html", "Specification"),
+    ("docs/reference/TRAINING.md", "TRAINING.html", "Training"),
+    ("docs/reference/BUGS.md", "BUGS.html", "Bugs"),
+    ("docs/reference/TEST_STRATEGY.md", "TEST_STRATEGY.html", "Test strategy"),
+    ("docs/reference/JOURNAL.md", "JOURNAL.html", "Journal"),
+    ("docs/reference/ROADMAP.md", "ROADMAP.html", "Roadmap"),
+    ("docs/reference/EXPERIMENT_STOP_DESIGN.md", "EXPERIMENT_STOP_DESIGN.html", "Experiment"),
+    ("docs/reference/REAL_DATA_COMPARISON.md", "REAL_DATA_COMPARISON.html", "Real data"),
 ]
 PAGE_OF = {(REPO / src).resolve(): out for src, out, _ in PAGES}
 NAV = [(out, title) for _, out, title in PAGES] + [("TEST_REPORT.html", "Test report")]
@@ -265,7 +265,7 @@ def build(out_dir: Path) -> list[Path]:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", type=Path, default=REPO / "docs" / "html")
+    ap.add_argument("--out", type=Path, default=REPO / "docs" / "reference" / "html")
     args = ap.parse_args()
     for path in build(args.out):
         print(path)

@@ -5,7 +5,7 @@ Time limits (2026-10-10, the project owner's decision): mean <= 15.0 s, p95 <= 2
 fail a brain that freezes or refuses to merge, not a cautious one. The earlier limits (6.0 / 7.0 s,
 set on 2026-10-06 from v9/v10) were measured while the merge steering overshot its target. Under
 honest steering, even a scripted merge at full throttle that ignores traffic takes 6.3 s on average
-(p95 7.1 s), so no brain could meet them (docs/CASE_STUDY_REWARD_HACKING.md).
+(p95 7.1 s), so no brain could meet them (docs/reference/CASE_STUDY_REWARD_HACKING.md).
 
 Time is measured from the end of boarding to fully merged, in the app engine, with the app's
 default settings (scenario B, 0.4 cars/s, 50 cars, governor off).

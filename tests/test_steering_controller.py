@@ -2,7 +2,7 @@
 
 The old merge steering, atan2(lateral error, max(v, 5)), had no heading term: it carried the bus about
 as far past its target as it started from it. The v9-v11 brains learned to rely on that overshoot
-(docs/CASE_STUDY_REWARD_HACKING.md). These tests drive a bus with the production method
+(docs/reference/CASE_STUDY_REWARD_HACKING.md). These tests drive a bus with the production method
 (`Vehicle.steer_toward`: pure pursuit, steering-rate limit, bicycle model) from a parallel start at
 a distance from the line, over the speeds and steering rates each controller meets.
 

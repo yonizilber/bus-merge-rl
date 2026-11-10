@@ -207,7 +207,7 @@ def case_study_table_semver(lang: str = "en") -> str:
     return "\n".join(table)
 
 
-# ── The stop-design experiment (docs-v3 results page) ────────────────────────────────────────────
+# ── The stop-design experiment (docs/current results page) ────────────────────────────────────────────
 # results/experiments/stop_design_v1/summary.json is written by scripts/analyze_stop_experiment.py --publish.
 STOP_EXPERIMENT = "stop_design_v1"
 _STOP_TEXT = {
@@ -305,19 +305,19 @@ RENDERERS = {"headline": headline, "brain_table": brain_table, "stress_table": s
              **_both(stop_cars_time, "stop_cars_time")}
 PUBLISHED = {"README.md": ["headline", "brain_table"],
              "README.he.md": ["headline_he", "brain_table_he"],
-             "next/en/README.md": ["headline", "brain_table"],
-             "next/en/CASE_STUDY.md": ["case_study_table"],
-             "next/he/README.md": ["headline_he", "brain_table_he"],
-             "next/he/CASE_STUDY.md": ["case_study_table_he"],
-             "docs-v3/en/README.md": ["headline_semver", "brain_table_semver"],
-             "docs-v3/en/RESULTS.md": ["stop_delta_grid", "stop_bus_delay", "stop_cars_time", "stop_pairs", "stop_break_even"],
-             "docs-v3/he/RESULTS.md": ["stop_delta_grid_he", "stop_bus_delay_he", "stop_cars_time_he", "stop_pairs_he",
+             "docs/archive/v2-next/en/README.md": ["headline", "brain_table"],
+             "docs/archive/v2-next/en/CASE_STUDY.md": ["case_study_table"],
+             "docs/archive/v2-next/he/README.md": ["headline_he", "brain_table_he"],
+             "docs/archive/v2-next/he/CASE_STUDY.md": ["case_study_table_he"],
+             "docs/current/en/README.md": ["headline_semver", "brain_table_semver"],
+             "docs/current/en/RESULTS.md": ["stop_delta_grid", "stop_bus_delay", "stop_cars_time", "stop_pairs", "stop_break_even"],
+             "docs/current/he/RESULTS.md": ["stop_delta_grid_he", "stop_bus_delay_he", "stop_cars_time_he", "stop_pairs_he",
                                        "stop_break_even_he"],
-             "docs-v3/en/CASE_STUDY.md": ["case_study_table_semver"],
-             "docs-v3/he/README.md": ["headline_semver_he", "brain_table_semver_he"],
-             "docs-v3/he/CASE_STUDY.md": ["case_study_table_semver_he"],
-             "docs/SPECS.md": ["brain_table", "stress_table"],
-             "docs/CASE_STUDY_REWARD_HACKING.md": ["case_study_table"]}
+             "docs/current/en/CASE_STUDY.md": ["case_study_table_semver"],
+             "docs/current/he/README.md": ["headline_semver_he", "brain_table_semver_he"],
+             "docs/current/he/CASE_STUDY.md": ["case_study_table_semver_he"],
+             "docs/reference/SPECS.md": ["brain_table", "stress_table"],
+             "docs/reference/CASE_STUDY_REWARD_HACKING.md": ["case_study_table"]}
 
 
 def _block(name: str) -> str:

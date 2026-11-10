@@ -7,7 +7,7 @@ the entry blocked waits instead of being lost. Every vehicle's trip is recorded 
 The unit of comparison is person-time: Σ occupancy × (exit time − scheduled arrival time). Occupancy is applied at
 analysis time (``person_time``), so one set of runs serves every car and bus occupancy.
 
-docs/EXPERIMENT_STOP_DESIGN.md describes the design and every column.
+docs/reference/EXPERIMENT_STOP_DESIGN.md describes the design and every column.
 """
 from __future__ import annotations
 

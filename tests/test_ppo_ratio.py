@@ -3,7 +3,7 @@
 The ratio compares the probability of each stored action now with the probability when it was
 sampled. Before any update the two are the same policy, so any ratio other than 1 means the stored
 action and its stored log-probability do not belong together. That was the case for every action
-beyond the steering limit (docs/BUGS.md P17). The batch is built exactly as training builds it
+beyond the steering limit (docs/reference/BUGS.md P17). The batch is built exactly as training builds it
 (`PPOAgent.choose_action`, `store_transition`) and scored with training's own functions
 (`train.policy_distribution`, `train.ppo_ratios`).
 """

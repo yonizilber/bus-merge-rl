@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The simulation's side of the comparison with published field data (docs/REAL_DATA_COMPARISON.md).
+"""The simulation's side of the comparison with published field data (docs/reference/REAL_DATA_COMPARISON.md).
 
     python scripts/compare_with_real_data.py            # reads outputs/experiments/stop_design_v1, prints and writes
                                                          # results/experiments/stop_design_v1/real_data_comparison.json

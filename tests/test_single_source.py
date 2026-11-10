@@ -1,7 +1,7 @@
 """The bay geometry and the merge threshold are defined once.
 
 The bay used to be drawn in three places with different tapers, and the merge threshold existed both
-in `merge_success.py` and as a literal in the engine (docs/BUGS.md P15). This test parses every
+in `merge_success.py` and as a literal in the engine (docs/reference/BUGS.md P15). This test parses every
 module and fails on a new copy:
 - a number equal to a bay x coordinate (the taper and flat-section ends);
 - a number compared with something named "lateral" that equals the merge threshold or its old value.

@@ -1,4 +1,4 @@
-"""Every number in the text of the results page (docs-v3/*/RESULTS.md) is what the stored measurement says.
+"""Every number in the text of the results page (docs/current/*/RESULTS.md) is what the stored measurement says.
 
 The tables on that page are generated from results/experiments/stop_design_v1/summary.json. The sentences around them
 state numbers too (how many cells the bay wins, the range of the bus's delay, the queue length), and a sentence that
@@ -87,7 +87,7 @@ def test_how_sure_we_are(summary, cells):
 def test_the_story_pages_exist_in_both_languages_and_use_the_generated_blocks():
     from busmerge.paths import REPO_ROOT
     for lang in ("en", "he"):
-        text = (REPO_ROOT / "docs-v3" / lang / "RESULTS.md").read_text(encoding="utf-8")
+        text = (REPO_ROOT / "docs/current" / lang / "RESULTS.md").read_text(encoding="utf-8")
         suffix = "_he" if lang == "he" else ""
         for name in ("stop_delta_grid", "stop_bus_delay", "stop_cars_time", "stop_pairs", "stop_break_even"):
             assert f"<!-- results:{name}{suffix} " in text, (lang, name)

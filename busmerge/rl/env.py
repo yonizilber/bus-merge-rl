@@ -655,7 +655,7 @@ class BusMergeEnv:
         # Once the bus is out of the bay (progress >= COMMITTED_PROGRESS) the weight is
         # `commit_steer_weight`: "finish what you started". With honest steering the bus stops where
         # the brain aims, and a brain that aims half way never samples a success, so the weak
-        # in-bay weight (8) alone did not move it (2026-10-10, docs/CASE_STUDY_REWARD_HACKING.md).
+        # in-bay weight (8) alone did not move it (2026-10-10, docs/reference/CASE_STUDY_REWARD_HACKING.md).
         _raw_steer = getattr(self, "_governor_raw_steer", 0.0)
         if gap > 6.0 and _raw_steer > 0.0 and progress < 1.0:
             _safe_scale = float(np.clip((gap - 6.0) / 20.0, 0.0, 1.0))   # 0 at 6m, 1 at 26m+

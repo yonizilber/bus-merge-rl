@@ -1,6 +1,6 @@
 """The default brain (v13) in forced situations, in the app engine.
 
-Two tests are strict `xfail`: they document known limitations (docs/BUGS.md O2, O12) with a
+Two tests are strict `xfail`: they document known limitations (docs/reference/BUGS.md O2, O12) with a
 situation that reproduces them, and turn red the day the behaviour changes, for better or worse.
 """
 import pytest

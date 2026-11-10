@@ -1,4 +1,4 @@
-"""Every published number comes from a measurement in results/ (docs/TEST_STRATEGY.md, #26).
+"""Every published number comes from a measurement in results/ (docs/reference/TEST_STRATEGY.md, #26).
 
 - Each stored summary is exactly what its per-seed rows give: no number was typed in by hand.
 - The marked blocks in the README, SPECS and the case study are what the measurements render

@@ -7,7 +7,7 @@
 
 The data goes to outputs/experiments/<name>[_pilot]/: runs-*.parquet (one row per run), trips-*.parquet (one row
 per vehicle and run) and provenance.json (commit, versions, spec). A run that is already stored is skipped, so an
-interrupted experiment continues where it stopped. docs/EXPERIMENT_STOP_DESIGN.md describes every column.
+interrupted experiment continues where it stopped. docs/reference/EXPERIMENT_STOP_DESIGN.md describes every column.
 """
 from __future__ import annotations
 

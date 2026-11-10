@@ -294,7 +294,7 @@ def rollback_due(no_improve_windows: int, patience: int, best_eval_success: int)
     Only after ``patience`` evaluations without improvement (0 disables rollback), and only if the best
     checkpoint has evaluated with at least one success. A run that has never succeeded has no checkpoint
     better than its current weights; restoring its starting weights would undo all its learning, which
-    is what defeated two fine-tunes (docs/BUGS.md P18).
+    is what defeated two fine-tunes (docs/reference/BUGS.md P18).
     """
     return patience > 0 and no_improve_windows >= patience and best_eval_success > 0
 

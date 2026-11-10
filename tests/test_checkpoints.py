@@ -1,7 +1,7 @@
 """Checkpoints round-trip exactly and a mismatched one is refused (#23).
 
 A checkpoint that loads into a network of the wrong shape, or a missing file, must never quietly
-leave random weights in place where a trained brain is expected (docs/BUGS.md H8, H9). Training's
+leave random weights in place where a trained brain is expected (docs/reference/BUGS.md H8, H9). Training's
 lenient load (``strict=False``) is allowed to start fresh, and says so.
 """
 import numpy as np

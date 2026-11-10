@@ -1,7 +1,7 @@
 """Nightly gates (#27, #28): the default brain on many unseen seeds. Skipped unless `pytest --nightly`.
 
 The seeds (3000-3399 reserved, 3000-3249 in use) are used nowhere else: not in training, selection or the published results
-(2000-2999). The thresholds were fixed in docs/TEST_STRATEGY.md before these seeds were run. The
+(2000-2999). The thresholds were fixed in docs/reference/TEST_STRATEGY.md before these seeds were run. The
 summaries are written to outputs/nightly/ (uploaded by .github/workflows/nightly.yml).
 """
 import json

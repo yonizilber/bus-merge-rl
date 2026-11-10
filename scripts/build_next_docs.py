@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Build the next documentation version: one self-contained HTML site per language.
 
-    python scripts/build_next_docs.py              # next/site/en and next/site/he
+    python scripts/build_next_docs.py              # docs/archive/v2-next/site/en and .../he
     python scripts/build_next_docs.py --lang he    # one language
 
-The sources are Markdown in next/en and next/he. The two sets are written separately and never link to
+The sources are Markdown in docs/archive/v2-next/en and docs/archive/v2-next/he (the second version) or docs/current (the third). The two sets are written separately and never link to
 each other: every page of a site is in one language, and the navigation, the table of contents, the
 notes and the test report are too.
 
@@ -36,10 +36,10 @@ import build_docs_html  # noqa: E402
 import build_test_report  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
-NEXT = REPO / "next"
+NEXT = REPO / "docs" / "archive" / "v2-next"
 MEDIA = REPO / "docs" / "media"
 
-# Output page -> source file (in next/<lang>/). The test report is generated, not written.
+# Output page -> source file (in <root>/<lang>/). The test report is generated, not written.
 PAGES = {
     "index.html": "README.md",
     "HOW_IT_WORKS.html": "HOW_IT_WORKS.md",
@@ -174,7 +174,7 @@ def site_config(root: Path) -> dict:
             cfg["langs"][lang]["nav"] = [tuple(item) for item in nav]
         cfg["feature_head"].update(data.get("feature_head", {}))
     for lang, lc in cfg["langs"].items():
-        lc["footer"] = lc["footer"].replace("next/", f"{root.name}/")
+        lc["footer"] = lc["footer"].replace("next/", f"{root.resolve().relative_to(REPO).as_posix()}/")
     return cfg
 
 
@@ -622,7 +622,7 @@ def build(out_root: Path, langs=("en", "he"), root: Path = NEXT) -> dict[str, li
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--root", type=Path, default=NEXT, help="the folder with en/ and he/ sources (default: next)")
+    ap.add_argument("--root", type=Path, default=NEXT, help="the folder with en/ and he/ sources (default: docs/archive/v2-next; the current version is docs/current)")
     ap.add_argument("--lang", choices=sorted(LANGS), help="one language only")
     ap.add_argument("--out", type=Path, help="where the HTML site goes (default: <root>/site)")
     ap.add_argument("--github", action="store_true", help="also write GitHub-flavoured Markdown to <root>/github")

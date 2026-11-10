@@ -11,7 +11,7 @@ _spec.loader.exec_module(build_docs_html)
 
 def test_every_markdown_document_has_a_page():
     sources = {src for src, _, _ in build_docs_html.PAGES}
-    documents = {"README.md", *(p.relative_to(REPO_ROOT).as_posix() for p in (REPO_ROOT / "docs").glob("*.md"))}
+    documents = {"README.md", *(p.relative_to(REPO_ROOT).as_posix() for p in (REPO_ROOT / "docs" / "reference").glob("*.md"))}
     assert documents <= sources, f"not in the HTML docs: {sorted(documents - sources)}"
 
 

@@ -1,7 +1,7 @@
 """The training environment moves the world exactly as the app engine does (#24).
 
 `BusMergeEnv` builds a training scenario and hands every physics step to `SimulationEngine`
-(docs/BUGS.md P1: two physics implementations used to drift apart). The test lets the env and an
+(docs/reference/BUGS.md P1: two physics implementations used to drift apart). The test lets the env and an
 independent copy of its engine take the same actions from the same state and random-number state.
 After every step, every vehicle must be bit-identical in both: position, speed, acceleration, lateral
 position, heading, steering angle and lane drift. Anything the env did to the physics outside the

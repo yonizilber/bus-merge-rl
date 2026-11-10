@@ -285,7 +285,7 @@ if _available_brains:
             + f"\n\n**Where v13 fails strict:** in {_v13['off_road_pct']:.1f}% of runs the kerb corner at the end "
             "of the exit taper cuts into its side, when it steers out slowly from the far end of the bay. "
             "v9-v11 were trained while the merge steering overshot its target. They ask for a target half "
-            "way out of the bay and stop there now (docs/CASE_STUDY_REWARD_HACKING.md). Generated from "
+            "way out of the bay and stop there now (docs/reference/CASE_STUDY_REWARD_HACKING.md). Generated from "
             "results/ (tests/test_published_numbers.py)."
         )
 

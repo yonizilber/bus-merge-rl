@@ -51,7 +51,7 @@ streamlit run streamlit_app.py
 
 ## חקר המקרה: סוכן שרימה עם ההיגוי שלו
 
-> **[לקריאת חקר המקרה](docs/CASE_STUDY_REWARD_HACKING.md)** (באנגלית): החקירה, התיקונים והאימון מחדש,
+> **[לקריאת חקר המקרה](docs/reference/CASE_STUDY_REWARD_HACKING.md)** (באנגלית): החקירה, התיקונים והאימון מחדש,
 > כשכל מספר נמדד.
 
 **הרמאות.** הסוכן הראשון השתלב ב-**97.9%** מההרצות שלא נראו. אחרי שכל תיקון נסתר הוסר מהסימולציה, אותן
@@ -107,11 +107,11 @@ streamlit run streamlit_app.py
 - **בלילה:** סוכן ברירת המחדל על seeds שלא משמשים בשום מקום אחר: 200 בהגדרות האפליקציה, ועוד 50 בכל אחת מארבע
   עוצמות תנועה (400 הרצות על 250 seeds).
 - **מגבלות ידועות:** מתועדות כבדיקות **strict `xfail`**. הן לא מסתירות כשל, והן יהפכו לאדומות ביום שההתנהגות
-  תשתנה. ראו [docs/QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md) (באנגלית ובעברית).
+  תשתנה. ראו [docs/reference/QA_TEST_SUMMARY.md](docs/reference/QA_TEST_SUMMARY.md) (באנגלית ובעברית).
 
 ## מגבלות ידועות
 
-נמדדו ותועדו ([docs/BUGS.md](docs/BUGS.md), בחלק "Open"); רובן נעקבות בבדיקות:
+נמדדו ותועדו ([docs/reference/BUGS.md](docs/reference/BUGS.md), בחלק "Open"); רובן נעקבות בבדיקות:
 - **מגע עם רכב שנוסע לצד האוטובוס (כ-2%).** הסוכן לפעמים יוצא כשיש מכונית לצד המפרץ.
 - **שפת המדרכה ביציאה (כ-9%).** מהקצה הרחוק של המפרץ, אחרי שנתן למכונית לעבור, הסוכן מנווט החוצה לאט מדי,
   ופינת המדרכה בקטע היציאה המשופע חודרת לדופן האוטובוס.
@@ -127,19 +127,19 @@ streamlit run streamlit_app.py
 
 | מסמך | מה הוא מכסה |
 |---|---|
-| [CASE_STUDY_REWARD_HACKING.md](docs/CASE_STUDY_REWARD_HACKING.md) | החקירה, מ-97.9% ל-0% ובחזרה, ומה שנלמד ממנה |
-| [SPECS.md](docs/SPECS.md) | המערכת: גאומטריה, כלי רכב, פיזיקה, סוכן, אימון, הערכה ושערי איכות, מוחות |
-| [TRAINING.md](docs/TRAINING.md) | איך כל מוח שמצורף נוצר, עם הפקודות המדויקות והניסיונות שנכשלו |
-| [BUGS.md](docs/BUGS.md) | כל באג שנמצא ותוקן (עם ראיות), וכל בעיה פתוחה |
-| [TEST_STRATEGY.md](docs/TEST_STRATEGY.md) | כיסוי הבדיקות והתפריט שממנו נבנתה חבילת הבדיקות |
-| [QA_TEST_SUMMARY.md](docs/QA_TEST_SUMMARY.md) | אסטרטגיית הבדיקות וה-QA, באנגלית ובעברית |
-| [JOURNAL.md](docs/JOURNAL.md) | יומן הנדסי מתוארך |
-| [ROADMAP.md](docs/ROADMAP.md) | מה הלאה |
+| [CASE_STUDY_REWARD_HACKING.md](docs/reference/CASE_STUDY_REWARD_HACKING.md) | החקירה, מ-97.9% ל-0% ובחזרה, ומה שנלמד ממנה |
+| [SPECS.md](docs/reference/SPECS.md) | המערכת: גאומטריה, כלי רכב, פיזיקה, סוכן, אימון, הערכה ושערי איכות, מוחות |
+| [TRAINING.md](docs/reference/TRAINING.md) | איך כל מוח שמצורף נוצר, עם הפקודות המדויקות והניסיונות שנכשלו |
+| [BUGS.md](docs/reference/BUGS.md) | כל באג שנמצא ותוקן (עם ראיות), וכל בעיה פתוחה |
+| [TEST_STRATEGY.md](docs/reference/TEST_STRATEGY.md) | כיסוי הבדיקות והתפריט שממנו נבנתה חבילת הבדיקות |
+| [QA_TEST_SUMMARY.md](docs/reference/QA_TEST_SUMMARY.md) | אסטרטגיית הבדיקות וה-QA, באנגלית ובעברית |
+| [JOURNAL.md](docs/reference/JOURNAL.md) | יומן הנדסי מתוארך |
+| [ROADMAP.md](docs/reference/ROADMAP.md) | מה הלאה |
 
 לגרסת HTML מעוצבת של כל המסמכים (ניווט, ערכת צבעים בהירה וכהה, עברית מימין לשמאל) מריצים
-`python scripts/build_docs_html.py` ופותחים את `docs/html/index.html`.
+`python scripts/build_docs_html.py` ופותחים את `docs/reference/html/index.html`.
 `python scripts/build_test_report.py` מריץ את כל חבילת הבדיקות ומוסיף דוח בדיקות באנגלית ובעברית
-(`docs/html/TEST_REPORT.html`): כל מקרה בדיקה עם התוצאה שלו, המגבלות הידועות, ותוצאות הבדיקות הליליות האחרונות.
+(`docs/reference/html/TEST_REPORT.html`): כל מקרה בדיקה עם התוצאה שלו, המגבלות הידועות, ותוצאות הבדיקות הליליות האחרונות.
 
 ## שחזור המספרים
 
@@ -152,7 +152,7 @@ pytest --nightly -m nightly                # the nightly gates
 הפקודה הראשונה מודדת את v13 על 1,000 seeds, השנייה מייצרת מחדש את הטבלאות שלמעלה מתוך `results/`,
 והשלישית מריצה את הבדיקות הליליות.
 
-לאימון, ראו [docs/TRAINING.md](docs/TRAINING.md). v13 הוא v11 אחרי fine-tune של 300 epochs, כ-45 דקות
+לאימון, ראו [docs/reference/TRAINING.md](docs/reference/TRAINING.md). v13 הוא v11 אחרי fine-tune של 300 epochs, כ-45 דקות
 על CPU.
 
 ## מבנה הפרויקט
@@ -167,7 +167,7 @@ pytest --nightly -m nightly                # the nightly gates
 | `results/` | המדידות שמתפרסמות (שורות לכל seed + מקור) |
 | `scripts/` | verify_brain, acceptance, train, publish_results, diagnostics |
 | `tests/` | חבילת pytest (CI) והבדיקות הליליות |
-| `docs/` | המסמכים שלמעלה |
+| `docs/` | המסמכים: `current/` (העדכני ביותר), `reference/` (המסמכים שלמעלה), `archive/`, `reports/`, `tools/`; ראו `docs/README.md` |
 
 ## רישיון
 

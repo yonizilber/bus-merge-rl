@@ -22,14 +22,14 @@ _spec.loader.exec_module(build_next_docs)
 HEBREW = re.compile(r"[֐-׿]")
 
 
-# The documentation versions built by scripts/build_next_docs.py: the second (next/) and the third (docs-v3/).
-ROOTS = ["next", "docs-v3"]
-INPUTS_PAGE = {"next": "HOW_IT_WORKS.html", "docs-v3": "AGENT.html"}
+# The documentation versions built by scripts/build_next_docs.py: the second (docs/archive/v2-next/) and the third (docs/current/).
+ROOTS = ["docs/archive/v2-next", "docs/current"]
+INPUTS_PAGE = {"docs/archive/v2-next": "HOW_IT_WORKS.html", "docs/current": "AGENT.html"}
 
 
 @pytest.fixture(scope="module", params=ROOTS)
 def sites(request, tmp_path_factory):
-    out = tmp_path_factory.mktemp(f"site_{request.param}")
+    out = tmp_path_factory.mktemp("site_" + request.param.replace("/", "_"))
     src = REPO_ROOT / request.param
     return out, build_next_docs.build(out, root=src), src
 
@@ -167,14 +167,14 @@ def test_the_pages_with_terms_actually_use_them(sites):
     _, built, src = sites
     for lang in ("en", "he"):
         counts = {p.name: len(re.findall(r'class="term"', _text(p))) for p in built[lang]}
-        assert counts["index.html"] >= 8 and counts[INPUTS_PAGE[src.name]] >= 10, (lang, counts)
+        assert counts["index.html"] >= 8 and counts[INPUTS_PAGE[src.relative_to(REPO_ROOT).as_posix()]] >= 10, (lang, counts)
         assert counts["GLOSSARY.html"] == 0 and counts["TEST_REPORT.html"] == 0
 
 
 def test_the_input_table_has_eleven_rows_in_both_languages(sites):
     _, built, src = sites
     for lang in ("en", "he"):
-        text = _text(next(p for p in built[lang] if p.name == INPUTS_PAGE[src.name]))
+        text = _text(next(p for p in built[lang] if p.name == INPUTS_PAGE[src.relative_to(REPO_ROOT).as_posix()]))
         assert len(re.findall(r'<article class="card" id="input-', text)) == len(build_next_docs.FEATURES) == 11
 
 
@@ -217,15 +217,15 @@ def test_the_checks_can_fail():
 
 
 def test_the_github_markdown_export_is_up_to_date(tmp_path):
-    # docs-v3/github/ is committed so that GitHub renders it; it must be what the sources produce.
-    src = REPO_ROOT / "docs-v3"
+    # docs/current/github/ is committed so that GitHub renders it; it must be what the sources produce.
+    src = REPO_ROOT / "docs/current"
     for lang in ("en", "he"):
         out = tmp_path / lang
         written = build_next_docs.export_github(lang, src, out)
         for page in written:
             committed = src / "github" / lang / page.name
             assert committed.exists() and committed.read_text(encoding="utf-8") == page.read_text(encoding="utf-8"), \
-                f"run: python scripts/build_next_docs.py --root docs-v3 --github ({lang}/{page.name})"
+                f"run: python scripts/build_next_docs.py --root docs/current --github ({lang}/{page.name})"
             text = page.read_text(encoding="utf-8")
             assert "[[" not in text and "{{" not in text, (lang, page.name)
             for key in re.findall(r"\[\^([a-z0-9_-]+)\](?!:)", text):

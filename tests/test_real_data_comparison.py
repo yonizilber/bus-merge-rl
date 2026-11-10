@@ -1,4 +1,4 @@
-"""The simulation's numbers quoted in docs/REAL_DATA_COMPARISON.md are the ones in the stored comparison.
+"""The simulation's numbers quoted in docs/reference/REAL_DATA_COMPARISON.md are the ones in the stored comparison.
 
 The field numbers in that document are quoted by hand from named sources; the simulation's own numbers come from
 scripts/compare_with_real_data.py and are stored in results/experiments/stop_design_v1/real_data_comparison.json.
@@ -9,7 +9,7 @@ import pytest
 
 from busmerge.paths import REPO_ROOT
 
-DOC = (REPO_ROOT / "docs" / "REAL_DATA_COMPARISON.md").read_text(encoding="utf-8")
+DOC = (REPO_ROOT / "docs" / "reference" / "REAL_DATA_COMPARISON.md").read_text(encoding="utf-8")
 DATA = json.loads((REPO_ROOT / "results" / "experiments" / "stop_design_v1" / "real_data_comparison.json").read_text())
 
 

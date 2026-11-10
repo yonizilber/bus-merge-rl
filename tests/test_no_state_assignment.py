@@ -3,7 +3,7 @@
 A vehicle's speed, position, heading, steering angle and lateral motion may be written only where a
 vehicle is created, by the physics update (`Vehicle.update_physics`, `Vehicle.apply_steering`), and
 by the training env when it places the bus for a new episode. Anywhere else, an assignment is a
-correction that the physics did not produce ("Hand of God", docs/BUGS.md P7). Acceleration is not on
+correction that the physics did not produce ("Hand of God", docs/reference/BUGS.md P7). Acceleration is not on
 the list: it is the driver's command, and the physics bounds it.
 
 - The strict `xfail` documents the leftovers that still exist.

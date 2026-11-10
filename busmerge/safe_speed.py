@@ -15,7 +15,7 @@ hidden. This is the safe-speed idea of the Gipps and Krauss car-following models
 default in SUMO), applied on top of the IDM driver.
 
 It replaced, on 2026-10-10, a set of corrections that kept cars apart by assignment (speed caps that
-removed up to 2.4 m/s in one frame, position trims, frozen "stop-holds"); see docs/BUGS.md and the git
+removed up to 2.4 m/s in one frame, position trims, frozen "stop-holds"); see docs/reference/BUGS.md and the git
 tag ``legacy-hand-of-god``.
 """
 from __future__ import annotations
