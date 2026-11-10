@@ -145,6 +145,40 @@ def table_examples(lang: str) -> str:
     return "\n".join(lines)
 
 
+# The occupancy pairs of the field comparison (scripts/compare_with_real_data.py) and what each one stands for.
+OCCUPANCY_LABELS = {
+    "car 1.2, bus 20": ("1.2 per car, 20 on the bus (Israel, bottom of the car range)", "1.2 במכונית, 20 באוטובוס (ישראל, תחתית הטווח)"),
+    "car 1.35, bus 20": ("1.35 per car, 20 on the bus (the explorer's starting values)", "1.35 במכונית, 20 באוטובוס (ערכי ההתחלה בכלי)"),
+    "car 1.5, bus 20": ("1.5 per car, 20 on the bus (Israel, top of the car range)", "1.5 במכונית, 20 באוטובוס (ישראל, ראש הטווח)"),
+    "car 1.7, bus 10.7": ("1.7 per car, 10.7 on the bus (US averages)", "1.7 במכונית, 10.7 באוטובוס (ממוצעי ארה\"ב)"),
+    "car 1.2, bus 50": ("1.2 per car, 50 on the bus (what the first analysis happened to use; not data)",
+                        "1.2 במכונית, 50 באוטובוס (מה שהניתוח הראשון השתמש בו; לא נתון)"),
+}
+FIELD_TEXT = {"en": {"occ": "Occupancy", "per_car": "Stop time / inflow (cars/s)"},
+              "he": {"occ": "תפוסה", "per_car": "זמן עצירה / תנועה (מכוניות/שנ')"}}
+
+
+def table_occupancy(lang: str) -> str:
+    """How the cells split between the designs for a few occupancy pairs (equal stop times, no accuracy penalties)."""
+    t, ft, f = TEXT[lang], FIELD_TEXT[lang], field()
+    lines = [f"| {ft['occ']} | {t['bay']} | {t['lane']} | {t['tie']} |", "|---|---|---|---|"]
+    for key, labels in OCCUPANCY_LABELS.items():
+        v = f["verdict_by_occupancy"][key]
+        lines.append(f"| {labels[0 if lang == 'en' else 1]} | {v['bay']} | {v['lane']} | {v['tie']} |")
+    return "\n".join(lines)
+
+
+def table_per_car(lang: str) -> str:
+    """Extra seconds per car with the stop in the lane instead of the bay (the same cars), by stop time."""
+    t, ft, f = TEXT[lang], FIELD_TEXT[lang], field()
+    rates = ("0.1", "0.3", "0.5")
+    lines = [f"| {ft['per_car']} | " + " | ".join(rates) + " |", "|---|---|---|---|"]
+    for dw in sorted(f["lane_minus_bay_s_per_car"], key=int, reverse=True):
+        row = f["lane_minus_bay_s_per_car"][dw]
+        lines.append(f"| **{dw} {t['s']}** | " + " | ".join(_minus(f"{row[r]:+.1f}") for r in rates) + " |")
+    return "\n".join(lines)
+
+
 def _equal_cells() -> list[tuple[float, int, list]]:
     d = data()
     return [(r, dw, pair(r, dw, dw)) for r in d["rates"] for dw in d["dwells"]]
@@ -216,7 +250,11 @@ def facts(lang: str) -> dict[str, str]:
         "bay_runs": f"{bay_runs:,}", "da_max": f"{da:.1f}", "db_max": f"{db:.0f}",
         "censored": str(sum(c["censored_runs"] for c in cells)),
         "mt_mean": f"{mt['mean']:.1f}", "mt_max": f"{mt['max']:.1f}", "mt_n": f"{mt['n']:,}",
-        "mt_n30": str(mt["n_over_30s"]), "mt_p99": f"{mt['p99']:.1f}",
+        "mt_n30": str(mt["n_over_30s"]), "mt_p99": f"{mt['p99']:.1f}", "mt_median": f"{mt['median']:.1f}",
+        "mt_p90": f"{mt['p90']:.1f}", "mt_over20": f"{100 * mt['share_over_20s']:.1f}",
+        "headway_median": f"{f['entry_flow']['headway_median_s']:.1f}", "headway_mean": f"{f['entry_flow']['headway_mean_s']:.1f}",
+        "entries": f"{f['entry_flow']['entries_measured']:,}", "bay_cost_cells": str(f["bay_cost_s"]["cells"]),
+        "table_occupancy": table_occupancy(lang), "table_per_car": table_per_car(lang),
         "flow_h": f"{f['entry_flow']['flow_veh_per_h']:,}", "flow_s": f"{f['entry_flow']['flow_cars_per_s']:.2f}",
         "per_car_15_lo": f"{min(per_car_15):.0f}", "per_car_15_hi": f"{max(per_car_15):.0f}",
         "entry_sim": _minus(f"{d['geometry']['entry_s']:.2f}"), "geom_seeds": str(d["geometry"]["seeds"]),

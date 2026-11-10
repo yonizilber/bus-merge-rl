@@ -117,6 +117,4 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
 
 /* inside a documentation page */
 .embed body { padding-block: 4px 12px; }
-.embed header .kicker, .embed .full-only { display: none; }
-.embed-only { display: none; }
-.embed .embed-only { display: block; }
+.embed header .kicker, .embed header h1 { display: none; }     /* the documentation page has its own title */

@@ -2,8 +2,8 @@
 
 > **Status: two experiments, 19,500 simulated runs.** Stops of 10 to 45 s (15,000 runs, commit
 > `fa5ee4c`, 2026-10-31) and short stops of 0 to 6 s (4,500 runs, 2026-11-05). The page
-> tells what the simulation showed, lets you [try your own conditions](#try-it-yourself), [checks the simulation against
-> field data](#reality-check-the-simulation-against-field-data), and ends with [our conclusion](#our-conclusion) and
+> tells what the simulation showed, lets you [try your own conditions](EXPLORER.md), [checks the simulation against
+> field data](FIELD_DATA.md), and ends with [our conclusion](#our-conclusion) and
 > [what the simulation leaves out](#what-the-simulation-leaves-out).
 
 ## The question, and what we did
@@ -27,9 +27,9 @@ to hour, so **nothing on this page assumes a bus load.** For each pair of runs t
 
 The difference is `ΔPT = bus passengers × a + people per car × b`: **below zero, the bay moved people faster.** The
 formula is linear, so the stored data answers for any occupancy without a new run. The tables below give the number of
-bus passengers at which the two designs tie, and [the explorer](#try-it-yourself) lets you set every value yourself.
+bus passengers at which the two designs tie, and [the explorer](EXPLORER.md) lets you set every value yourself.
 Where one car occupancy is needed we use 1.35, the middle of the Israeli range (1.2 to 1.5; see the
-[field-data check](#reality-check-the-simulation-against-field-data)).
+[field-data check](FIELD_DATA.md)).
 
 ## Chapter 1: what the bay costs the bus
 
@@ -125,7 +125,7 @@ it spans zero):
 
 The stop times above are the same in both designs, but a stop in a bay may not be as quick. In the lane the bus stops
 in line with the kerb; in a bay it may stop further from the kerb or from the waiting passengers, and boarding takes a
-little longer (the [field-data check](#reality-check-the-simulation-against-field-data) collects what is known). How much
+little longer (the [field-data check](FIELD_DATA.md) collects what is known). How much
 longer is an assumption, so we paired a lane stop with a *longer* bay stop. Each cell is again the bus load at which the
 two designs tie (1.35 people per car):
 
@@ -147,7 +147,7 @@ lightly loaded bus to pay for itself, and every second it adds to the stop pushe
 
 - **Every number is a mean over paired runs.** Each cell has 150 pairs (stops of 0 to 6 s) or
   300 (10 to 45 s), and the verdicts use the 95% interval of the mean (normal approximation). The tipping
-  points are means; near them single seeds disagree, and the [explorer](#try-it-yourself) shows the interval for any
+  points are means; near them single seeds disagree, and the [explorer](EXPLORER.md) shows the interval for any
   choice.
 - **The driver's imperfections do not decide it.** The trained driver touches a car in 2.3% of its
   9,750 pull-outs and clips the bay's exit kerb in 8.6%. Leaving out every seed whose bay
@@ -161,34 +161,14 @@ lightly loaded bus to pay for itself, and every second it adds to the stop pushe
 
 ## Try it yourself
 
-Every chapter above fixes some values to tell one story. The explorer below fixes none: choose the traffic, the
-people per car and on the bus, the stop time in the lane and in the bay (separately, equal, or equal plus a penalty for
-the bay's less precise stop), and it answers from the same stored runs, with the 95% interval. Its starting values are
-only a place to begin.
-
-> **The interactive explorer** is an HTML page: download [`stop_design_explorer.en.html`](../../../tools/stop_design_explorer.en.html) and open it in a browser, or browse the HTML site.
+The chapters above fix some values to tell one story. The [Explorer](EXPLORER.md) tab fixes none: choose the
+traffic, the people per car and on the bus, and the stop time in the lane and in the bay, and it answers from the same
+stored runs, with the 95% interval.
 
 ## Reality check: the simulation against field data
 
-Does what the simulation produces look like what has been measured on real streets? We compared what it **outputs**
-(the bus's loss, the merge, the queue, the entry flow) and what it only **takes as input** (stop times, people per car
-and per bus) with published studies. This is a review of the literature, not a recalibration of the simulation.
-*Read*: we downloaded the report and read the numbers in it. *Summary only*: we saw only a search summary or an
-abstract, to be checked against the source before quoting.
-
-| Question | The simulation | The field | Verdict |
-|---|---|---|---|
-| What the bay costs the bus | 5.3 to 10.5 s per stop, mean 7.0 | Singapore: +1.6 s in acceleration (11.35 against 9.73 s; *read*). Ottawa: 4 to 5 s (*second-hand*) | At the upper end of the measurements |
-| Entering and aligning in the bay | No difference from the lane: −0.03 s; 2.8 m from the stop pole in both | Deceleration longer by 0.3 s (Singapore, *read*), 1.4 s (Beijing), 1 to 2 s (Ottawa); each passenger 0.19 s slower (Singapore) | Missing in the simulation; the explorer adds it as an adjustable assumption |
-| The merge | Mean 12.9 s, at most 37.4; 1 of 9,750 bay runs over 30 s | San Francisco: 4 to 13 s mean wait, up to 52 (*read*). Florida: 36 s, measured differently (*read*) | A plausible mean, but no long tail |
-| The queue behind a bus in the lane | 0 to 22 cars (means per cell) | San Francisco: 1 to 3 cars on average, at most 6, on four lanes where drivers overtake (*read*) | Matches only for short stops |
-| Cars entering the road | 1,231 cars an hour when queued | Saturation flow about 1,900 an hour per lane (*summary only*) | About a third low |
-| The cars' loss from a stop in the lane | 2 to 4 s per car at a 15 s stop | Ottawa: about 4 s per car (*summary only*) | The same order of magnitude |
-| Stop time | Chosen directly, 0 to 45 s | No Israeli measurement. London: means of 9 to 16 s by time of day (TfL, *read*); Portland: 12.4 s (*read*) | No data from Israel; nothing is guessed |
-| People per car | The reader's choice; 1.35 where one value is needed | Israel: 1.44 to 1.52 in the travel surveys (Ministry of Transport, *read*); 1.2 in the press, with no report behind it | Within the range |
-| People on the bus | The reader's choice | USA: 10.7 on average (*read*). Israel: only load factors; about 20 per city trip (*summary only*) | No measurement; left to the reader |
-
-What it means for the results:
+Does what the simulation produces look like what has been measured on real streets? The [Field data](FIELD_DATA.md)
+tab compares it, question by question, with published studies, and lists every source. What it means for the results:
 
 - **The direction is supported.** A bay costs the bus a few seconds, and a stop in the lane costs the cars behind it,
   more as the stop gets longer. Both appear in the field data we read, in the same order of magnitude.
@@ -198,9 +178,6 @@ What it means for the results:
   overtaking, no long waits for a gap, and a slow entry. Two favour the lane: the bay's cost to the bus is higher than
   measured, and the stop time is the same in every run (real variation lengthens queues). **So when the simulation says
   "the lane is better", it is on firmer ground than when it says "the bay is better".**
-
-The full comparison, with its charts and every source, is a separate report (in Hebrew):
-[the simulation against field data](../../../reports/REAL_DATA_COMPARISON.he.html).
 
 ## Our conclusion
 

@@ -7,7 +7,8 @@ Reads scripts/real_data_report_template.html and results/experiments/stop_design
 simulation's side, written by scripts/compare_with_real_data.py) and writes docs/reports/REAL_DATA_COMPARISON.he.html:
 one self-contained page (fonts come from Google Fonts when online) that opens in any browser. The field numbers and the
 verdicts are written in the template by hand, each with its source; the simulation's numbers and the charts come from the
-JSON. The documentation site copies it next to the results page.
+JSON. The documentation site has the same comparison, in both languages, as its "Field data" page
+(docs/current/*/FIELD_DATA.md).
 """
 import json
 import re

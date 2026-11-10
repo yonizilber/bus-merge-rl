@@ -81,8 +81,7 @@
     </figure>
   </section>
 
-  <p class="embed-only" style="font-size:14px;color:var(--muted)">The tool's own summary, its assumptions with their sources, and the data from Israel are in the full window (the link below the tool).</p>
-  <section class="full-only">
+  <section>
     <h2>Our summary</h2>
     <ul class="plain">
       [[summary]]
@@ -97,11 +96,11 @@
         <li><b>A slow entry</b> (probably favours the bay): the simulation lets about a third fewer cars per hour onto the road than the standard saturation flow.</li>
         <li><b>The same stop time in every run</b> (favours the lane): in the field it varies a lot, and that variation lengthens queues.</li>
       </ul>
-      <p style="margin-top:8px">When the tool says "the lane is better", trust it more than when it says "the bay is better". The full comparison with field data is on the results page of the documentation.</p>
+      <p style="margin-top:8px">When the tool says "the lane is better", trust it more than when it says "the bay is better". The full comparison with field data is on the "Field data" page of the documentation.</p>
     </div>
   </section>
 
-  <section class="full-only">
+  <section>
     <h2>The stop time and the bay's penalty</h2>
     <p><b>The stop time is chosen directly, not from the number of passengers.</b> We did not derive it from passenger counts, because the measurements we found come from other systems (for example about <span class="num">3.9</span> s per passenger in San Francisco before all-door boarding) and do not represent an Israeli city bus, with app validation and boarding at every door, which stops much more briefly. We found no Israeli measurement, so there is no "right" value here. Choose the time that fits the stop you have in mind, from 0 s: separately for the lane and the bay, equal in both, or equal plus a penalty for the bay.</p>
     <p>Each design has accuracy penalties that make up the bay's penalty when you choose "equal plus the bay's penalty": the distance along the street from the stopping point, and the gap between the side of the bus and the kerb. An extra for entering the bay is added to them.</p>
@@ -119,7 +118,7 @@
     </div>
   </section>
 
-  <section class="full-only">
+  <section>
     <h2>Data from Israel</h2>
     <div class="scroll panel" style="padding:4px 6px">
       <table>
@@ -136,7 +135,7 @@
     <p style="font-size:14px;color:var(--muted);max-width:72ch">The tool's range for people per car is <span class="num">1.2–1.5</span>: the official survey figure (<span class="num">1.44–1.52</span>) and the figure quoted in the press (<span class="num">1.2</span>), behind which no report was found. The gap may be peak hours against all trips, as in the USA (<span class="num">1.18</span> against <span class="num">1.67</span>), but that is a guess. A load factor is a share of capacity, and the document gives no number of places on a bus, so "20 passengers" on a bus is a rough figure, not a measurement.</p>
   </section>
 
-  <section class="full-only">
+  <section>
     <h2>How the tool works</h2>
     <p>For every traffic rate and every combination of a stop time in the lane and in the bay we stored, over seeds in which both designs see exactly the same cars, the difference in the bus's trip time (a) and in all the cars' trip times (b), with their variances. The difference in person-seconds is <span class="num">bus passengers × a + people per car × b</span>, so the browser can compute it for any occupancy without a new run. The stop times of the two designs are the base time and each design's accuracy penalties. The extra time to enter the bay is added to a. The confidence interval is a normal approximation of the mean. Between the experiment's points the tool interpolates linearly, and it never goes beyond the range that was tested (traffic <span class="num">0.1–0.5</span>, stop time <span class="num">0–45</span> s).</p>
     <p style="font-size:14px;color:var(--muted)" id="prov"></p>

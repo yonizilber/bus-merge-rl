@@ -125,9 +125,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
 
 /* inside a documentation page */
 .embed body { padding-block: 4px 12px; }
-.embed header .kicker, .embed .full-only { display: none; }
-.embed-only { display: none; }
-.embed .embed-only { display: block; }
+.embed header .kicker, .embed header h1 { display: none; }     /* the documentation page has its own title */
 </style>
 
 </head>
@@ -209,8 +207,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     </figure>
   </section>
 
-  <p class="embed-only" style="font-size:14px;color:var(--muted)">הסיכום של הכלי, ההנחות שלו עם המקורות, והנתונים מישראל נמצאים בחלון המלא (הקישור מתחת לכלי).</p>
-  <section class="full-only">
+  <section>
     <h2>הסיכום שלנו</h2>
     <ul class="plain">
       <li><b>המחיר של המפרץ הוא כמה שניות של האוטובוס.</b> כשהאוטובוס יוצא ממפרץ הוא צריך למצוא רווח, ובניסוי זה הוסיף לו <span class="num">5.3</span> עד <span class="num">10.5</span> שניות לנסיעה, בכל התנאים שנבדקו.</li>
@@ -229,11 +226,11 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
         <li><b>כניסה איטית</b> (כנראה לטובת המפרץ): הסימולציה מכניסה כשליש פחות מכוניות לשעה מערך הרוויה הסטנדרטי.</li>
         <li><b>זמן עצירה קבוע בכל הרצה</b> (לטובת הנתיב): בשטח הוא משתנה מאוד, והשונות הזו מאריכה תורים.</li>
       </ul>
-      <p style="margin-top:8px">כשהכלי אומר "הנתיב עדיף", כדאי לסמוך עליו יותר מאשר כשהוא אומר "המפרץ עדיף". ההשוואה המלאה לנתוני שטח היא בעמוד התוצאות של התיעוד ובדוח נפרד: <span class="path">docs/reports/REAL_DATA_COMPARISON.he.html</span>.</p>
+      <p style="margin-top:8px">כשהכלי אומר "הנתיב עדיף", כדאי לסמוך עליו יותר מאשר כשהוא אומר "המפרץ עדיף". ההשוואה המלאה לנתוני שטח היא בעמוד "נתוני שטח" של התיעוד ובדוח נפרד: <span class="path">docs/reports/REAL_DATA_COMPARISON.he.html</span>.</p>
     </div>
   </section>
 
-  <section class="full-only">
+  <section>
     <h2>זמן העצירה ועונש המפרץ</h2>
     <p><b>זמן העצירה נקבע ישירות, ולא לפי מספר נוסעים.</b> לא גזרנו אותו ממספר הנוסעים, כי המדידות שמצאנו נעשו במערכות אחרות (למשל כ-<span class="num">3.9</span> שנ' לנוסע בסן פרנסיסקו לפני עלייה מכל הדלתות) ולא מייצגות אוטובוס עירוני בישראל, עם אפליקציית תיקוף ועלייה מכל הדלתות, שעוצר הרבה פחות. לא מצאנו מדידה ישראלית, ולכן אין כאן ערך "נכון". בחרו את הזמן שמתאים לתחנה שאתם מדמיינים, מ-0 שניות: בנפרד לנתיב ולמפרץ, זהה בשניהם, או זהה בתוספת עונש למפרץ.</p>
     <p>לכל תכנון יש עונשי דיוק שמצטרפים לעונש של המפרץ כשבוחרים "זהים בתוספת עונש": סטייה לאורך הרחוב מנקודת העצירה, ומרווח בין דופן האוטובוס לשפת המדרכה. להם נוספת תוספת לכניסה למפרץ.</p>
@@ -251,7 +248,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     </div>
   </section>
 
-  <section class="full-only">
+  <section>
     <h2>נתונים מישראל</h2>
     <div class="scroll panel" style="padding:4px 6px">
       <table>
@@ -268,7 +265,7 @@ ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction:
     <p style="font-size:14px;color:var(--muted);max-width:72ch">טווח האנשים במכונית שבכלי הוא <span class="num">1.2–1.5</span>: המספר הרשמי מהסקרים (<span class="num">1.44–1.52</span>) והמספר שמצוטט בכתבות (<span class="num">1.2</span>), שלא נמצא מאחוריו דוח. ייתכן שהפער הוא שעות שיא מול כל הנסיעות, כמו בארה"ב (<span class="num">1.18</span> מול <span class="num">1.67</span>), אבל זו השערה. מקדם מילוי הוא שיעור התפוסה, ובמסמך אין מספר מקומות באוטובוס, ולכן "20 נוסעים" באוטובוס היא הערכה גסה ולא מדידה.</p>
   </section>
 
-  <section class="full-only">
+  <section>
     <h2>איך הכלי עובד</h2>
     <p>לכל תנועה וכל צירוף של זמן עצירה בנתיב ובמפרץ שמרנו, על זרעים שבהם לשני התכנונים אותן מכוניות בדיוק, את הפרש זמן הנסיעה של האוטובוס (a) ושל כל המכוניות (b), ואת השונות שלהם. ההפרש באדם-שניות הוא <span class="num">נוסעי האוטובוס × a + אנשים במכונית × b</span>, ולכן אפשר לחשב אותו לכל תפוסה בדפדפן, בלי להריץ מחדש. זמני העצירה בשני התכנונים הם הזמן הבסיסי ועונשי הדיוק של כל אחד. תוספת לזמן הכניסה למפרץ נוספת ל-a. רווח הסמך הוא קירוב נורמלי לממוצע. בין נקודות הניסוי הכלי מחשב בהשלמה לינארית, ואינו יוצא מעבר לטווח שנבדק (תנועה <span class="num">0.1–0.5</span>, עצירה <span class="num">0–45</span> שניות).</p>
     <p style="font-size:14px;color:var(--muted)" id="prov"></p>

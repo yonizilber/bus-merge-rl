@@ -42,12 +42,29 @@ def test_the_page_assumes_no_bus_load(lang):
 
 
 @pytest.mark.parametrize("lang", ["en", "he"])
-def test_the_page_embeds_the_explorer_and_links_the_field_report_and_the_figure(lang):
-    text = PAGES[lang]
-    assert "<!-- embed: explorer -->" in text and "(FIELD_REPORT.he.html)" in text
+def test_the_results_link_their_two_tabs_the_explorer_and_the_field_data(lang):
+    """The explorer and the field-data check are tabs of their own, next to the results, in the same language."""
+    text, root = PAGES[lang], REPO_ROOT / "docs" / "current"
+    assert "(EXPLORER.md)" in text and "(FIELD_DATA.md)" in text and "<!-- embed: explorer -->" not in text
+    assert "<!-- embed: explorer -->" in (root / lang / "EXPLORER.md").read_text(encoding="utf-8")
+    site = json.loads((root / "site.json").read_text(encoding="utf-8"))
+    assert site["pages"]["EXPLORER.html"] == "EXPLORER.md" and site["pages"]["FIELD_DATA.html"] == "FIELD_DATA.md"
+    nav = [page for page, _ in site["nav"][lang]]
+    assert nav[nav.index("RESULTS.html") + 1: nav.index("RESULTS.html") + 3] == ["EXPLORER.html", "FIELD_DATA.html"]
     assert f"media/stop_design_break_even_bus.{lang}.png" in text
-    assert (REPO_ROOT / "docs" / "media" / f"stop_design_break_even_bus.{lang}.png").exists()
+    for name in ("stop_design_break_even_bus", "field_merge_time", "field_queue", "field_verdicts"):
+        assert (REPO_ROOT / "docs" / "media" / f"{name}.{lang}.png").exists(), name
     assert (REPO_ROOT / "docs" / "tools" / f"stop_design_explorer.{lang}.html").exists()
+
+
+@pytest.mark.parametrize("lang", ["en", "he"])
+def test_the_field_data_page_uses_generated_numbers_and_its_figures(lang):
+    text = (REPO_ROOT / "docs" / "current" / lang / "FIELD_DATA.md").read_text(encoding="utf-8")
+    assert "{{stop:" not in sr.fill(text, lang)
+    for token in ("table_per_car", "table_occupancy", "mt_mean", "mt_max", "flow_h", "a_min", "a_max"):
+        assert "{{stop:" + token + "}}" in text, token
+    for name in ("field_merge_time", "field_queue", "field_verdicts"):
+        assert f"media/{name}.{lang}.png" in text, name
 
 
 def test_the_combined_summary_holds_both_experiments():

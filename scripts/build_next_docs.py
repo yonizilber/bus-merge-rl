@@ -43,8 +43,7 @@ NEXT = REPO / "docs" / "archive" / "v2-next"
 MEDIA = REPO / "docs" / "media"
 # Standalone pages copied next to the site's pages (site name -> source, per language), and where the GitHub export
 # points instead (the same files in the repository).
-COPIED = {"EXPLORER.html": "docs/tools/stop_design_explorer.{lang}.html",
-          "FIELD_REPORT.he.html": "docs/reports/REAL_DATA_COMPARISON.he.html"}
+COPIED = {"explorer_app.html": "docs/tools/stop_design_explorer.{lang}.html"}
 EMBED = "<!-- embed: explorer -->"
 EMBED_TEXT = {"en": ("The interactive explorer: bay or lane", "Open the explorer in its own window"),
               "he": ("הכלי האינטראקטיבי: מפרץ או נתיב", "לפתוח את הכלי בחלון נפרד")}
@@ -489,10 +488,10 @@ def _pop(cfg: dict) -> str:
 def embed_html(lang: str) -> str:
     """The explorer inside a page: an iframe that takes the height the explorer reports, so it has no scroll bar."""
     title, open_label = EMBED_TEXT[lang]
-    return (f'<div class="embed-wrap"><iframe class="embed" src="EXPLORER.html?embed=1" title="{title}" loading="lazy" '
+    return (f'<div class="embed-wrap"><iframe class="embed" src="explorer_app.html?embed=1" title="{title}" '
             'style="width:100%;height:1600px;border:1px solid var(--border);border-radius:12px;background:var(--surface)">'
             '</iframe></div>\n'
-            f'<p class="embed-open"><a href="EXPLORER.html" target="_blank" rel="noopener">{open_label} ↗</a></p>\n'
+            f'<p class="embed-open"><a href="explorer_app.html" target="_blank" rel="noopener">{open_label} ↗</a></p>\n'
             '<script>window.addEventListener("message", function (e) { if (!e.data || e.data.type !== "stop-explorer-height") return; '
             'document.querySelectorAll("iframe.embed").forEach(function (f) { if (f.contentWindow === e.source) '
             '{ f.style.height = (e.data.h + 8) + "px"; } }); });</script>')
@@ -567,7 +566,7 @@ def build_language(lang: str, out_dir: Path, root: Path = NEXT) -> list[Path]:
     # and the field report exists in Hebrew only), so they are not in the list of pages written.
     sources = "".join((root / lang / s).read_text(encoding="utf-8") for s in site["pages"].values())
     for name, src in COPIED.items():
-        if name in sources or (name == "EXPLORER.html" and EMBED in sources):
+        if name in sources or EMBED in sources:
             shutil.copy2(REPO / src.format(lang=lang), out_dir / name)
     cfg = site["langs"][lang]
     written.append(build_test_report.write(out_dir, lang, nav=cfg["nav"], toc_label=cfg["toc"]))
@@ -645,10 +644,10 @@ def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> 
             text = text.replace(f"]({name}", f"]({rel}")
         if EMBED in text:
             text = text.replace(EMBED, "> " + ("**The interactive explorer** is an HTML page: download "
-                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['EXPLORER.html'].format(lang=lang), root / 'github' / lang)}) "
+                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['explorer_app.html'].format(lang=lang), root / 'github' / lang)}) "
                                                "and open it in a browser, or browse the HTML site." if lang == "en" else
                                                "**הכלי האינטראקטיבי** הוא עמוד HTML: הורידו את "
-                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['EXPLORER.html'].format(lang=lang), root / 'github' / lang)}) "
+                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['explorer_app.html'].format(lang=lang), root / 'github' / lang)}) "
                                                "ופתחו אותו בדפדפן, או עיינו באתר ה-HTML."))
         target = out_dir / src_name
         target.write_text(text, encoding="utf-8")

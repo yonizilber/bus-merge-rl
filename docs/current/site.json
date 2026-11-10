@@ -3,6 +3,8 @@
     "index.html": "README.md",
     "RESEARCH.html": "RESEARCH.md",
     "RESULTS.html": "RESULTS.md",
+    "EXPLORER.html": "EXPLORER.md",
+    "FIELD_DATA.html": "FIELD_DATA.md",
     "WORLD.html": "WORLD.md",
     "AGENT.html": "AGENT.md",
     "CASE_STUDY.html": "CASE_STUDY.md",
@@ -24,6 +26,14 @@
       [
         "RESULTS.html",
         "Results"
+      ],
+      [
+        "EXPLORER.html",
+        "Explorer"
+      ],
+      [
+        "FIELD_DATA.html",
+        "Field data"
       ],
       [
         "WORLD.html",
@@ -70,6 +80,14 @@
       [
         "RESULTS.html",
         "תוצאות"
+      ],
+      [
+        "EXPLORER.html",
+        "הכלי"
+      ],
+      [
+        "FIELD_DATA.html",
+        "נתוני שטח"
       ],
       [
         "WORLD.html",
