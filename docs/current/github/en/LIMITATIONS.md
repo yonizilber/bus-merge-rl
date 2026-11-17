@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · **Limitations** · [Glossary](GLOSSARY.md) · [עברית](../he/LIMITATIONS.md)
+
 # Limitations
 
 Everything that is known not to work, in plain words, with the test that tracks it. None of this is hidden: each
@@ -95,3 +97,7 @@ The simulation is, of course, very partial. Streets come in many shapes, and thi
 [^strict_xfail]: **Strict xfail.** A test for a known limitation: it keeps its honest assertion, must fail on that assertion, and turns red the day the behaviour changes. Deleting the test or loosening its threshold would hide the limitation. With strict xfail it stays in the suite, next to the code, and it cannot silently start passing or break for another reason. [more](GLOSSARY.md#strict_xfail)
 [^kerb_corner]: **Kerb corner.** The point where the bay's exit taper meets the plain kerb. It points into the road. If the bus steers out too slowly from the far end of the bay, this corner cuts into the bus's side. The checker first missed it, because it compared only the four body corners with the road edge. Now the kerb corners are tested against the body too. [more](GLOSSARY.md#kerb_corner)
 [^jerk]: **Jerk.** The rate of change of acceleration, in m/s³. A real brake needs time to build up force, so jerk is bounded. The test suite checks that jerk stays within bounds. One known limitation is that braking can start with a jerk of about 100 m/s³, where a real brake system gives 30 - 60 (see the limitations page). [more](GLOSSARY.md#jerk)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · **Limitations** · [Glossary](GLOSSARY.md) · [עברית](../he/LIMITATIONS.md)

@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · **Measurements and research** · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/EXPLORER.md)
+
 # Measurements and research
 
 > **An interactive tool: try it yourself.** Choose the traffic, the people per car and on the bus, and the stop time in
@@ -191,3 +193,7 @@ described in [the research question](RESEARCH.md#how-it-was-run) and `docs/refer
 [^paired]: **Paired runs.** Two runs, one for each stop design, with exactly the same cars. For one seed, the bay run and the in-lane run get the same arrival times, and every car the same class, size and desired speed (common random numbers). Any difference between the two is then due to the stop, not to the luck of the draw, and far fewer runs are needed for a tight interval than with independent runs. [more](GLOSSARY.md#paired)
 [^person_time]: **Person-time.** How long all the people in the vehicles travelled: each vehicle's trip time times the people in it, summed. The stop experiment compares the two designs on person-time, not vehicle-time, because a bus carries many people and a car one or two. [more](GLOSSARY.md#person_time)
 [^break_even]: **Tipping point.** The number of bus passengers at which a bay and an in-lane stop are equal. With fewer passengers the bay is better, with more the lane. A cell where the lane wins at any load has no tipping point ("lane always"). [more](GLOSSARY.md#break_even)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · **Measurements and research** · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/EXPLORER.md)

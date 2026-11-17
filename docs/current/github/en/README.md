@@ -1,3 +1,5 @@
+**Overview** · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/README.md)
+
 # bus-merge-rl
 
 [![CI](https://github.com/yonizilber/bus-merge-rl/actions/workflows/ci.yml/badge.svg)](https://github.com/yonizilber/bus-merge-rl/actions/workflows/ci.yml)
@@ -101,7 +103,7 @@ How to read it:
   and two training bugs. The [case study](CASE_STUDY.md) tells the story.
 - **Measured on unseen data.** Training, selection, publication and the scheduled gates use separate sets of random
   seeds.
-- **491 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
+- **492 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
   main branch is that a change is merged only when they pass. Known limitations are kept as strict xfail[^strict_xfail] tests, so they
   stay visible and turn red the day the behaviour changes. See [Testing](TESTING.md).
 
@@ -166,3 +168,7 @@ MIT.
 [^strict]: **Strict success.** Merged, and in addition no physical anomaly: the bus stayed on the road, out of the opposing lane, with no contact or other violation. It is the honest measure. For brain 0.13.0 it is 89.4% of 1,000 unseen runs, against 97.8% merged. [more](GLOSSARY.md#strict)
 [^invariants]: **Invariants (physics checks).** Checks run on every simulated run for moments that cannot happen in reality. A run is not judged only by its outcome. `busmerge/invariants.py` goes over the whole frame log and reports every impossible moment. Cars crossing the centre line or the kerb are reported but not failed (mostly the overshoot of their steering law when they move over for the bus, limitation O21). [more](GLOSSARY.md#invariants)
 [^strict_xfail]: **Strict xfail.** A test for a known limitation: it keeps its honest assertion, must fail on that assertion, and turns red the day the behaviour changes. Deleting the test or loosening its threshold would hide the limitation. With strict xfail it stays in the suite, next to the code, and it cannot silently start passing or break for another reason. [more](GLOSSARY.md#strict_xfail)
+
+---
+
+**Overview** · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/README.md)

@@ -641,6 +641,57 @@ def frozen_test_counts(root: Path, refresh: bool = False) -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else test_counts()
 
 
+GITHUB_LANG_SWITCH = {"en": ("he", "עברית"), "he": ("en", "English")}
+
+
+def github_nav(lang: str, site: dict, page: str, link=lambda name: name) -> str:
+    """The tabs of the HTML site as one line of links, for the top of every GitHub page (GitHub has no navigation
+    bar of its own). The page being read is bold, not a link; the last item switches language."""
+    md_of = site["pages"]
+    items = []
+    for out_name, label in site["langs"][lang]["nav"]:
+        src = md_of.get(out_name)
+        if src is None:
+            continue
+        items.append(f"**{label}**" if src == page else f"[{label}]({link(src)})")
+    other, other_label = GITHUB_LANG_SWITCH[lang]
+    items.append(f"[{other_label}]({link(f'../{other}/{page}')})")
+    return " · ".join(items)
+
+
+def _github_page(text: str, lang: str, nav: str) -> str:
+    """A GitHub page: the tabs on top and at the bottom; Hebrew wrapped right-to-left (GitHub lays Markdown out
+    left-to-right otherwise). The blank lines around the div let GitHub read the Markdown inside it."""
+    body = f"{nav}\n\n{text.rstrip()}\n\n---\n\n{nav}\n"
+    return f'<div dir="rtl">\n\n{body}\n</div>\n' if lang == "he" else body
+
+
+ROOT_README = {"en": "README.md", "he": "README.he.md"}
+
+
+def root_readme(lang: str, root: Path) -> str:
+    """The repository's front page (what GitHub shows first): the overview of ``root`` as exported for GitHub, with
+    every relative link rewritten from docs/current/github/<lang>/ to the repository root, and the language switch
+    pointing at the other front page."""
+    github_dir = root / "github" / lang
+    text = (github_dir / "README.md").read_text(encoding="utf-8")
+    other, _ = GITHUB_LANG_SWITCH[lang]
+    switch = f"../{other}/README.md"
+
+    def fix(target: str) -> str:
+        if target == switch:
+            return ROOT_README[other]
+        if re.match(r"^(?:[a-z]+:|#|/)", target):
+            return target
+        path, hash_, frag = target.partition("#")
+        rel = os.path.relpath(os.path.normpath(github_dir / path), REPO).replace(os.sep, "/")
+        return rel + hash_ + frag
+
+    text = re.sub(r"\]\(([^)\s]+)\)", lambda m: f"]({fix(m.group(1))})", text)
+    text = re.sub(r'(src|href)="([^"]+)"', lambda m: f'{m.group(1)}="{fix(m.group(2))}"', text)
+    return text
+
+
 def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> list[Path]:
     """Write the GitHub-flavoured Markdown version of one language to ``root/github/<lang>``."""
     site = site_config(root)
@@ -666,6 +717,7 @@ def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> 
                                                "**הכלי האינטראקטיבי** הוא עמוד HTML: הורידו את "
                                                f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['explorer_app.html'].format(lang=lang), root / 'github' / lang)}) "
                                                "ופתחו אותו בדפדפן, או עיינו באתר ה-HTML."))
+        text = _github_page(text, lang, github_nav(lang, site, src_name))
         target = out_dir / src_name
         target.write_text(text, encoding="utf-8")
         written.append(target)
@@ -692,3 +744,7 @@ if __name__ == "__main__":
         frozen_test_counts(root, refresh=True)
         for lang in langs:
             print(lang, root / "github" / lang, f"({len(export_github(lang, root))} Markdown files)")
+        if root.resolve() == (REPO / "docs" / "current").resolve():
+            for lang in langs:                     # the repository's front page is the current overview
+                (REPO / ROOT_README[lang]).write_text(root_readme(lang, root), encoding="utf-8")
+                print(lang, REPO / ROOT_README[lang])

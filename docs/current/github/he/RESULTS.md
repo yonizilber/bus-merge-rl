@@ -1,3 +1,7 @@
+<div dir="rtl">
+
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · **מסקנות** · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/RESULTS.md)
+
 # מסקנות
 
 על סמך 19,500 הרצות מדומות ([מדידות ומחקר](EXPLORER.md)), בדיקה מול [נתוני שטח](FIELD_DATA.md) והנחיות התכנון.
@@ -95,3 +99,9 @@
 
 מה הסימולציה לא מדמה, ואיך זה מטה את התוצאה: [מגבלות](LIMITATIONS.md#ניסוי-התחנה). ובכל זאת, משמח לראות שבמקרה הפרטי
 שלנו תוצאות הסימולציה תואמות את הגישה של הנחיות התכנון בישראל, ואת הכיוון של רבות מההנחיות והמחקרים בעולם.
+
+---
+
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · **מסקנות** · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/RESULTS.md)
+
+</div>

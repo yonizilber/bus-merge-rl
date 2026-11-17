@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · **Agent** · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/AGENT.md)
+
 # Agent
 
 The **agent** is the bus driver for the one decision the [world model](WORLD.md) leaves open: when boarding in the bay
@@ -147,3 +149,7 @@ because tests use 0.11.0 to prove that the stall check can fail.
 [^contact_judge]: **Contact judge.** The test that decides whether two vehicles touched: the exact overlap area of their body polygons. Training and the acceptance gate use the same judge, with the same threshold (an overlap of more than 0.01 m² counts as contact) and the same order of precedence (contact is judged before success). [more](GLOSSARY.md#contact_judge)
 [^strict]: **Strict success.** Merged, and in addition no physical anomaly: the bus stayed on the road, out of the opposing lane, with no contact or other violation. It is the honest measure. For brain 0.13.0 it is 89.4% of 1,000 unseen runs, against 97.8% merged. [more](GLOSSARY.md#strict)
 [^wilson]: **Wilson interval.** A confidence interval for a percentage measured on a limited number of runs. For 100 runs, a result near 97% has a 95% interval of about ±6 points in the worst case, so two results that differ by a few points are not necessarily different. [more](GLOSSARY.md#wilson)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · **Agent** · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/AGENT.md)

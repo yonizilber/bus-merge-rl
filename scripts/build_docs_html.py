@@ -191,7 +191,7 @@ def _page(source: Path, out_name: str, title: str, out_dir: Path) -> str:
     text = _blank_line_before_lists(source.read_text(encoding="utf-8"))
     text = re.sub(r'<div dir="rtl">', '<div dir="rtl" markdown="1">', text)
     md = markdown.Markdown(extensions=["tables", "fenced_code", "codehilite", "sane_lists", "md_in_html",
-                                       "attr_list", "toc"],
+                                       "attr_list", "toc", "footnotes"],
                            extension_configs={"codehilite": {"guess_lang": False},
                                               "toc": {"permalink": "#", "toc_depth": "2-3"}})
     body = md.convert(text)

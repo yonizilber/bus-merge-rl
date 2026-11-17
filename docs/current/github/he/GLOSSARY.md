@@ -1,3 +1,7 @@
+<div dir="rtl">
+
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · **מילון מונחים** · [English](../en/GLOSSARY.md)
+
 # מילון מונחים
 
 המונחים שהעמודים האחרים מסמנים בקו תחתון מנוקד. העבירו עליהם את העכבר (או עברו אליהם עם Tab) כדי לראות הסבר בשורה
@@ -549,3 +553,9 @@ $$j=\frac{\mathrm{d}a}{\mathrm{d}t}\;\approx\;\frac{a_{k+1}-a_k}{\Delta t}.$$
 
 מחיקת הבדיקה או הרפיית הסף שלה היתה מסתירה את המגבלה. עם xfail קשיח היא נשארת בחבילה, ליד הקוד, ולא יכולה להתחיל לעבור בשקט או להישבר
 מסיבה אחרת.
+
+---
+
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · **מילון מונחים** · [English](../en/GLOSSARY.md)
+
+</div>

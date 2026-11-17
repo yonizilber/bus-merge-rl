@@ -238,3 +238,26 @@ def test_the_working_brain_row_stands_out():
             "<tr><td>0.11.0</td><td>✘ Replaced</td></tr></tbody></table>")
     out = build_next_docs.mark_working_rows(body)
     assert out.count('<tr class="ok">') == 1 and "<tr><td>0.11.0" in out
+
+
+def test_github_shows_every_tab_and_the_front_page_is_the_current_overview():
+    """GitHub has no navigation bar: every exported page starts and ends with the tabs, Hebrew pages are laid out
+    right-to-left, and the repository's front pages (README.md, README.he.md) are the current overview with links
+    that resolve from the repository root."""
+    src = REPO_ROOT / "docs/current"
+    site = build_next_docs.site_config(src)
+    for lang in ("en", "he"):
+        labels = [label for out, label in site["langs"][lang]["nav"] if out in site["pages"]]
+        for page in (src / "github" / lang).glob("*.md"):
+            text = page.read_text(encoding="utf-8")
+            first = text.split("\n\n")[1 if lang == "he" else 0]
+            assert all(label in first for label in labels), (lang, page.name)
+            assert text.startswith('<div dir="rtl">') == (lang == "he"), (lang, page.name)
+        front = REPO_ROOT / build_next_docs.ROOT_README[lang]
+        assert front.read_text(encoding="utf-8") == build_next_docs.root_readme(lang, src), \
+            "run: python scripts/build_next_docs.py --root docs/current --github"
+        text = front.read_text(encoding="utf-8")
+        for target in re.findall(r"\]\(([^)\s]+)\)", text) + re.findall(r'(?:src|href)="([^"]+)"', text):
+            if not re.match(r"^(?:[a-z]+:|#)", target):
+                assert (REPO_ROOT / target.split("#")[0]).exists(), (lang, target)
+        assert "docs/current/github/" + lang + "/EXPLORER.md" in text

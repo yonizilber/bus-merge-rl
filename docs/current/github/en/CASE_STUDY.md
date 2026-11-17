@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · **Case study** · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CASE_STUDY.md)
+
 # Case study: an agent that exploited a steering bug, and how it was fixed
 
 > **One case, which we chose to tell in detail.** This is not a survey of every problem that came up during development,
@@ -280,3 +282,7 @@ overshot, cannot be met by any policy and have to be re-derived.
 [^pure_pursuit]: **Pure pursuit.** A steering method: aim at the point on the target line a look-ahead distance ahead, in the vehicle's own frame, and steer along the arc that reaches it. Because the formula includes the vehicle's heading, the vehicle steers back as it approaches the line and arrives parallel to it, instead of crossing it. This is the controller that replaced the one that overshot every target. [more](GLOSSARY.md#pure_pursuit)
 [^rollback]: **Rollback rule.** During training: after several evaluations without improvement, go back to the best checkpoint so far. A fine-tune that starts with no successful evaluation has no "best" except its starting weights, so the rule threw away every 30 epochs of learning. It is now a flag (`--rollback-patience`), and it only restores a checkpoint that evaluated with at least one success. [more](GLOSSARY.md#rollback)
 [^bicycle]: **Bicycle model (kinematic).** A car reduced to two wheels, the front one steering: the heading turns at speed × tan(steering angle) / wheelbase. Every car and the bus move sideways this way. The steering angle changes the heading, the heading changes the sideways position, and steering is limited in angle and in rate, so a vehicle cannot jump sideways. "Kinematic" means that only geometry is modelled, with no tyre forces or mass. [more](GLOSSARY.md#bicycle)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · **Case study** · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CASE_STUDY.md)

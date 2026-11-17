@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · **World model** · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/WORLD.md)
+
 # World model
 
 The project has two parts: the **world** (this page), a microscopic traffic simulation, and the **[agent](AGENT.md)**,
@@ -140,3 +142,7 @@ are reported but not counted as failures: most of it comes from the cars' steeri
 [^pure_pursuit]: **Pure pursuit.** A steering method: aim at the point on the target line a look-ahead distance ahead, in the vehicle's own frame, and steer along the arc that reaches it. Because the formula includes the vehicle's heading, the vehicle steers back as it approaches the line and arrives parallel to it, instead of crossing it. This is the controller that replaced the one that overshot every target. [more](GLOSSARY.md#pure_pursuit)
 [^ou]: **OU process (Ornstein-Uhlenbeck).** A random wobble that is pulled back toward its centre: slowly varying noise, not jitter. Used here for lane drift and for perception errors. A pure random walk wanders off without limit. The Ornstein-Uhlenbeck process adds a pull toward the centre that grows with the distance, so the value wobbles around the centre, with a typical size and a memory of a few seconds. That is what a driver's imperfect lane keeping looks like, and what a persistent misjudgement of a distance looks like. [more](GLOSSARY.md#ou)
 [^invariants]: **Invariants (physics checks).** Checks run on every simulated run for moments that cannot happen in reality. A run is not judged only by its outcome. `busmerge/invariants.py` goes over the whole frame log and reports every impossible moment. Cars crossing the centre line or the kerb are reported but not failed (mostly the overshoot of their steering law when they move over for the bus, limitation O21). [more](GLOSSARY.md#invariants)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · **World model** · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/WORLD.md)

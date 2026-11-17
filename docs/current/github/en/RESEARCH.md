@@ -1,3 +1,5 @@
+[Overview](README.md) · **Research question** · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/RESEARCH.md)
+
 # Research question
 
 > **Status: two experiments have run (19,500 runs).** This page states the question and describes how it was
@@ -103,3 +105,7 @@ any cell.
 [^merged]: **Merged.** The bus is wholly in the lane (lateral position at least -0.25 m). Judged on traffic only. "Merged" says nothing about the road edges: a merged bus may still have left the road on the way. That is what [strict success](GLOSSARY.md#strict) adds. [more](GLOSSARY.md#merged)
 [^invariants]: **Invariants (physics checks).** Checks run on every simulated run for moments that cannot happen in reality. A run is not judged only by its outcome. `busmerge/invariants.py` goes over the whole frame log and reports every impossible moment. Cars crossing the centre line or the kerb are reported but not failed (mostly the overshoot of their steering law when they move over for the bus, limitation O21). [more](GLOSSARY.md#invariants)
 [^paired]: **Paired runs.** Two runs, one for each stop design, with exactly the same cars. For one seed, the bay run and the in-lane run get the same arrival times, and every car the same class, size and desired speed (common random numbers). Any difference between the two is then due to the stop, not to the luck of the draw, and far fewer runs are needed for a tight interval than with independent runs. [more](GLOSSARY.md#paired)
+
+---
+
+[Overview](README.md) · **Research question** · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/RESEARCH.md)

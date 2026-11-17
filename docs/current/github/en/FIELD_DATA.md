@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · **Field data** · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/FIELD_DATA.md)
+
 # Field data: the simulation against real streets
 
 > **A literature review, not a recalibration.** First written on 2026-11-01, updated on 2026-11-17 for both experiments
@@ -265,3 +267,7 @@ guidelines, the only direct support, and the sources from elsewhere (Germany, Lo
 TfL, San Francisco, NACTO), which serve as inspiration and comparison, not validation.
 
 [^merged]: **Merged.** The bus is wholly in the lane (lateral position at least -0.25 m). Judged on traffic only. "Merged" says nothing about the road edges: a merged bus may still have left the road on the way. That is what [strict success](GLOSSARY.md#strict) adds. [more](GLOSSARY.md#merged)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · **Field data** · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/FIELD_DATA.md)

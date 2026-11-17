@@ -14,7 +14,9 @@ jobs:
           python-version: "3.11"
           cache: pip
       - name: Install CPU-only PyTorch
-        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+        # The golden fingerprints (tests/golden/) are bit-exact and were recorded with torch 2.13.0; a newer torch
+        # changes the last bits of the network output and with them the fingerprints. Move both together.
+        run: pip install "torch==2.13.0" --index-url https://download.pytorch.org/whl/cpu
       - name: Install package
         run: pip install -e ".[dev]"
       - name: Lint

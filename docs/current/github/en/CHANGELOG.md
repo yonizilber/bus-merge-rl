@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · **Changelog** · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CHANGELOG.md)
+
 # Changelog
 
 Every notable change to the simulation and to the brains, newest first, with the commit that made it. The format
@@ -175,3 +177,7 @@ where a fix was never committed on its own it is marked *notes*.
 The patterns these share (two copies of one thing drifting apart; corrections hiding failures; fixing symptoms instead
 of causes) shaped the rules of this repository: one definition of everything, no hidden corrections, and every
 number generated and tested.
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · **Changelog** · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CHANGELOG.md)

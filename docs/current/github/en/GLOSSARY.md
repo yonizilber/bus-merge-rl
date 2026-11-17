@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · **Glossary** · [עברית](../he/GLOSSARY.md)
+
 # Glossary
 
 The terms that the other pages underline with a dotted line. Hover over one (or tab to it) for a one-line
@@ -534,3 +536,7 @@ For $n$ runs of which a fraction $\hat p$ succeeded, the 95% Wilson interval is
 $$\frac{\hat p+\dfrac{z^{2}}{2n}\;\pm\;z\sqrt{\dfrac{\hat p(1-\hat p)}{n}+\dfrac{z^{2}}{4n^{2}}}}{1+\dfrac{z^{2}}{n}},\qquad z=1.96 .$$
 
 Unlike the plain "$\hat p\pm z\sqrt{\hat p(1-\hat p)/n}$", it stays inside $[0,1]$ and behaves well near 0% and 100%, which is where most of our results are. `scripts/verify_brain.py` reports it for every outcome; with $n=1000$ and $\hat p=0.978$ the interval is about 96.7% - 98.6%.
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · **Glossary** · [עברית](../he/GLOSSARY.md)

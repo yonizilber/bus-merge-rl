@@ -1,14 +1,16 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · **Testing** · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/TESTING.md)
+
 # Testing
 
 ## Status
 
-The last full run recorded 491 test cases: 441 passed, 22 expected failures (strict xfail), 28 skipped, 0 failed. That is **0 unknown failures**: every test that does not pass is either an accepted, documented
+The last full run recorded 492 test cases: 442 passed, 22 expected failures (strict xfail), 28 skipped, 0 failed. That is **0 unknown failures**: every test that does not pass is either an accepted, documented
 limitation or deliberately not run on every push. The test report (HTML site) lists every test case with its
 result, from that one real run.
 
 | Result | Count | What it means |
 |---|---|---|
-| Passed | 441 | The behaviour is as required |
+| Passed | 442 | The behaviour is as required |
 | Expected failure (strict xfail) | 22 | **13 known limitations** of the simulation or the brain, each a test that keeps the correct requirement and fails on it today (listed [below](#known-limitations-as-tests)), and **9 legacy tests** inherited from the original project, written against an interface that no longer exists |
 | Skipped | 28 | **5 statistical gates** that take 10-20 minutes and run as a [scheduled job](#when-the-tests-run), and **1 test that never reaches its check** (see future work) |
 | Failed | 0 | |
@@ -95,3 +97,7 @@ python scripts/build_test_report.py     # run everything and write the test repo
 [^property_test]: **Property-based test.** A test that states a rule ("never brakes harder than 9 m/s²") and lets a library try thousands of generated cases. The `hypothesis` library does the generating, and when it finds a counterexample it shrinks it to the smallest case. It found the minimum-gap intrusion of the safe-speed law (limitation O19). [more](GLOSSARY.md#property_test)
 [^pure_pursuit]: **Pure pursuit.** A steering method: aim at the point on the target line a look-ahead distance ahead, in the vehicle's own frame, and steer along the arc that reaches it. Because the formula includes the vehicle's heading, the vehicle steers back as it approaches the line and arrives parallel to it, instead of crossing it. This is the controller that replaced the one that overshot every target. [more](GLOSSARY.md#pure_pursuit)
 [^rollback]: **Rollback rule.** During training: after several evaluations without improvement, go back to the best checkpoint so far. A fine-tune that starts with no successful evaluation has no "best" except its starting weights, so the rule threw away every 30 epochs of learning. It is now a flag (`--rollback-patience`), and it only restores a checkpoint that evaluated with at least one success. [more](GLOSSARY.md#rollback)
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · **Testing** · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/TESTING.md)

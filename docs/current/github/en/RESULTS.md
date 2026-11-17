@@ -1,3 +1,5 @@
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · **Conclusions** · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/RESULTS.md)
+
 # Conclusions
 
 Based on 19,500 simulated runs ([Measurements and research](EXPLORER.md)), a check against [field data](FIELD_DATA.md)
@@ -106,3 +108,7 @@ our numbers. In most of them the lane comes out better, or no worse:
 What the simulation does not model, and which way that tilts the result: [limitations](LIMITATIONS.md#the-stop-experiment).
 Still, it is good to see that in our particular case the simulation agrees with the approach of the Israeli planning
 guidelines, and with the direction of many guidelines and studies elsewhere.
+
+---
+
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · **Conclusions** · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/RESULTS.md)
