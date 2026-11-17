@@ -9,9 +9,10 @@ class SimConfig:
     traffic_rate: float = 0.3     # cars/second
     total_cars_to_spawn: int = 50 # <--- NEW: Fixed Batch Size
     
-    # --- Passenger Loads (The Modular Variables) ---
-    pax_per_car: float = 1.2
-    pax_per_bus: float = 50.0
+    # --- Passenger loads (only the app's person-weighted KPIs use them; the stop-design experiment applies
+    # occupancy at analysis time). The explorer's Israeli starting values: 1.35 per car, 20 per bus. ---
+    pax_per_car: float = 1.35
+    pax_per_bus: float = 20.0
     
     # --- Scenario Logic ---
     bus_stop_position: float = 300.0

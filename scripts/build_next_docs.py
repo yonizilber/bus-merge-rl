@@ -362,6 +362,17 @@ math mi.v { text-transform: none; font-style: italic; }
 .card dt { color: var(--muted); font-size: 13px; font-weight: 600; padding-top: 2px; }
 .card dd { margin: 0; }
 @media (max-width: 680px) { .card dl { grid-template-columns: 1fr; gap: 2px; } .card dt { margin-top: 8px; } }
+/* The row of the working brain, and the interactive tool's tab in the navigation */
+:root { --ok-bg: #e7f6ec; --ok: #1a7f37; }
+@media (prefers-color-scheme: dark) { :root { --ok-bg: #14301f; --ok: #3fb950; } }
+tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: var(--ok-bg); }
+tbody tr.ok td:first-child { box-shadow: inset 4px 0 0 var(--ok); }
+[dir="rtl"] tbody tr.ok td:first-child { box-shadow: inset -4px 0 0 var(--ok); }
+nav.pages a[href='EXPLORER.html']::after { display: inline-block; margin-inline-start: .4em; padding: 0 6px;
+  border-radius: 999px; border: 1px solid currentColor; font-size: .8em; line-height: 1.5; font-weight: 600;
+  color: var(--accent); vertical-align: 1px; }
+html[lang="he"] nav.pages a[href='EXPLORER.html']::after { content: "\\5DB\\5DC\\5D9"; }   /* the Hebrew word for "tool" */
+html[lang="en"] nav.pages a[href='EXPLORER.html']::after { content: "tool"; }
 .notes { margin-top: 3rem; border-top: 1px solid var(--border); padding-top: .5rem; font-size: 14.5px; }
 .notes ol { padding-inline-start: 1.5rem; }
 .notes li { margin: .5em 0; padding: 2px 6px; }
@@ -444,6 +455,11 @@ POP_JS = """<div id="pop" role="dialog" aria-live="polite" hidden>
 
 # ------------------------------------------------------------------------------------------------ pages
 
+def mark_working_rows(body: str) -> str:
+    """A table row marked ✔ (the brain that works) gets a green background, so it stands out from the replaced ones."""
+    return re.sub(r"<tr>((?:(?!</tr>).)*?✔)", r'<tr class="ok">\1', body, flags=re.S)
+
+
 def cards(body: str) -> str:
     """A table preceded by ``<!-- cards -->`` (or ``<!-- cards: Case -->``, a heading prefix) becomes one card per row.
 
@@ -516,6 +532,7 @@ def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dic
                                                       "slugify": slugify_unicode}})
     body = _restore_math(md.convert(text), math_items)
     body = cards(body)
+    body = mark_working_rows(body)
     body = body.replace("<table>", '<div class="table-wrap"><table>').replace("</table>", "</table></div>")
     body += notes_html(used, glossary, cfg)
     body = _links_to_pages(body)

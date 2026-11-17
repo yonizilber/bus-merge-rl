@@ -230,3 +230,11 @@ def test_the_github_markdown_export_is_up_to_date(tmp_path):
             assert "[[" not in text and "{{" not in text, (lang, page.name)
             for key in re.findall(r"\[\^([a-z0-9_-]+)\](?!:)", text):
                 assert f"[^{key}]:" in text, (lang, page.name, key)       # every footnote has its definition
+
+
+def test_the_working_brain_row_stands_out():
+    """The row marked ✔ (the brain that works) gets the green 'ok' class; the replaced brains' rows do not."""
+    body = ("<table><tbody><tr><td><strong>0.13.0</strong></td><td>✔ <strong>Working</strong></td></tr>"
+            "<tr><td>0.11.0</td><td>✘ Replaced</td></tr></tbody></table>")
+    out = build_next_docs.mark_working_rows(body)
+    assert out.count('<tr class="ok">') == 1 and "<tr><td>0.11.0" in out

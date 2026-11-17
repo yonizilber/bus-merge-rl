@@ -26,11 +26,29 @@ model files keep their original names (`models/ppo_bus_brain_v13.pth`). Release 
 
 ### Added
 - **The stop-design experiment** (`feature/stop-experiment`): an opt-in schedule of arrivals that gives both designs the same
-  cars and loses none (`fa5ee4c`), a runner and an analysis, and 15,000 measured runs (`70a44a9`, `e0a9e63`); the
-  [results](RESULTS.md) page tells what they showed. When released this is a minor version of the simulation, 1.1.0.
+  cars and loses none (`fa5ee4c`), a runner and an analysis, and 15,000 measured runs with stops of 10 to 45 s
+  (`70a44a9`, `e0a9e63`). When released this is a minor version of the simulation, 1.1.0.
+- **A second experiment with short stops** of 0, 3 and 6 s: 4,500 runs on the same seeds, so they pair with the first.
+  It was first measured with uncommitted changes and then run again from the clean commit `c4894bc`; every run and
+  every trip came out identical. The two are summarised together in `results/experiments/stop_design/combined.json`
+  (`81acf6f`).
+- **The comparison with published field data** (`2c675a8`, `055c198`, `e6969f5`) and **the interactive explorer**
+  (`61b9afd`, `70327ff`, `b2b92d2`, `9ea2f67`): choose the traffic, the occupancies, the stop times and the accuracy
+  penalties, and see which design wins.
+- **The results as three tabs**, [Measurements and research](EXPLORER.md) (the tool, with the measurements below it),
+  [Conclusions](RESULTS.md) and Field data, in both languages (`81acf6f`, `c4894bc`), with our conclusion: in Israeli cities, where stops are short, a stop in the lane is better. The
+  conclusion states the assumption it rests on (stops of up to about 12 s, by scattered measurements made for building
+  this project) and keeps the Israeli guidelines as the only direct support; the sources from elsewhere are given as
+  inspiration and comparison.
 - A third version of the documentation, in English and Hebrew: a research question, separate pages for the world and
   the agent, this changelog, and a GitHub-ready Markdown export.
 - A GIF of the in-lane stop (scenario A), next to the bay.
+
+### Changed
+- The app's default occupancies are 1.35 people per car and 20 passengers per bus (were 1.2 and 50), and the app says
+  it is for illustration only; the results come from the experiment. The occupancies affect only the KPIs the app
+  shows.
+- No page assumes a fixed bus load; a test checks six pages for it.
 
 ## [1.0.1] - 2026-10-25
 

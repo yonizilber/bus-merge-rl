@@ -184,10 +184,10 @@ def merge_timeline(df: pd.DataFrame) -> Optional[dict]:
 
 
 # Streamlit sidebar defaults (streamlit_app.py): scenario B, 0.4 cars/s, 50 cars,
-# 15 s dwell, 1.2 / 50 passengers, governor off.
+# 15 s dwell, 1.35 / 20 passengers (the explorer's Israeli starting values), governor off.
 APP_DEFAULTS = dict(
     total_cars_to_spawn=50, traffic_rate=0.4, bus_dwell_time=15,
-    pax_per_car=1.2, pax_per_bus=50.0,
+    pax_per_car=1.35, pax_per_bus=20.0,
 )
 
 

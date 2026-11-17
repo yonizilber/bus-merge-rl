@@ -3,6 +3,7 @@
 
     python scripts/summarize_stop_experiments.py            # writes results/experiments/stop_design/combined.json
     python scripts/summarize_stop_experiments.py --figures  # also redraws docs/media/stop_design_break_even_bus.{en,he}.png
+    python scripts/summarize_stop_experiments.py --figures-only  # only the figure, from the committed summary
 
 Reads the raw runs (outputs/experiments/stop_design_v1: dwell 10 to 45 s, 300 seeds; stop_design_v2: dwell 0 to 6 s,
 150 seeds; outputs/ is not committed) and keeps what is needed to rebuild the paired person-time difference for ANY
@@ -90,43 +91,71 @@ def cell_details(runs: pd.DataFrame, dwells: list[int]) -> dict:
 
 
 def figure(data: dict, lang: str) -> Path:
-    """The bus load below which the bay wins, against the dwell time, one line per traffic rate (car occupancy 1.35)."""
+    """Up to how many bus passengers the bay wins, against the stop time, for light, medium and heavy traffic.
+
+    Car occupancy 1.35. Three of the five traffic rates, so the lines stay readable (the tables on the pages give all
+    five). Short urban stops (up to SHORT_STOP_S) are shaded; a point above the top of the axis is drawn as an arrow
+    at the top, never as a value, and a cell where the lane wins at any bus load sits on the zero line."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from busmerge.stop_results import SHORT_STOP_S
     matplotlib.rcParams["font.family"] = "DejaVu Sans"
     shape = an._t(lang)
     he = lang == "he"
     pc, cap = 1.35, 100
     dwells = data["dwells"]
-    fig, ax = plt.subplots(figsize=(8.5, 6.2))
-    fig.subplots_adjust(bottom=0.30, top=0.92)
-    colours = plt.cm.viridis(np.linspace(0.05, 0.85, len(RATES)))
-    for rate, col in zip(RATES, colours):
-        ys = []
+    fig, ax = plt.subplots(figsize=(8.5, 6.4))
+    fig.subplots_adjust(bottom=0.27, top=0.86, left=0.10, right=0.97)
+    ax.axvspan(0, SHORT_STOP_S, color="#2da44e", alpha=0.10, lw=0)
+    ax.axvspan(SHORT_STOP_S, 15, color="#bf8700", alpha=0.10, lw=0)
+    ax.text(SHORT_STOP_S / 2, cap * 0.96, shape(f"עצירות עירוניות\nקצרות (עד {SHORT_STOP_S} שנ')" if he
+            else f"short urban stops\n(up to {SHORT_STOP_S} s)"), ha="center", va="top", fontsize=9, color="#1a7f37")
+    ax.text((SHORT_STOP_S + 15) / 2, cap * 0.80, shape(f"{SHORT_STOP_S}-15\nשנ'" if he else f"{SHORT_STOP_S}-15\ns"),
+            ha="center", va="top", fontsize=8.5, color="#9a6700")
+    lines = ((0.1, "#6baed6", "o", "תנועה דלילה, 0.1 מכוניות לשנייה", "light traffic, 0.1 cars/s"),
+             (0.3, "#2171b5", "s", "תנועה בינונית, 0.3 מכוניות לשנייה", "medium traffic, 0.3 cars/s"),
+             (0.5, "#08306b", "^", "תנועה צפופה, 0.5 מכוניות לשנייה", "heavy traffic, 0.5 cars/s"))
+    for rate, col, mk, label_he, label_en in lines:
+        xs, ys, over = [], [], []
         for d in dwells:
             _, a, b, *_ = data["pairs"][f"{rate:g}"][str(d)][str(d)]
-            ys.append(min(-pc * b / a, cap) if a > 0 and b < 0 else 0.0)
-        label = f"{rate:g} " + ("מכוניות לשנייה" if he else "cars/s")
-        ax.plot(dwells, ys, marker="o", color=col, label=shape(label))
+            y = -pc * b / a if a > 0 and b < 0 else 0.0
+            if y > cap:
+                over.append(d)
+                xs.append(d)
+                ys.append(cap)
+                break                                   # the rest of the line is off the chart too
+            xs.append(d)
+            ys.append(y)
+        ax.plot(xs, ys, marker=mk, ms=7, lw=2, color=col, label=shape(label_he if he else label_en), clip_on=False)
+        for d in over:
+            ax.annotate("", xy=(d, cap + 6), xytext=(d, cap), arrowprops=dict(arrowstyle="-|>", color=col, lw=1.8),
+                        annotation_clip=False)
     ax.set_xlim(0, max(dwells))
     ax.set_ylim(0, cap)
-    ax.set_xlabel(shape("זמן העצירה בשניות, זהה בשני התכנונים" if he else "dwell time (s), the same in both designs"))
-    ax.set_ylabel(shape("נוסעים באוטובוס בנקודת האיזון" if he else "bus passengers at the tipping point"))
-    ax.set_title(shape("מתחת לקו המפרץ עדיף, מעליו הנתיב" if he else "Below a line the bay wins; above it, the lane"))
-    ax.grid(alpha=0.3)
-    ax.legend(loc="upper left", fontsize=9)
+    ax.set_xticks([0, 3, 6, 10, SHORT_STOP_S, 15, 20, 30, 45])
+    ax.set_xlabel(shape("זמן העצירה בתחנה (שניות), זהה במפרץ ובנתיב" if he
+                        else "time stopped at the stop (s), the same in the bay and in the lane"))
+    ax.set_ylabel(shape("מספר נוסעים באוטובוס שבו שני התכנונים שווים" if he
+                        else "bus passengers at which the two designs tie"))
+    ax.set_title(shape("עד כמה נוסעים באוטובוס המפרץ עדיף?" if he else "Up to how many bus passengers does the bay win?"),
+                 fontsize=13, pad=22)
+    ax.grid(alpha=0.25)
+    ax.legend(loc="lower right", fontsize=9, frameon=True, framealpha=0.95)
     caption = (
-        "כמה נוסעים צריכים להיות באוטובוס כדי שהנתיב ינצח, לפי זמן העצירה ועוצמת התנועה, עם 1.35 אנשים במכונית, "
-        "אמצע הטווח הישראלי. כל קו הוא עוצמת תנועה אחת, וכל נקודה היא ממוצע על זוגות הרצות עם אותן מכוניות. "
-        "כשבאוטובוס פחות נוסעים מהקו המפרץ מעביר אנשים מהר יותר, וכשיותר הנתיב. קו על אפס: הנתיב עדיף בכל מספר "
-        "נוסעים, כי המפרץ מאט גם את המכוניות. הנקודה נחתכת ב-100. עם 1.2 או 1.5 אנשים במכונית כל ערך קטן או גדל ב-11 אחוז."
+        "כל קו הוא עוצמת תנועה אחת, עם 1.35 אנשים במכונית (אמצע הטווח הישראלי). הגובה של הקו הוא מספר הנוסעים באוטובוס "
+        "שבו המפרץ והנתיב מעבירים אנשים באותה מהירות: כשבאוטובוס פחות נוסעים מזה, המפרץ עדיף; כשיותר, הנתיב. "
+        "קו על אפס: הנתיב עדיף בכל מספר נוסעים, כי המפרץ מאט גם את המכוניות. חץ בראש הציר: יותר מ-100 נוסעים, "
+        f"כלומר המפרץ עדיף כמעט תמיד. בין 10 ל-15 שניות הקו הוא חישוב ביניים, לא הרצה. כל נקודה היא ממוצע על זוגות הרצות "
+        "עם אותן מכוניות; עם 1.2 או 1.5 אנשים במכונית כל ערך קטן או גדל ב-11 אחוז. העוצמות 0.2 ו-0.4 בטבלאות."
         if he else
-        "How many passengers the bus must carry for the in-lane stop to win, by dwell time and traffic inflow, with 1.35 "
-        "people per car (the middle of the Israeli range). Each line is one inflow; each point is a mean over paired runs "
-        "with the same cars. With fewer passengers than the line, the bay moves people faster; with more, the lane does. "
-        "A line at zero: the lane wins at any bus load, because the bay slows the cars as well. Points are capped at 100. "
-        "With 1.2 or 1.5 people per car every value shrinks or grows by 11%.")
+        "Each line is one traffic inflow, with 1.35 people per car (the middle of the Israeli range). The height of a line "
+        "is the number of bus passengers at which the bay and the lane move people equally fast: with fewer passengers "
+        "the bay wins; with more, the lane. A line at zero: the lane wins at any bus load, because the bay slows the cars "
+        "too. An arrow at the top: more than 100 passengers, so the bay almost always wins. Between 10 and 15 s the line "
+        "is interpolated, not run. Each point is a mean over paired runs with the same cars; with 1.2 or 1.5 people per "
+        "car every value shrinks or grows by 11%. The inflows 0.2 and 0.4 are in the tables.")
     an._caption(fig, caption, lang, width=112)
     out = MEDIA / f"stop_design_break_even_bus.{lang}.png"
     fig.savefig(out, dpi=130)
@@ -137,7 +166,14 @@ def figure(data: dict, lang: str) -> Path:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--figures", action="store_true", help="also redraw the figure in docs/media (both languages)")
+    ap.add_argument("--figures-only", action="store_true",
+                    help="redraw the figure from the committed summary, without the raw runs")
     args = ap.parse_args()
+    if args.figures_only:
+        data = json.loads(OUT.read_text(encoding="utf-8"))
+        for lang in ("en", "he"):
+            print("written", figure(data, lang).relative_to(REPO))
+        return
     runs, provenance = load_runs()
     dwells = sorted(int(d) for d in runs["dwell_s"].unique())
     g = json.loads(GEOMETRY.read_text(encoding="utf-8"))

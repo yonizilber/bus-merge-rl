@@ -24,10 +24,11 @@ python scripts/build_next_docs.py --root docs/current --github     # both HTML s
 - **Overview**: a hook right after the quick start (the research question, two GIFs: a bay stop and an in-lane stop),
   the results told as the test of realism, which brain works and which do not, and why the numbers can be trusted.
 - **Research question**: a new page; motivation, measures, factors and the experiment.
-- **Results**: a new page, the first experiment told as a story in chapters (what the bay costs, what it buys, who wins, what
-  if the lane stop is quicker, who is in the car, how sure, what it does not say). Its tables are generated from
-  `results/experiments/stop_design_v1/summary.json`, and a test checks every number in its text; the figures are in
-  `docs/media/` in both languages.
+- **Results**: three tabs. *Measurements and research* is the interactive explorer, with both experiments (19,500
+  runs) told below it in chapters (what the bay costs, what it buys, who wins, what if the bay stop is longer, how
+  sure). *Conclusions* gives our conclusion, the assumption it rests on and its sources. *Field data* compares the
+  simulation with published measurements. The numbers are generated from `results/experiments/stop_design/combined.json`,
+  and tests check the text against them; the figures are in `docs/media/` in both languages.
 - **How it works** split into **World model** and **Agent**, in standard terminology (observation space, action
   space, reward function; the input table's columns are Index and Meaning).
 - **Case study**: retitled; the whole story (problem, how it was found, cause, fix, result) at the top, with links to

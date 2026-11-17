@@ -1,5 +1,9 @@
 # Case study: an agent that exploited a steering bug, and how it was fixed
 
+> **One case, which we chose to tell in detail.** This is not a survey of every problem that came up during development,
+> but a single case we chose to follow from start to finish, because it shows how a good number can hide a problem, and
+> how that problem was found and fixed.
+
 ## The story in brief
 
 **The problem.** The first PPO[^ppo]-trained driver, brain 0.11.0, merged in **97.9%** of 1,000 unseen runs, and every

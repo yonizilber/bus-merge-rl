@@ -276,6 +276,21 @@ It is used three times:
 The original merge steering overshot every target, and the agent learned to rely on it. See the
 [case study](CASE_STUDY.md).
 
+<a name="paired"></a>
+
+## Paired runs
+> Two runs, one for each stop design, with exactly the same cars.
+
+For one seed, the bay run and the in-lane run get the same arrival times, and every car the same class, size and
+desired speed (common random numbers). Any difference between the two is then due to the stop, not to the luck of the
+draw, and far fewer runs are needed for a tight interval than with independent runs.
+
+**In detail**
+The schedule is drawn before the run from its own generator (`SimConfig.arrival_seed`): Poisson arrivals at the
+requested rate during the first 150 s. A car that finds the entry blocked waits outside the road and enters as soon as
+it is clear, so both designs deliver every scheduled car. The stop experiment uses seeds 4000 to 4299; the result of
+each pair is the difference bay minus lane.
+
 <a name="parity"></a>
 
 ## Parity (training and production)
@@ -314,6 +329,25 @@ with stationary standard deviation $\sigma_c$ and a memory of about 3 s. The bia
 | car width, length | $0.1\,k$ m |
 
 So distances grow vague in proportion to distance, and speeds quadratically (a looming object is hard to judge from far, easy from near). The bus's own progress and heading are exact: it knows its own pose.
+
+<a name="person_time"></a>
+
+## Person-time
+> How long all the people in the vehicles travelled: each vehicle's trip time times the people in it, summed.
+
+The stop experiment compares the two designs on person-time, not vehicle-time, because a bus carries many people and a
+car one or two.
+
+**In detail**
+For a pair of runs, with $a$ the bus's extra trip time with a bay (s) and $b$ the cars' total extra trip time with a bay
+(vehicle-s),
+
+$$\Delta PT = p_{\text{bus}}\,a + p_{\text{car}}\,b ,$$
+
+where $p_{\text{bus}}$ is the number of bus passengers and $p_{\text{car}}$ the people per car. Below zero the bay moved
+people faster. A trip is timed from the scheduled arrival to the exit at 1,000 m, so a wait at the entry counts; the
+free-flow time is the same in both runs and cancels. Because $\Delta PT$ is linear in the occupancies, they are chosen at
+analysis time and need no new runs.
 
 <a name="plant"></a>
 
@@ -467,6 +501,24 @@ It is the honest measure. For brain 0.13.0 it is 89.4% of 1,000 unseen runs, aga
 
 Deleting the test or loosening its threshold would hide the limitation. With strict xfail it stays in the suite, next to
 the code, and it cannot silently start passing or break for another reason.
+
+<a name="break_even"></a>
+
+## Tipping point
+> The number of bus passengers at which a bay and an in-lane stop are equal.
+
+With fewer passengers the bay is better, with more the lane. A cell where the lane wins at any load has no tipping
+point ("lane always").
+
+**In detail**
+Setting $\Delta PT=0$ ([person-time](#person_time)) gives
+
+$$p_{\text{bus}}^{*} = -\,p_{\text{car}}\,\frac{b}{a} .$$
+
+In every cell the bay costs the bus time ($a>0$), so a tipping point exists only where the bay saves the cars time
+($b<0$). It is proportional to $p_{\text{car}}$: 1.2 or 1.5 people per car instead of 1.35 moves every tipping point down
+or up by about 11%. The explorer interpolates $a$ and $b$ linearly between the stop times and traffic levels that were
+run.
 
 <a name="wilson"></a>
 

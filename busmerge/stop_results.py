@@ -26,22 +26,25 @@ from busmerge.paths import REPO_ROOT
 COMBINED = REPO_ROOT / "results" / "experiments" / "stop_design" / "combined.json"
 FIELD = REPO_ROOT / "results" / "experiments" / "stop_design_v1" / "real_data_comparison.json"
 PC = 1.35                      # people per car where the page needs one value (the middle of 1.2 to 1.5)
-CAP = 100                      # tipping points above this many bus passengers are shown as ">100"
+CAP = 100                      # tipping points above this many bus passengers are shown as "over 100"
 EXAMPLE_LOADS = (10, 20, 40, 60)
 PAIRS = ((3, 6), (6, 10), (10, 15), (15, 20), (20, 30), (30, 45))
 Z = 1.96
+SHORT_STOP_S = 12              # the longest typical urban stop in Israel, by scattered measurements made for this project
 
 TEXT = {
     "en": {"s": "s", "dwell": "Dwell time", "inflow": "inflow (cars/s)", "lane_always": "lane always",
            "bay_always": "bay always", "bus": "Bus, bay − lane (s)", "cars": "All cars, bay − lane (vehicle-min)",
            "be": "Dwell time / inflow (cars/s)", "pair": "Stop in lane / in bay", "load": "Bus passengers",
            "bay": "bay wins", "lane": "lane wins", "tie": "undecided", "and": "and", "at": "at", "from": "from",
-           "every": "at every inflow", "cars_s": "cars/s"},
+           "every": "at every inflow", "cars_s": "cars/s", "over": "over",
+           "n_bay": "Cells where the bay wins", "n_lane": "Cells where the lane wins", "n_tie": "Cells undecided"},
     "he": {"s": "שנ'", "dwell": "זמן עצירה", "inflow": "תנועה (מכוניות/שנ')", "lane_always": "נתיב תמיד",
            "bay_always": "מפרץ תמיד", "bus": "האוטובוס, מפרץ − נתיב (שנ')", "cars": "כל המכוניות, מפרץ − נתיב (דקות-רכב)",
            "be": "זמן עצירה / תנועה (מכוניות/שנ')", "pair": "עצירה בנתיב / במפרץ", "load": "נוסעים באוטובוס",
            "bay": "המפרץ מנצח", "lane": "הנתיב מנצח", "tie": "ללא הכרעה", "and": "ו-", "at": "ב-", "from": "מ-",
-           "every": "בכל עוצמת תנועה", "cars_s": "מכוניות/שנ'"},
+           "every": "בכל עוצמת תנועה", "cars_s": "מכוניות/שנ'", "over": "מעל",
+           "n_bay": "תאים שבהם המפרץ עדיף", "n_lane": "תאים שבהם הנתיב עדיף", "n_tie": "תאים ללא הכרעה"},
 }
 
 
@@ -58,6 +61,24 @@ def field() -> dict:
 def pair(rate: float, lane: int, bay: int) -> list:
     """[n, mean a, mean b, var a, var b, cov ab] for a lane stop of ``lane`` s and a bay stop of ``bay`` s."""
     return data()["pairs"][f"{rate:g}"][str(lane)][str(bay)]
+
+
+def interpolated_pair(rate: float, dwell: float) -> list:
+    """``pair`` for the same stop time in both designs at a ``dwell`` between the measured levels.
+
+    Bilinear in the lane and bay stop times, as the explorer interpolates (scripts/explorer/model.js), at a measured
+    ``rate``. It is an interpolation between measured cells, not a measurement."""
+    levels = data()["dwells"]
+    hi = next(i for i, x in enumerate(levels) if x >= dwell)
+    lo = max(hi - 1, 0)
+    w = 0.0 if hi == lo else (dwell - levels[lo]) / (levels[hi] - levels[lo])
+    out = [0.0] * 6
+    for li, lw in ((lo, 1 - w), (hi, w)):
+        for bi, bw in ((lo, 1 - w), (hi, w)):
+            if lw * bw:
+                v = pair(rate, levels[li], levels[bi])
+                out = [o + lw * bw * x for o, x in zip(out, v)]
+    return out
 
 
 def verdict(pc: float, pb: float, v: list) -> str:
@@ -94,7 +115,7 @@ def _minus(s: str) -> str:
 def _show_load(v, t: dict) -> str:
     if isinstance(v, str):
         return t[v]
-    return f">{CAP}" if v > CAP else str(_r(v))
+    return f"{t['over']} {CAP}" if v > CAP else str(_r(v))
 
 
 def _grid(cell, head: str, lang: str) -> str:
@@ -138,7 +159,7 @@ def example_counts(pb: float, pc: float = PC) -> dict:
 
 def table_examples(lang: str) -> str:
     t = TEXT[lang]
-    lines = [f"| {t['load']} | {t['bay']} | {t['lane']} | {t['tie']} |", "|---|---|---|---|"]
+    lines = [f"| {t['load']} | {t['n_bay']} | {t['n_lane']} | {t['n_tie']} |", "|---|---|---|---|"]
     for pb in EXAMPLE_LOADS:
         c = example_counts(pb)
         lines.append(f"| **{pb}** | {c['bay']} | {c['lane']} | {c['tie']} |")
@@ -161,7 +182,7 @@ FIELD_TEXT = {"en": {"occ": "Occupancy", "per_car": "Stop time / inflow (cars/s)
 def table_occupancy(lang: str) -> str:
     """How the cells split between the designs for a few occupancy pairs (equal stop times, no accuracy penalties)."""
     t, ft, f = TEXT[lang], FIELD_TEXT[lang], field()
-    lines = [f"| {ft['occ']} | {t['bay']} | {t['lane']} | {t['tie']} |", "|---|---|---|---|"]
+    lines = [f"| {ft['occ']} | {t['n_bay']} | {t['n_lane']} | {t['n_tie']} |", "|---|---|---|---|"]
     for key, labels in OCCUPANCY_LABELS.items():
         v = f["verdict_by_occupancy"][key]
         lines.append(f"| {labels[0 if lang == 'en' else 1]} | {v['bay']} | {v['lane']} | {v['tie']} |")
@@ -269,6 +290,10 @@ def facts(lang: str) -> dict[str, str]:
     for lane, bay in PAIRS:
         for r in d["rates"]:
             out[f"tip_{r:g}_{lane}_{bay}"] = _show_load(tipping_bus_load(pair(r, lane, bay)), t)
+    tip12 = [tipping_bus_load(interpolated_pair(r, SHORT_STOP_S)) for r in d["rates"]]
+    if all(isinstance(x, float) for x in tip12):
+        out["short_stop"] = f"{SHORT_STOP_S:g}"
+        out["tip_short_min"], out["tip_short_max"] = str(_r(min(tip12))), str(_r(max(tip12)))
     for pb in EXAMPLE_LOADS:
         for k, n in example_counts(pb).items():
             out[f"n{pb}_{k}"] = str(n)

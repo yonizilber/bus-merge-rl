@@ -1,7 +1,8 @@
 # Research question
 
-> **Status: two experiments have run ({{stop:runs}} runs).** This page states the question and how it was answered; the
-> [results](RESULTS.md) are on their own page, as a story, with an interactive explorer and a check against field data. The planning below is kept as it was written, with what is done marked.
+> **Status: two experiments have run ({{stop:runs}} runs).** This page states the question and describes how it was
+> answered. The measurements, with a tool to try other conditions, are in [Measurements and research](EXPLORER.md); the
+> check against the field in [Field data](FIELD_DATA.md); and the conclusion in [Conclusions](RESULTS.md).
 
 ## The question
 
@@ -22,57 +23,77 @@ and how many people each carries is the reader's choice, not the simulation's.
 | Boarding time | may be longer if the bus stops away from the kerb or the doors | may be shorter: the stop is precise |
 | Risk | the merge: contact with a car alongside, the bay's exit kerb | a car changing lanes around the bus (not modelled: one lane) |
 
-Neither column wins everywhere. In light traffic a bay costs the bus almost nothing and spares the cars; in heavy
-traffic the merge can take long, while the queue behind an in-lane stop grows with the inflow. Where the balance tips
-is the question.
+Neither column wins everywhere. A bay spares the cars the queue but costs the bus the merge; a stop in the lane spares
+the bus the merge but holds up everyone behind it. Both costs grow with the traffic, and the queue's cost grows with
+the stop time too. Where the balance tips is the question.
 
-## What will be measured
+## What was measured
 
-- **Total person delay** (primary): for every person, car occupants and bus passengers alike, the travel time through
-  the road section minus the time at free-flow speed, summed. Lower is better.
-- **Person-weighted average speed** and **people delivered** per hour. The simulation already computes both
-  (`AnalyticsEngine.compute_kpis`, weighting each vehicle by its occupancy).
-- **Bus delay**: from the end of boarding to back at speed in the lane (the [[merged|merge]] time, for the bay).
-- **Queue** behind the bus: length and duration.
-- **Safety**: contacts and other [[invariants|physics violations]] per stop.
+For every pair of runs (the same seed, once with a bay and once in the lane):
 
-## What will be varied
+- **a**, how many seconds longer the bus's trip is with a bay, and **b**, how many vehicle-seconds longer all the cars'
+  trips together are with a bay. Each vehicle's trip is timed from the moment it was due to enter the road until it
+  leaves at the far end, so waiting at the entry counts.
+- **The primary measure**, the difference in [[person_time|person-time]]: `ΔPT = bus passengers × a + people per car × b`.
+  Below zero, the bay is better. From it comes the [[break_even|tipping point]]: the bus load at which the two designs
+  are equal.
+- **The queue** behind a bus stopped in the lane, and the wait at the road's entry.
+- **The merge** at the bay: from the end of boarding until the bus has [[merged|merged]].
+- **Safety**: contacts, kerb strikes and other [[invariants|physics violations]] in every run, and runs that did not
+  finish in time.
+
+## What was varied
+
+The table gives what the experiments actually ran. The original plan had other ranges; they were replaced once it
+was clear what is realistic.
 
 | Factor | Range | Why |
 |---|---|---|
 | Stop design | bay (scenario B), in lane (scenario A) | the question |
-| Traffic inflow | 0.2 - 0.8 cars/s requested | the main driver of both costs |
-| Boarding time | 10 - 30 s, separately for each design | the in-lane stop may be shorter; how much is an assumption to vary, not a fact |
-| Car occupancy | 1.0 - 1.6 people per car (default 1.2) | weighs the cars against the bus |
-| Bus occupancy | 20 - 80 passengers (default 50) | weighs the bus against the cars |
+| Traffic inflow | 0.1 to 0.5 cars/s requested | the main driver of both costs. 0.5 is above the capacity of one lane, about 0.43 |
+| Stop time | 0, 3, 6, 10, 15, 20, 30 and 45 s, for each design | measured for every pair of lane time and bay time, so the [explorer](EXPLORER.md) lets you choose them separately |
+| People per car | chosen at analysis time; 1.2 to 1.5 in Israel, 1.35 where one value is needed | a weight only, not part of the run |
+| Bus passengers | chosen at analysis time, with no fixed value | a weight only, not part of the run. The verdict is especially sensitive to it, so there is no single default |
 
-## How it will be run
+## How it was run
 
-- **Paired comparisons.** The same seed should give the same arrivals of cars in both designs (common random
-  numbers), so the difference is measured on identical traffic and its noise is small. Today the arrivals share one
-  random stream with everything else, so this needs a separate stream for arrivals (see below).
-- **Unseen seeds,** separate from those used for training, selection and the published results.
-- **Enough runs per point** for 95% confidence intervals on the difference ([[wilson|Wilson intervals]] for
-  rates, bootstrap intervals for delays), and the curves of the difference against inflow, with the point where it
-  changes sign if there is one.
+- **[[paired|Paired comparisons]].** For a given seed both designs get exactly the same cars: the same arrival times,
+  sizes and desired speeds. Arrivals have their own random generator, so they do not depend on what happens on the
+  road, and the difference is measured on identical traffic.
+- **Reserved seeds** 4000 to 4299, never used for training, brain selection or the published results. The first
+  experiment (stops of 10 to 45 s) has 300 pairs per combination; the second (0 to 6 s) has 150 pairs, on seeds 4000 to
+  4149, so the runs of the two experiments pair with each other.
+- **A 95% confidence interval** for the mean of every cell, by the normal approximation. A cell is decided for a design
+  only when the whole interval is on one side of zero.
+- **No arrivals are lost.** Cars arrive on a schedule (Poisson) during the first 150 s. A car that finds the entry
+  blocked waits, and the run goes on until every vehicle has left (a cap of 900 s, which no run reached).
+- **Occupancies are not part of the run.** The simulation measures times only; the people in each vehicle are chosen at
+  analysis time, so the same runs answer for any occupancy.
 
-## What must be in place first
+The full design, with the data dictionary and the commands to run it again, is in
+`docs/reference/EXPERIMENT_STOP_DESIGN.md`.
 
-The instrument was built, but these items would bias this particular comparison. **Marked done: handled for the first experiment.**
-- **Traffic arrivals (limitation O20).** *Done for the experiment:* the experiment's arrivals follow a schedule, and a car that
-  finds the entry blocked waits instead of being lost, so "heavy" traffic is heavy. The app's own arrival model on `main` still loses them.
-- **The in-lane scenario (O5, O7).** It is a baseline that still resets the bus's pose at the stop; it needs the same
-  physical treatment as the bay.
-- **Cars' steering (O21).** Cars overshoot when they move aside for the bus; with a queue behind an in-lane stop that
-  matters less, at a bay more.
-- **Paired arrivals.** *Done:* arrivals have their own random generator, so a seed produces the same traffic in both designs.
-- **Person delay.** *Done in another form:* the measure is person-time, occupancy × trip time from the scheduled arrival, and the
-  paired difference cancels the free-flow reference. Each vehicle's free-flow time is recorded too, for absolute delays.
+## What was handled before the experiment, and what was not
 
-## Threats to validity
+- **Traffic arrivals (limitation O20).** *Handled in the experiment:* a car that finds the entry blocked waits instead
+  of being lost, so "heavy" traffic is heavy. The app's arrival model still loses them.
+- **Paired arrivals.** *Handled:* arrivals have their own random generator, so a seed produces the same traffic in both
+  designs.
+- **The in-lane scenario (O5, O7).** *Not fixed:* it still resets the bus's pose at the stop, and both experiments ran
+  with it. The reset is lateral only and leaves the position along the road unchanged ([world model](WORLD.md#scenarios)).
+- **Cars' steering (O21).** *Not fixed:* cars overshoot when they move aside for the bus. With a queue behind an in-lane
+  stop that matters less, at a bay more; how much it changes the trip times we have not measured.
+
+## Model limitations
 
 - One lane, one stop, one bus; no buses in sequence, no traffic lights.
 - No vehicle mass (a bus brakes like a car) and no brake lag ([limitations](LIMITATIONS.md) O17, O18).
-- The driver is good but not perfect: 2.2% of its pull-outs end in contact. The bay's cost may be slightly
-  overstated or understated depending on how a real driver would handle those cases.
+- The driver is good but not perfect: {{stop:contact_pct}}% of its pull-outs in the experiment ended in contact.\*
 - Arrivals are synthetic (Poisson), not counted from a real street.
+- The stop time is fixed in every run; on the street it varies.
+- The conclusion rests on the assumption that Israeli city stops are short, up to about {{stop:short_stop}} s, by scattered
+  measurements made for building this project ([our conclusion](RESULTS.md#our-conclusion)).
+
+\* Real streets have crashes when buses leave a bay too. For simplicity the model does not put a cost on them: a run that
+ended in contact counts like any other. Leaving those runs out changes the bus's delay by at most {{stop:da_max}} s in
+any cell.

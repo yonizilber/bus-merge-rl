@@ -12,6 +12,7 @@ JSON. The documentation site has the same comparison, in both languages, as its 
 """
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -23,6 +24,9 @@ HEAD = ('<!doctype html>\n<html lang="he" dir="rtl">\n<head>\n<meta charset="utf
 
 
 GEOMETRY = REPO / "results" / "experiments" / "stop_design_v2" / "stop_geometry.json"
+
+sys.path.insert(0, str(REPO))
+from busmerge.stop_results import SHORT_STOP_S  # noqa: E402  (the conclusion's short-stop assumption)
 
 
 def tokens(d: dict) -> dict:
@@ -37,7 +41,7 @@ def tokens(d: dict) -> dict:
             "[[mt_p99]]": f"{mt['p99']:.1f}", "[[mt_max]]": f"{mt['max']:.1f}", "[[mt_max_int]]": str(int(mt["max"])),
             "[[mt_over20]]": f"{100 * mt['share_over_20s']:.1f}%", "[[mt_n]]": f"{mt['n']:,}",
             "[[queue_min]]": f"{min(q):.1f}", "[[queue_max]]": f"{max(q):.0f}", "[[cells]]": str(5 * len(d["dwells_s"])),
-            "[[entry_sim]]": f"{entry:.2f}".replace("-", "−"), "[[geom_seeds]]": str(g["seeds"]),
+            "[[short_stop]]": f"{SHORT_STOP_S:g}", "[[entry_sim]]": f"{entry:.2f}".replace("-", "−"), "[[geom_seeds]]": str(g["seeds"]),
             "[[dev_lane]]": f"{g['distance_from_stop_pole_m']['lane_mean']:.1f}", "[[dev_bay]]": f"{g['distance_from_stop_pole_m']['bay_mean']:.1f}",
             "[[gap_lane]]": f"{g['gap_between_bus_side_and_pavement_edge_m']['lane_mean']:.2f}",
             "[[gap_bay]]": f"{g['gap_between_bus_side_and_pavement_edge_m']['bay_mean']:.2f}"}

@@ -44,8 +44,10 @@ Traffic here means people, not vehicles. A bus carries many passengers and a car
 lost by a full bus can outweigh a minute lost by a car, while a nearly empty bus tips the scale the other way. The
 answer depends on how dense the traffic is, how long the bus stands at the stop in each design, how full the bus is
 and how many people ride in each car. The [research question](RESEARCH.md) page sets out the experiment that varies
-them, and the [results](RESULTS.md) show where each design wins. In short: **a short stop favours the lane; a long
-stop, dense traffic or a bus with few passengers favours the bay; and the tipping point moves with every assumption.**
+them, [measurements and research](EXPLORER.md) shows where each design wins, and the
+[conclusions](RESULTS.md) sum it up. In short: **a short stop favours the lane; the bay
+pays only with long stops, dense traffic and a bus that is not full.** Our conclusion is that in Israeli cities, where
+stops are short (up to about 12 s, by scattered measurements made for building this project), **a stop in the lane is better**.
 
 **Answering it means simulating the hardest moment on the road.** The stop in the lane is easy to model: the bus
 stops and the cars queue. The bay is not. When boarding ends, the driver reads the traffic, waits for a gap and pulls
@@ -99,7 +101,7 @@ How to read it:
   and two training bugs. The [case study](CASE_STUDY.md) tells the story.
 - **Measured on unseen data.** Training, selection, publication and the scheduled gates use separate sets of random
   seeds.
-- **459 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
+- **491 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
   main branch is that a change is merged only when they pass. Known limitations are kept as strict xfail[^strict_xfail] tests, so they
   stay visible and turn red the day the behaviour changes. See [Testing](TESTING.md).
 
@@ -108,10 +110,12 @@ How to read it:
 | Page | What it covers |
 |---|---|
 | [Research question](RESEARCH.md) | Bay or lane: the question, the measures, the factors and the experiment |
-| [Results](RESULTS.md) | What 19,500 simulated runs showed, an explorer to try your own conditions, a check against field data, and our conclusion |
+| [Measurements and research](EXPLORER.md) | An interactive tool: choose the traffic, the occupancies and the stop times and see which design wins; below it, what 19,500 simulated runs showed |
+| [Conclusions](RESULTS.md) | Our conclusion, the assumption it rests on, and the sources |
+| [Field data](FIELD_DATA.md) | The simulation against published field measurements, question by question, with every source |
 | [World model](WORLD.md) | The road, the cars, the bus and the bay, and the physics that holds it together |
 | [Agent](AGENT.md) | What the driver sees, what it decides, its network, how it learns, and every version |
-| [Case study](CASE_STUDY.md) | How an agent that exploited a steering bug was found out and replaced |
+| [Case study](CASE_STUDY.md) | One case we chose to tell in detail: how an agent that exploited a steering bug was found out and replaced |
 | [Changelog](CHANGELOG.md) | Every release and fix, with the commit that made it |
 | [Testing](TESTING.md) | The test status, what is tested, and the rules for merging |
 | [Limitations](LIMITATIONS.md) | Every known issue in plain words, with the test that tracks it |

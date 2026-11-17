@@ -31,9 +31,9 @@ occupancy follows directly: pax_car* = −pax_bus · mean ΔT_bus / mean ΔT_car
 |---|---|---|
 | Stop design | A (in lane), B (bay) | yes |
 | Requested traffic inflow | 0.1, 0.2, 0.3, 0.4, 0.5 cars/s (0.5 is above one lane's capacity, about 0.43) | yes |
-| Dwell time | 10, 15, 20, 30, 45 s, for both designs | yes; at analysis time any lane dwell can be paired with any bay dwell (a more precise stop in the lane may board faster) |
-| Car occupancy | default 1.2; any value | no, a weight |
-| Bus occupancy | default 50; any value | no, a weight |
+| Dwell time | 10, 15, 20, 30, 45 s, for both designs (stop_design_v1); 0, 3, 6 s (stop_design_v2, same seeds 4000-4149) | yes; at analysis time any lane dwell can be paired with any bay dwell (a more precise stop in the lane may board faster) |
+| Car occupancy | chosen at analysis time; 1.2 to 1.5 in Israel, 1.35 where one value is needed | no, a weight |
+| Bus occupancy | chosen at analysis time, no fixed value | no, a weight |
 
 2 designs × 5 inflows × 5 dwell times = 50 cells. Seeds **4000-4999** are reserved for this experiment and used
 nowhere else; the pilot uses 20 seeds per cell (1,000 runs), the full run 300 (15,000 runs).
@@ -104,25 +104,32 @@ aggregate table in `results/experiments/stop_design_v1/summary.json`.
 | `free_flow_s` | road length / desired speed: a reference for absolute delay |
 | `censored` | did not leave the road before the cap |
 
-## First observations (2026-10-31, occupancy 1.2 per car and 50 on the bus)
+## Results (both experiments)
 
-Read from `summary.json`; every number has a 95% bootstrap interval there.
-- **The bay costs the bus 5-10 s** in every cell (the merge), which weighs 50 passengers; **it saves the cars**
-  from queueing behind the stopped bus, and that saving grows with the traffic and the dwell time.
-- **Short stops (10-15 s) favour the lane stop** at almost every inflow; at 10 s and 0.3 cars/s or more the bay
-  even slows the cars (they yield to the merging bus), so the lane stop is better for any occupancy.
-- **Long stops or dense traffic favour the bay:** at 30 s from 0.2 cars/s, and at 20 s from about 0.35 cars/s.
-- **A shorter stop in the lane** (for example 15 s in the lane against 20 s in the bay) moves the balance clearly
-  toward the lane stop.
-- **Robustness:** leaving out the seeds whose bay run ended in contact (1.6% of bay runs) changes no cell's mean by
-  more than 12 person-seconds.
+The results are on the Measurements and research tab (`docs/current/*/EXPLORER.md`) and the conclusion on the
+Conclusions tab (`docs/current/*/RESULTS.md`), generated from
+`results/experiments/stop_design/combined.json`; this section only summarises them, with no fixed occupancy. A first
+reading of 2026-10-31 used a fixed 1.2 people per car and 50 on the bus; it was replaced, because the bus load is the
+reader's choice and the verdict depends on it.
+- **The bay costs the bus 5.3 to 10.5 s** (mean 7.0) in every cell, at the same stop time in both designs.
+- **Up to 6 s the lane wins at every inflow and every load**: at those stops the bay slows the cars too. At 10 s the
+  same holds from 0.3 cars/s.
+- **The bay starts to win at stops of 15 to 30 s**, depending on the inflow and the bus load. At 15 s, with 1.35
+  people per car, the bay wins below 8 bus passengers at 0.1 cars/s and below 53 at 0.5 cars/s.
+- **Robustness:** leaving out the seeds whose bay run ended in contact (2.3% of bay runs) changes the bus's delay by at
+  most 0.4 s in any cell.
+- **Conclusion** (Conclusions tab): in urban travel a stop in the lane is better. It rests on the assumption that Israeli
+  city stops are short, up to about 12 s, by scattered unpublished measurements made for building this project: a heuristic, not
+  data. At 12 s (interpolated between the 10 and 15 s cells) the bay wins only below 5 to 11 bus passengers, with 1.35
+  people per car. For longer stops the conclusion does not hold.
 
 ## Caveats
 
 - The bay's driver is brain 0.13.0: about 2% of its pull-outs end in contact and about 9% clip the exit kerb. The
   analysis reports both and a sensitivity without contact runs.
-- Scenario A still sets the bus's speed to 0 at the stop and resets its pose (BUGS O5, O7): an assignment within the
-  physical limit, with no expected effect on travel times.
+- Scenario A still sets the bus's speed to 0 at the stop (at 0.05 m/s or less) and resets its pose (BUGS O5, O7): an
+  assignment within the physical limit. The pose reset is lateral only (offset, heading, steering) and leaves the
+  position along the road unchanged, so no effect on travel times is expected. Not fixed; both experiments ran with it.
 - Cars' steering overshoots (O21); it moves cars sideways, not along the road, so travel times are not expected to
   depend on it.
 - No vehicle mass and no brake lag (O17, O18); synthetic Poisson arrivals; one lane, one stop, one bus, which enters

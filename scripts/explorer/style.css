@@ -108,8 +108,8 @@ svg .muted { fill: var(--muted); }
 table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 620px; }
 th, td { text-align: start; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--muted); }
-.src { display: inline-block; font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; }
-.src.read { color: var(--field); } .src.sum { color: var(--warn); }
+.src { display: inline-block; font-size: 12px; font-weight: 600; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.src.read { color: var(--muted); } .src.sum { color: var(--warn); border-color: currentColor; }
 ul.plain { margin: 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 8px; max-width: 68ch; }
 .path { direction: ltr; unicode-bidi: isolate; overflow-wrap: anywhere; font-size: 13px; }
 @media (max-width: 520px) { body { font-size: 16px; } .part { grid-template-columns: 1fr auto; } .part > span:first-child { grid-column: 1 / -1; } }

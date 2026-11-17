@@ -13,7 +13,7 @@ const S = { rate: 0.3, pbus: 20, pcar: 1.35, npax: 6, doors: 2, link: "pen", dLa
 const A = Object.assign({}, DEFAULT_ADV);
 const ADV_KEYS = ["m2", "m3", "longPen", "latPen", "devLane", "devBay", "gapLane", "gapBay", "entryExtra"];
 const ADV_STEP = { m2: "0.05", m3: "0.05", longPen: "0.05", latPen: "0.01", devLane: "0.1", devBay: "0.1", gapLane: "0.05", gapBay: "0.05", entryExtra: "0.5" };
-const ADV_TAG = { m2: "guess", m3: "guess", longPen: "guess", latPen: "guess", devLane: "sim", devBay: "guess", gapLane: "sim", gapBay: "guess", entryExtra: "src" };
+const ADV_TAG = { m2: "guess", m3: "guess", longPen: "guess", latPen: "guess", devLane: "sim", devBay: "guess", gapLane: "sim", gapBay: "guess", entryExtra: "guess" };
 function buildAdv() {
   $("advgrid").innerHTML = ADV_KEYS.map(k => { const [label, why] = T.adv[k]; const tag = ADV_TAG[k];
     return `<div class="f"><label for="adv-${k}">${label}<span class="tag ${tag}">${T.tags[tag]}</span></label><input type="number" id="adv-${k}" step="${ADV_STEP[k]}" value="${A[k]}"><span class="why">${why}</span></div>`; }).join("");

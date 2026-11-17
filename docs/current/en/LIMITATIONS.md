@@ -23,12 +23,49 @@ test does.
 | O17 | There is no vehicle mass: every vehicle, the 11 m bus included, can brake as hard as 9 m/s². Real emergency braking is about 8-9 m/s² for a car and about 5-7 for a city bus | The bus can follow closer than a real one | `test_physics_limits.py` |
 | O18 | There is no brake actuation lag: a car goes from cruising to -9 m/s² within one 0.1 s step, a [[jerk|jerk]] of about 100 m/s³. A real brake needs 0.15-0.3 s | Rare: about 25 frames in 5 runs | `test_physics_limits.py` |
 | O19 | The safe-speed law lets a follower get up to 0.55 m into its own 2 m minimum gap (never into contact) | Found by property-based testing | `test_safe_speed_properties.py` |
-| O20 | The car generator loses arrivals while the entry is blocked, so the inflow delivered is about λ / (1 + 1.5·λ): 80% of the setting at 0.2 cars/s, 71% at the default 0.4, 46% at 0.8 | The "heavy" traffic settings are not much heavier. A real stress test needs the training scenarios or a different arrival model | `test_traffic_density.py` |
+| O20 | The car generator loses arrivals while the entry is blocked, so the inflow delivered is about λ / (1 + 1.5·λ): 80% of the setting at 0.2 cars/s, 71% at the default 0.4, 46% at 0.8 | In the app, the "heavy" traffic settings are not much heavier. The stop experiment is not affected: there a car that finds the entry blocked waits | `test_traffic_density.py` |
 | O11 | The model turns the bus about the centre of its body; a real bus pivots near its rear axle | The tail swing is exaggerated, which limits how sharply the bus may exit | none |
 | O16 | The pull-in steering (6 m look-ahead) is unstable for a sudden target step at speed, for example 3.5 m off the line at 10 m/s | It only ever follows the gradual kerb line, and 300 pull-ins were clean | none (the steering test excludes it) |
 | O21 | The cars' steering law has no heading term and overshoots every target, the defect the bus had before the case study's fix. Measured: a 0.5 m sideways move overshoots by 100% (peak heading about 5°); a 3.5 m move by 99-100% (34-39°) and never settles | Hidden in v1.0 because cars only nudge 0.5 m to make room for the bus. It causes most of the cars crossing the centre line (see below). A lane change would show it. A fix is pure pursuit for cars, and then every number that depends on car behaviour must be measured again | `test_car_steering_controller.py` |
 | O22 | The IDM acceleration functions change the vehicle's state (the squeeze flag and the yield limiter), not only return a number | Hidden because the engine asks once per car per frame. It prevents "what-if" queries: a lane-change model such as MOBIL must ask what the acceleration would be in another lane without braking the car now. A fix splits each function into a pure computation and an explicit commit | `test_idm_query_side_effects.py` |
-| O5, O7 | The arrival in the bay still sets the bus speed to 0 (at 0.05 m/s or less), and scenario A resets the bus pose | An assignment, within the physical limit | `test_no_state_assignment.py` |
+| O5, O7 | The arrival in the bay still sets the bus speed to 0 (at 0.05 m/s or less), and scenario A resets the bus pose | An assignment, within the physical limit. In scenario A the reset is lateral only and leaves the position along the road unchanged; both experiments ran with it | `test_no_state_assignment.py` |
+
+## The stop experiment
+
+What the bay-versus-lane experiment does not simulate, and what that does to the [conclusion](RESULTS.md#our-conclusion).
+
+<!-- cards -->
+
+| What | Effect | Where |
+|---|---|---|
+| The assumption that Israeli city stops are short, up to about {{stop:short_stop}} s | The conclusion ("a stop in the lane is better") rests on it. It comes from scattered measurements made for building this project, not published, so it is a heuristic assumption. For longer stops the conclusion does not hold | [Our conclusion](RESULTS.md#our-conclusion) |
+| One lane, no overtaking | The queue behind an in-lane stop is longer than anything observed on a street; this favours the bay, mostly at long stops and in dense traffic | [Field data](FIELD_DATA.md) |
+| The bay's cost to the bus ({{stop:a_min}} to {{stop:a_max}} s) | Higher than measured in London and Singapore, under other conditions; favours the lane | [Field data](FIELD_DATA.md) |
+| No long waits for a gap, and entering the bay is no slower | Both favour the bay; the explorer adds an adjustable entry penalty | [Measurements and research](EXPLORER.md) |
+| One fixed stop time per run | Real variation lengthens queues; favours the lane | [What comes next](RESULTS.md#what-comes-next) |
+
+### What else the simulation leaves out
+
+The simulation is, of course, very partial. Streets come in many shapes, and this is one stop on one kind of road:
+
+- **One lane, no overtaking.** The queue behind a bus stopped in the lane is as long as it is because nobody can pass.
+  Streets with two or more lanes, with bus lanes, or with a two-way flow that cars can borrow, all change the balance.
+  This is the strongest reason not to read the long-stop results as a verdict for real streets. A two-lane version is
+  under way.
+- **People who park in the bay** ("only for a moment, it won't bother the bus"). A car standing in the bay forces the bus
+  to stop in the lane anyway, or to stop at an angle away from the kerb. TfL and the Israeli guidelines both call for
+  stopping bans and enforcement for this reason.
+- **The road's shape.** Curves, slopes and short sight distances, where traffic cannot see a bus stopped ahead in time
+  (TCRP lists this as a reason for a bay).
+- **Traffic lights and junctions.** A light upstream sends cars in platoons, with gaps between them that help a bus
+  merge; a light downstream builds queues of its own. Whether the stop is before or after the junction matters too.
+- **Pedestrian crossings, pedestrians and cyclists.** None are modelled.
+- **More than one bus.** No bus behind a bus, no bunching, no limit on how many buses the stop can hold, and no law
+  that makes cars yield to a bus leaving a bay (in Florida, a third of the merges happened because a car made way).
+- **Stop times that vary.** Every run uses one fixed stop time; on the street it varies a lot.
+- **A simple model of the vehicles and of one driver.** No vehicle mass (the bus brakes like a car), no brake lag, cars
+  that overshoot when they move aside (see above), and one trained driver that still touches a car in
+  {{stop:contact_pct}}% of its pull-outs.
 
 ## What is reported but not failed
 

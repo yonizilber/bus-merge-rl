@@ -121,6 +121,10 @@ def _governor_flag_title(log) -> str:
 # --- Page Config ---
 st.set_page_config(page_title="Bus Traffic Sim", layout="wide")
 st.title("🚌 Traffic Simulation: Behavioral Analysis")
+st.caption(
+    "For illustration: one run at a time, with the app's own settings (arrivals that find the entry blocked are "
+    "lost). The stop-design results come from the experiment (scripts/run_stop_experiment.py), not from this app."
+)
 
 # --- INITIALIZE MEMORY ---
 # This prevents Streamlit from restarting when you click play
@@ -158,8 +162,10 @@ batch_size = st.sidebar.slider("Total Cars to Sim", 20, 100, 50)
 # 3. Bus Settings
 st.sidebar.subheader("Bus Parameters")
 bus_stop_duration = st.sidebar.slider("Stop Duration (s)", 5, 30, 15)
-pax_car = st.sidebar.number_input("Pax per Car", 1.0, 5.0, 1.2)
-pax_bus = st.sidebar.number_input("Pax per Bus", 10.0, 100.0, 50.0)
+pax_car = st.sidebar.number_input("Pax per Car", 1.0, 5.0, 1.35,
+    help="Starting value 1.35: the middle of the Israeli range 1.2 to 1.5 (see the Field data page).")
+pax_bus = st.sidebar.number_input("Pax per Bus", 1.0, 100.0, 20.0,
+    help="Starting value 20: a rough estimate for an Israeli city bus, not a measurement. Your choice.")
 
 st.sidebar.subheader("Sensor Noise (Robustness Test)")
 noise_enabled = st.sidebar.checkbox(
