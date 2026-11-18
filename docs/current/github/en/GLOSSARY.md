@@ -29,16 +29,16 @@ the brain drives in the app or in a measurement, only the actor is used and it a
 gives the same action.
 
 **In detail**
-**Architecture** (`busmerge/rl/ppo_agent.py`). With $n$ inputs (11 for every brain that merges):
+**Architecture** (`busmerge/rl/ppo_agent.py`). With $`n`$ inputs (11 for every brain that merges):
 
-- **Actor trunk:** $n\to64\to64$ with $\tanh$ activations, shared by two heads.
-- **Mean head:** $64\to2$ followed by $\tanh$, so each action mean lies in $[-1,1]$: the sideways target `steer` and the speed target `gas`.
-- **Spread head:** $64\to2$ giving $\log\sigma$, clamped to $[-3,\,0.5]$ (so $\sigma\in[0.05,\,1.65]$). The spread depends on the state: the agent can be sure in familiar situations and keep exploring in new ones. It starts at $\sigma\approx0.5$.
-- **Critic:** a separate network $n\to64\to64\to1$ (also $\tanh$) that outputs the expected return $V(s)$.
+- **Actor trunk:** $`n\to64\to64`$ with $`\tanh`$ activations, shared by two heads.
+- **Mean head:** $`64\to2`$ followed by $`\tanh`$, so each action mean lies in $`[-1,1]`$: the sideways target `steer` and the speed target `gas`.
+- **Spread head:** $`64\to2`$ giving $`\log\sigma`$, clamped to $`[-3,\,0.5]`$ (so $`\sigma\in[0.05,\,1.65]`$). The spread depends on the state: the agent can be sure in familiar situations and keep exploring in new ones. It starts at $`\sigma\approx0.5`$.
+- **Critic:** a separate network $`n\to64\to64\to1`$ (also $`\tanh`$) that outputs the expected return $`V(s)`$.
 
-**The policy.** Each action is drawn from a Gaussian, $a\sim\mathcal N\big(\mu(s),\sigma(s)^2\big)$, during training. At run time the agent uses $a=\mu(s)$. The vehicle receives the action clipped to $[-1,1]$, but the training buffer stores the raw sample with its own log-probability (otherwise the PPO ratio is wrong at the limits; see the [changelog](CHANGELOG.md), P17).
+**The policy.** Each action is drawn from a Gaussian, $`a\sim\mathcal N\big(\mu(s),\sigma(s)^2\big)`$, during training. At run time the agent uses $`a=\mu(s)`$. The vehicle receives the action clipped to $`[-1,1]`$, but the training buffer stores the raw sample with its own log-probability (otherwise the PPO ratio is wrong at the limits; see the [changelog](CHANGELOG.md), P17).
 
-**A deliberate bias.** The bias of the `steer` mean is initialised to $+1$, so before any learning $\tanh(1)\approx0.76$: the untrained agent steers into the lane. Learning then has to teach it to hold back when a car is near, which has a direct gradient (a contact costs a lot), instead of having to discover the first successful merge by chance.
+**A deliberate bias.** The bias of the `steer` mean is initialised to $`+1`$, so before any learning $`\tanh(1)\approx0.76`$: the untrained agent steers into the lane. Learning then has to teach it to hold back when a car is near, which has a direct gradient (a contact costs a lot), instead of having to discover the first successful merge by chance.
 
 **Why two networks.** The critic's job (predict a value on the reward scale, which reaches thousands) and the actor's job (choose actions) need different features and scales; separating them avoids one overwhelming the other.
 
@@ -52,21 +52,29 @@ position, and steering is limited in angle and in rate, so a vehicle cannot jump
 geometry is modelled, with no tyre forces or mass.
 
 **In detail**
-**The model.** Let $\psi$ be the vehicle's heading relative to the road, $y$ its sideways position, $v$ its speed, $L$ its wheelbase (the distance between the axles) and $\delta$ the steering angle of the front wheel. Then
+**The model.** Let $`\psi`$ be the vehicle's heading relative to the road, $`y`$ its sideways position, $`v`$ its speed, $`L`$ its wheelbase (the distance between the axles) and $`\delta`$ the steering angle of the front wheel. Then
 
-$$\dot\psi=\frac{v}{L}\tan\delta,\qquad \dot y=v\sin\psi .$$
 
-A larger angle or a higher speed turns faster; a longer wheelbase turns slower. A vehicle moving straight ($\delta=0$) keeps its heading, and so keeps drifting sideways if $\psi\neq0$. This is why it matters to steer by the heading and not only by the sideways error (see [pure pursuit](#pure_pursuit)).
+```math
+\dot\psi=\frac{v}{L}\tan\delta,\qquad \dot y=v\sin\psi .
+```
 
-**The steering wheel is not instantaneous.** The controller asks for an angle $\delta^{*}$, but the wheel turns at a bounded rate $r$ and within a bounded angle $\delta_{\max}$:
 
-$$\delta_{k+1}=\delta_k+\operatorname{clip}\!\big(\delta^{*}-\delta_k,\;-r\,\Delta t,\;r\,\Delta t\big),\qquad |\delta^{*}|\le\delta_{\max}.$$
+A larger angle or a higher speed turns faster; a longer wheelbase turns slower. A vehicle moving straight ($`\delta=0`$) keeps its heading, and so keeps drifting sideways if $`\psi\neq0`$. This is why it matters to steer by the heading and not only by the sideways error (see [pure pursuit](#pure_pursuit)).
+
+**The steering wheel is not instantaneous.** The controller asks for an angle $`\delta^{*}`$, but the wheel turns at a bounded rate $`r`$ and within a bounded angle $`\delta_{\max}`$:
+
+
+```math
+\delta_{k+1}=\delta_k+\mathrm{clip}\!\big(\delta^{*}-\delta_k,\;-r\,\Delta t,\;r\,\Delta t\big),\qquad |\delta^{*}|\le\delta_{\max}.
+```
+
 
 This delay is part of what makes a badly designed controller overshoot.
 
-**How we implemented it.** One function, `Vehicle.apply_steering`, moves every vehicle in every state, one step of $\Delta t=0.1$ s at a time: limit $\delta$ by the rate, update $\psi\mathrel{+}=\frac{v}{L}\tan\delta\,\Delta t$, set $\dot y=v\sin\psi$ and integrate. Progress along the road uses the speed only ($x\mathrel{+}=v\,\Delta t$).
+**How we implemented it.** One function, `Vehicle.apply_steering`, moves every vehicle in every state, one step of $`\Delta t=0.1`$ s at a time: limit $`\delta`$ by the rate, update $`\psi\mathrel{+}=\frac{v}{L}\tan\delta\,\Delta t`$, set $`\dot y=v\sin\psi`$ and integrate. Progress along the road uses the speed only ($`x\mathrel{+}=v\,\Delta t`$).
 
-| | Wheelbase $L$ | Steering limit $\delta_{\max}$ | Steering rate $r$ |
+| | Wheelbase $`L`$ | Steering limit $`\delta_{\max}`$ | Steering rate $`r`$ |
 |---|---|---|---|
 | Cars (five classes, per driver) | 2.6 - 2.9 m | 30° - 40° | 60 - 120 °/s |
 | Bus | 7.0 m | 15° | about 25 °/s (drawn per run, 18 - 33) |
@@ -100,13 +108,17 @@ Training and the acceptance gate use the same judge, with the same threshold (an
 contact) and the same order of precedence (contact is judged before success).
 
 **In detail**
-**Bodies.** Each vehicle is a rectangle (length × width) placed with its front bumper at $x$, shifted sideways by its position *including lane drift*, and rotated by its heading. One function, `geometry.vehicle_corners`, builds the four corners for the app, the drawing, the checks and the training reward, so they cannot disagree.
+**Bodies.** Each vehicle is a rectangle (length × width) placed with its front bumper at $`x`$, shifted sideways by its position *including lane drift*, and rotated by its heading. One function, `geometry.vehicle_corners`, builds the four corners for the app, the drawing, the checks and the training reward, so they cannot disagree.
 
 **Overlap area.** The polygon of one body is clipped successively by the four half-planes of the other (the Sutherland-Hodgman method), and the area of what remains is computed with the shoelace formula:
 
-$$A=\tfrac12\Big|\sum_{i}\big(x_i\,y_{i+1}-x_{i+1}\,y_i\big)\Big| .$$
 
-**Threshold and order.** $A>0.01\ \mathrm{m^2}$ counts as contact. In training, contact ends the episode with a large penalty and is judged *before* success, exactly as in the acceptance gate: a merge that touches a car is not a success. Earlier, training judged only the nearest car and without lane drift, and its threshold differed from the gate's; that is why they disagreed on what a collision is.
+```math
+A=\tfrac12\Big|\sum_{i}\big(x_i\,y_{i+1}-x_{i+1}\,y_i\big)\Big| .
+```
+
+
+**Threshold and order.** $`A>0.01\ \mathrm{m^2}`$ counts as contact. In training, contact ends the episode with a large penalty and is judged *before* success, exactly as in the acceptance gate: a merge that touches a car is not a success. Earlier, training judged only the nearest car and without lane drift, and its threshold differed from the gate's; that is why they disagreed on what a collision is.
 
 <a name="golden"></a>
 
@@ -128,14 +140,14 @@ command an escape. The shipped brains were trained without it, so it is off in t
 [safety shield](#shield) is separate and is always on.
 
 **In detail**
-**Inputs.** The agent's `steer` and `gas`, the merge progress $p$, the gap $g$ and relative speed to the nearest car, and the closing speed $c=\max(0,-\dot g)$ ($\dot g$ is the relative speed). It returns either the command unchanged or a replacement, and a reason.
+**Inputs.** The agent's `steer` and `gas`, the merge progress $`p`$, the gap $`g`$ and relative speed to the nearest car, and the closing speed $`c=\max(0,-\dot g)`$ ($`\dot g`$ is the relative speed). It returns either the command unchanged or a replacement, and a reason.
 
 **Rules, in order** (`busmerge/rl/governor_logic.py`):
 
-1. **Clear road:** no car within the scan window, or $g\ge50$ m: do nothing.
-2. **A car alongside** ($g<0$: its front is already beside or ahead of the bus's rear). Before progress 0.85: block the sideways steering (keep the gas). If the bus is closing on it and has progress above 0.05: retreat (`steer`$=-1$). Otherwise hold the sideways position.
-3. **Committed merge** ($p>0.5$): if the projected gap after $T=2.5$ s, $g-cT$, is $\le0$, or the braking that would be needed, $c^{2}/2(g-cT)$, exceeds 9 m/s², command an escape (`steer`$=+1$, `gas`$=+1$).
-4. **Early merge:** only when the agent steers into the lane (`steer` $\ge0.15$): hold (no gas) if the braking needed now, $c^{2}/2g$, exceeds 9 m/s², if the gap would close within $T=1$ s, or if the braking needed at that point exceeds 9 m/s².
+1. **Clear road:** no car within the scan window, or $`g\ge50`$ m: do nothing.
+2. **A car alongside** ($`g<0`$: its front is already beside or ahead of the bus's rear). Before progress 0.85: block the sideways steering (keep the gas). If the bus is closing on it and has progress above 0.05: retreat (`steer`$`=-1`$). Otherwise hold the sideways position.
+3. **Committed merge** ($`p>0.5`$): if the projected gap after $`T=2.5`$ s, $`g-cT`$, is $`\le0`$, or the braking that would be needed, $`c^{2}/2(g-cT)`$, exceeds 9 m/s², command an escape (`steer`$`=+1`$, `gas`$`=+1`$).
+4. **Early merge:** only when the agent steers into the lane (`steer` $`\ge0.15`$): hold (no gas) if the braking needed now, $`c^{2}/2g`$, exceeds 9 m/s², if the gap would close within $`T=1`$ s, or if the braking needed at that point exceeds 9 m/s².
 
 The governor is a design choice for safety; the shipped brains work without it, and a hold is penalised in training so that the agent does not learn to depend on it.
 
@@ -156,19 +168,23 @@ Treiber, Hennecke and Helbing proposed it in 2000. Every car in the simulation i
 and the bus follows the same model when it drives in the lane.
 
 **In detail**
-**The model.** For a car with speed $v$ whose leader is a gap $s$ ahead (bumper to bumper) and drives at $v_\ell$:
+**The model.** For a car with speed $`v`$ whose leader is a gap $`s`$ ahead (bumper to bumper) and drives at $`v_\ell`$:
 
-$$a=a_{\max}\left[\,1-\left(\frac{v}{v_0}\right)^{\delta}-\left(\frac{s^{*}}{s}\right)^{2}\right],\qquad s^{*}=s_0+vT+\frac{v\,\Delta v}{2\sqrt{a_{\max}\,b}},\qquad \Delta v=v-v_\ell .$$
 
-- $v_0$ is the speed the driver wants on an empty road, $a_{\max}$ the strongest acceleration, $b$ the comfortable braking, $T$ the time headway, $s_0$ the minimum gap, and $\delta=4$ sets how sharply acceleration fades near $v_0$.
-- The term $1-(v/v_0)^{\delta}$ is the *free-road* part: accelerate until $v_0$.
-- The last term is the *interaction* part. $s^{*}$ is the gap the driver wants at this speed: the standstill gap $s_0$, plus the distance covered during the headway $vT$, plus a braking term that grows when the car is closing in on its leader ($\Delta v>0$). When the real gap $s$ is smaller than $s^{*}$ the term exceeds 1 and the car brakes, the harder the closer.
+```math
+a=a_{\max}\left[\,1-\left(\frac{v}{v_0}\right)^{\delta}-\left(\frac{s^{*}}{s}\right)^{2}\right],\qquad s^{*}=s_0+vT+\frac{v\,\Delta v}{2\sqrt{a_{\max}\,b}},\qquad \Delta v=v-v_\ell .
+```
+
+
+- $`v_0`$ is the speed the driver wants on an empty road, $`a_{\max}`$ the strongest acceleration, $`b`$ the comfortable braking, $`T`$ the time headway, $`s_0`$ the minimum gap, and $`\delta=4`$ sets how sharply acceleration fades near $`v_0`$.
+- The term $`1-(v/v_0)^{\delta}`$ is the *free-road* part: accelerate until $`v_0`$.
+- The last term is the *interaction* part. $`s^{*}`$ is the gap the driver wants at this speed: the standstill gap $`s_0`$, plus the distance covered during the headway $`vT`$, plus a braking term that grows when the car is closing in on its leader ($`\Delta v>0`$). When the real gap $`s`$ is smaller than $`s^{*}`$ the term exceeds 1 and the car brakes, the harder the closer.
 
 **How we implemented it.**
-- **Parameters** are drawn per driver around the means of five classes (see the table on the [World model](WORLD.md) page): $v_0$ 13.0 - 15.5 m/s, $a_{\max}$ 1.7 - 2.8 m/s², $b$ 1.8 - 2.5 m/s², $T$ 1.0 - 1.7 s, $s_0=2$ m, $\delta=4$.
-- **Reaction time.** A driver recomputes the acceleration only every reaction time (0.35 - 0.58 s, plus or minus 0.1 s) and holds it in between. The result is never below $-9$ m/s².
-- **The bus changes the situation.** While the bus pulls out, the minimum gap is enlarged to $s_0+3.5\,\min(p/0.22,\,1)$, where $p$ is the bus's presence (the share of the lane it covers, multiplied by 1.15 while merging), so cars leave more room. Cars also move over sideways by up to 0.5 m (times their politeness), and brake softly when the lane narrows.
-- **Yielding blend.** While the bus merges, a car's acceleration is $a=(1-Y)\,a_{\text{free}}+Y\,a_{\text{IDM(bus)}}$, the free-road acceleration against the IDM with the *bus* as leader. $Y\in[0,1]$ grows with how far the bus has entered the lane and falls with the distance to it (ignored beyond 50 m). It may change by at most 0.5 per second (the "surprise filter"), so the start of a merge cannot cause a one-frame emergency stop. During the last 3 s of boarding a faint "virtual blinker" gives $Y$ a small value, so cars begin to ease off.
+- **Parameters** are drawn per driver around the means of five classes (see the table on the [World model](WORLD.md) page): $`v_0`$ 13.0 - 15.5 m/s, $`a_{\max}`$ 1.7 - 2.8 m/s², $`b`$ 1.8 - 2.5 m/s², $`T`$ 1.0 - 1.7 s, $`s_0=2`$ m, $`\delta=4`$.
+- **Reaction time.** A driver recomputes the acceleration only every reaction time (0.35 - 0.58 s, plus or minus 0.1 s) and holds it in between. The result is never below $`-9`$ m/s².
+- **The bus changes the situation.** While the bus pulls out, the minimum gap is enlarged to $`s_0+3.5\,\min(p/0.22,\,1)`$, where $`p`$ is the bus's presence (the share of the lane it covers, multiplied by 1.15 while merging), so cars leave more room. Cars also move over sideways by up to 0.5 m (times their politeness), and brake softly when the lane narrows.
+- **Yielding blend.** While the bus merges, a car's acceleration is $`a=(1-Y)\,a_{\text{free}}+Y\,a_{\text{IDM(bus)}}`$, the free-road acceleration against the IDM with the *bus* as leader. $`Y\in[0,1]`$ grows with how far the bus has entered the lane and falls with the distance to it (ignored beyond 50 m). It may change by at most 0.5 per second (the "surprise filter"), so the start of a merge cannot cause a one-frame emergency stop. During the last 3 s of boarding a faint "virtual blinker" gives $`Y`$ a small value, so cars begin to ease off.
 - **The IDM is a driver model, not a safety guarantee.** Between two recomputations a car can close in on its leader. The [safe-speed law](#safe_speed) therefore limits the acceleration the IDM asks for.
 - **A known limitation (O22): the functions are not pure.** Computing the acceleration also writes the squeeze flag (`is_squeezing`, through a Schmitt trigger) and the yield limiter (`last_applied_yield`), and a driver's reaction timer advances in the physics step. That is harmless while the engine asks once per car per frame, but it prevents "what-if" queries (what would my acceleration be in another lane?), which a lane-change model needs.
 
@@ -188,7 +204,7 @@ law when they move over for the bus, limitation O21).
 | Acceleration | beyond 5 m/s² |
 | Speed | negative |
 | Backward motion | the position decreases |
-| Position jump | $\big|\Delta x-v\,\Delta t\big|>0.5$ m |
+| Position jump | $`\big\vert \Delta x-v\,\Delta t\big\vert >0.5`$ m |
 | Overlap | any overlap between two bodies ([contact judge](#contact_judge)) |
 | Off the road | a bus corner below the kerb or the bay wall, or a kerb corner inside the bus body (tolerance 0.02 m) |
 | Over the centre line | a bus corner in the opposing lane |
@@ -205,9 +221,13 @@ The test suite checks that jerk stays within bounds. One known limitation is tha
 100 m/s³, where a real brake system gives 30 - 60 (see the limitations page).
 
 **In detail**
-$$j=\frac{\mathrm{d}a}{\mathrm{d}t}\;\approx\;\frac{a_{k+1}-a_k}{\Delta t}.$$
 
-With $\Delta t=0.1$ s, an acceleration that goes from $0$ to $-9$ m/s² in one step has $j=90$ m/s³. A real braking system needs roughly 0.15 - 0.3 s to build up force, i.e. 30 - 60 m/s³. The simulation has no such lag, so the strict xfail test (limit 50 m/s³) documents it as limitation O18. Typical car jerk (99th percentile) is about 2 m/s³, so the problem is rare: about 25 frames in 5 runs.
+```math
+j=\frac{\mathrm{d}a}{\mathrm{d}t}\;\approx\;\frac{a_{k+1}-a_k}{\Delta t}.
+```
+
+
+With $`\Delta t=0.1`$ s, an acceleration that goes from $`0`$ to $`-9`$ m/s² in one step has $`j=90`$ m/s³. A real braking system needs roughly 0.15 - 0.3 s to build up force, i.e. 30 - 60 m/s³. The simulation has no such lag, so the strict xfail test (limit 50 m/s³) documents it as limitation O18. Typical car jerk (99th percentile) is about 2 m/s³, so the problem is rare: about 25 frames in 5 runs.
 
 <a name="kerb_corner"></a>
 
@@ -253,21 +273,29 @@ the distance, so the value wobbles around the centre, with a typical size and a 
 driver's imperfect lane keeping looks like, and what a persistent misjudgement of a distance looks like.
 
 **In detail**
-**The equation.** For a quantity $X$ (a sideways error in metres, or a perception bias):
+**The equation.** For a quantity $`X`$ (a sideways error in metres, or a perception bias):
 
-$$\mathrm{d}X=-\theta\,X\,\mathrm{d}t+\sigma\,\mathrm{d}W .$$
 
-$\theta$ (1/s) is the strength of the pull toward 0; $\sigma\,\mathrm{d}W$ is random kicks (a Wiener process, white noise). The process has a *stationary* distribution, with standard deviation $\sigma/\sqrt{2\theta}$, and forgets its past with a time constant $1/\theta$.
+```math
+\mathrm{d}X=-\theta\,X\,\mathrm{d}t+\sigma\,\mathrm{d}W .
+```
 
-**In the simulation** (step $\Delta t$, $\xi_k\sim\mathcal N(0,1)$, Euler-Maruyama):
 
-$$X_{k+1}=(1-\theta\,\Delta t)\,X_k+\sigma\sqrt{\Delta t}\;\xi_k .$$
+$`\theta`$ (1/s) is the strength of the pull toward 0; $`\sigma\,\mathrm{d}W`$ is random kicks (a Wiener process, white noise). The process has a *stationary* distribution, with standard deviation $`\sigma/\sqrt{2\theta}`$, and forgets its past with a time constant $`1/\theta`$.
+
+**In the simulation** (step $`\Delta t`$, $`\xi_k\sim\mathcal N(0,1)`$, Euler-Maruyama):
+
+
+```math
+X_{k+1}=(1-\theta\,\Delta t)\,X_k+\sigma\sqrt{\Delta t}\;\xi_k .
+```
+
 
 It is used three times:
 
-1. **Lane drift of every vehicle.** $\theta=0.4$ s⁻¹, and $\sigma$ is the class's lane-keeping noise (Compact 0.06, Mid 0.08, Large 0.10, SUV 0.09, Aggressive 0.15 m/√s; the bus about 0.01). The typical size is therefore $\sigma/\sqrt{2\theta}\approx1.1\,\sigma$ (about 7 cm for a Compact, 17 cm for an Aggressive driver), with a memory of $1/\theta=2.5$ s. The drift is added to the sideways position, `total_lateral_offset`, which is what the contact judge and the road-edge checks use.
-2. **The bus's active lane correction.** $\theta=0.5$ s⁻¹, $\sigma=0.03$, limited to ±0.10 m. Here the wobble is added to the *target line* of the bus, so the [pure-pursuit](#pure_pursuit) controller actively steers to correct it, which gives small natural oscillations instead of an invisible shift. Active only while driving in the lane; it fades out during the bay entry and the merge so that they are precise.
-3. **Perception noise of the agent**, see [perception noise](#noise): one bias per input, with the parametrisation $b_{k+1}=b_k-\kappa\,b_k\,\Delta t+\sqrt{2\kappa}\,\sigma_c\sqrt{\Delta t}\,\xi_k$, which makes the stationary standard deviation exactly $\sigma_c$ (and $\kappa=0.35$ s⁻¹).
+1. **Lane drift of every vehicle.** $`\theta=0.4`$ s⁻¹, and $`\sigma`$ is the class's lane-keeping noise (Compact 0.06, Mid 0.08, Large 0.10, SUV 0.09, Aggressive 0.15 m/√s; the bus about 0.01). The typical size is therefore $`\sigma/\sqrt{2\theta}\approx1.1\,\sigma`$ (about 7 cm for a Compact, 17 cm for an Aggressive driver), with a memory of $`1/\theta=2.5`$ s. The drift is added to the sideways position, `total_lateral_offset`, which is what the contact judge and the road-edge checks use.
+2. **The bus's active lane correction.** $`\theta=0.5`$ s⁻¹, $`\sigma=0.03`$, limited to ±0.10 m. Here the wobble is added to the *target line* of the bus, so the [pure-pursuit](#pure_pursuit) controller actively steers to correct it, which gives small natural oscillations instead of an invisible shift. Active only while driving in the lane; it fades out during the bay entry and the merge so that they are precise.
+3. **Perception noise of the agent**, see [perception noise](#noise): one bias per input, with the parametrisation $`b_{k+1}=b_k-\kappa\,b_k\,\Delta t+\sqrt{2\kappa}\,\sigma_c\sqrt{\Delta t}\,\xi_k`$, which makes the stationary standard deviation exactly $`\sigma_c`$ (and $`\kappa=0.35`$ s⁻¹).
 
 **Why not white noise?** Independent noise at every step averages out over a few steps, and the agent would not have to be robust against anything. Real errors persist for seconds, which is what the OU memory gives.
 
@@ -314,22 +342,26 @@ progress and heading are never noisy. The acceptance gate covers noise 0 and 0.1
 **In detail**
 **Purpose.** A real driver does not know exact distances and speeds. Far objects are vague and near ones sharp, the speed of an approaching car is hard to judge until it is close, and errors persist for a few seconds. Training and testing with such errors makes the agent robust to them, and tells us how much it relies on precise numbers.
 
-**The form.** Each input $c$ (gap, lateral clearance, car speed, ...) the agent receives is the true value plus a bias $b_c$, and the biases are [OU processes](#ou):
+**The form.** Each input $`c`$ (gap, lateral clearance, car speed, ...) the agent receives is the true value plus a bias $`b_c`$, and the biases are [OU processes](#ou):
 
-$$b_{c,k+1}=b_{c,k}-\kappa\,b_{c,k}\,\Delta t+\sqrt{2\kappa}\;\sigma_c\sqrt{\Delta t}\;\xi_k,\qquad \kappa=0.35\ \mathrm{s^{-1}},$$
 
-with stationary standard deviation $\sigma_c$ and a memory of about 3 s. The biases are reset when the nearest car changes.
+```math
+b_{c,k+1}=b_{c,k}-\kappa\,b_{c,k}\,\Delta t+\sqrt{2\kappa}\;\sigma_c\sqrt{\Delta t}\;\xi_k,\qquad \kappa=0.35\ \mathrm{s^{-1}},
+```
 
-**The size $\sigma_c$** depends on the noise level $k$ (0 = off, 0.15 and 0.30 are used) and on the gap $g$ to the nearest car. With $d_{\rm lin}=\operatorname{clip}(|g|/50,\,0.05,\,1.2)$ and $d_{\rm spd}=\max\!\big((|g|/50)^{2},\,0.04^{2}\big)$:
 
-| Input | $\sigma_c$ |
+with stationary standard deviation $`\sigma_c`$ and a memory of about 3 s. The biases are reset when the nearest car changes.
+
+**The size $`\sigma_c`$** depends on the noise level $`k`$ (0 = off, 0.15 and 0.30 are used) and on the gap $`g`$ to the nearest car. With $`d_{\rm lin}=\mathrm{clip}(|g|/50,\,0.05,\,1.2)`$ and $`d_{\rm spd}=\max\!\big((|g|/50)^{2},\,0.04^{2}\big)`$:
+
+| Input | $`\sigma_c`$ |
 |---|---|
-| gap | $10\,k\,d_{\rm lin}$ m |
-| lateral clearance | $6\,k\,d_{\rm lin}$ m |
-| car speed, relative speed | $5\,k\,d_{\rm spd}$ m/s |
-| car acceleration, relative acceleration | $12\,k\,d_{\rm spd}+1.5\,k$ m/s², then low-pass filtered with weight 0.15 per step |
-| car heading | $2\,k\,d_{\rm lin}$ degrees |
-| car width, length | $0.1\,k$ m |
+| gap | $`10\,k\,d_{\rm lin}`$ m |
+| lateral clearance | $`6\,k\,d_{\rm lin}`$ m |
+| car speed, relative speed | $`5\,k\,d_{\rm spd}`$ m/s |
+| car acceleration, relative acceleration | $`12\,k\,d_{\rm spd}+1.5\,k`$ m/s², then low-pass filtered with weight 0.15 per step |
+| car heading | $`2\,k\,d_{\rm lin}`$ degrees |
+| car width, length | $`0.1\,k`$ m |
 
 So distances grow vague in proportion to distance, and speeds quadratically (a looming object is hard to judge from far, easy from near). The bus's own progress and heading are exact: it knows its own pose.
 
@@ -342,14 +374,18 @@ The stop experiment compares the two designs on person-time, not vehicle-time, b
 car one or two.
 
 **In detail**
-For a pair of runs, with $a$ the bus's extra trip time with a bay (s) and $b$ the cars' total extra trip time with a bay
+For a pair of runs, with $`a`$ the bus's extra trip time with a bay (s) and $`b`$ the cars' total extra trip time with a bay
 (vehicle-s),
 
-$$\Delta PT = p_{\text{bus}}\,a + p_{\text{car}}\,b ,$$
 
-where $p_{\text{bus}}$ is the number of bus passengers and $p_{\text{car}}$ the people per car. Below zero the bay moved
+```math
+\Delta PT = p_{\text{bus}}\,a + p_{\text{car}}\,b ,
+```
+
+
+where $`p_{\text{bus}}`$ is the number of bus passengers and $`p_{\text{car}}`$ the people per car. Below zero the bay moved
 people faster. A trip is timed from the scheduled arrival to the exit at 1,000 m, so a wait at the entry counts; the
-free-flow time is the same in both runs and cancels. Because $\Delta PT$ is linear in the occupancies, they are chosen at
+free-flow time is the same in both runs and cancels. Because $`\Delta PT`$ is linear in the occupancies, they are chosen at
 analysis time and need no new runs.
 
 <a name="plant"></a>
@@ -368,25 +404,37 @@ A rollout of 2,000 steps is collected; then the network is updated several times
 every action is now with how likely it was when it was taken, and does not let that ratio move far from 1.
 
 **In detail**
-**Objective.** Let $\pi_\theta(a\mid s)$ be the policy, $r_t(\theta)=\pi_\theta(a_t\mid s_t)/\pi_{\theta_{\rm old}}(a_t\mid s_t)$ the probability ratio of the action taken at step $t$, and $\hat A_t$ the advantage (how much better the action was than expected). The clipped objective is
+**Objective.** Let $`\pi_\theta(a\mid s)`$ be the policy, $`r_t(\theta)=\pi_\theta(a_t\mid s_t)/\pi_{\theta_{\rm old}}(a_t\mid s_t)`$ the probability ratio of the action taken at step $`t`$, and $`\hat A_t`$ the advantage (how much better the action was than expected). The clipped objective is
 
-$$L^{\rm CLIP}=\mathbb E_t\Big[\min\!\big(r_t\hat A_t,\ \operatorname{clip}(r_t,\,1-\epsilon,\,1+\epsilon)\,\hat A_t\big)\Big],\qquad \epsilon=0.2 .$$
 
-If an action was good ($\hat A>0$), the gain stops once $r_t>1.2$; if it was bad, the loss stops once $r_t<0.8$. So one update cannot move the policy far, even if the batch looks very promising.
+```math
+L^{\rm CLIP}=\mathbb E_t\Big[\min\!\big(r_t\hat A_t,\ \mathrm{clip}(r_t,\,1-\epsilon,\,1+\epsilon)\,\hat A_t\big)\Big],\qquad \epsilon=0.2 .
+```
 
-**Advantage (GAE).** With discount $\gamma=0.995$, trace parameter $\lambda=0.95$, value estimate $V$ and the end-of-episode flag $d_t$:
 
-$$\delta_t=r_t^{\rm rew}+\gamma\,V(s_{t+1})(1-d_t)-V(s_t),\qquad \hat A_t=\delta_t+\gamma\lambda\,(1-d_t)\,\hat A_{t+1}.$$
+If an action was good ($`\hat A>0`$), the gain stops once $`r_t>1.2`$; if it was bad, the loss stops once $`r_t<0.8`$. So one update cannot move the policy far, even if the batch looks very promising.
 
-$\lambda$ trades bias against variance: 0 uses one step, 1 uses the whole future. The advantages are normalised over the batch (zero mean, unit variance) before they are used; the critic's target is $\hat A_t+V(s_t)$.
+**Advantage (GAE).** With discount $`\gamma=0.995`$, trace parameter $`\lambda=0.95`$, value estimate $`V`$ and the end-of-episode flag $`d_t`$:
 
-**Total loss** minimised with Adam (learning rate $5\cdot10^{-5}$, gradient norm clipped to 0.5), four passes over each 2,000-step rollout:
 
-$$L=-L^{\rm CLIP}+0.5\,\big(V_\theta(s_t)-\hat R_t\big)^{2}-c_H\,H\big[\pi_\theta\big],$$
+```math
+\delta_t=r_t^{\rm rew}+\gamma\,V(s_{t+1})(1-d_t)-V(s_t),\qquad \hat A_t=\delta_t+\gamma\lambda\,(1-d_t)\,\hat A_{t+1}.
+```
 
-where $\hat R_t$ is the critic's target and $H$ the entropy of the policy. The entropy bonus $c_H$ keeps the agent exploring: 0.02, and at least 0.10 in the first phase of training.
 
-**What is specific here.** The agent's action is clipped before it is sent to the vehicle, but the *raw* sample is stored with its own log-probability. Storing the clipped one made $r_t\neq1$ before the first update for every action at the limit, which is exactly the action the corrected steering needs ([changelog](CHANGELOG.md), P17).
+$`\lambda`$ trades bias against variance: 0 uses one step, 1 uses the whole future. The advantages are normalised over the batch (zero mean, unit variance) before they are used; the critic's target is $`\hat A_t+V(s_t)`$.
+
+**Total loss** minimised with Adam (learning rate $`5\cdot10^{-5}`$, gradient norm clipped to 0.5), four passes over each 2,000-step rollout:
+
+
+```math
+L=-L^{\rm CLIP}+0.5\,\big(V_\theta(s_t)-\hat R_t\big)^{2}-c_H\,H\big[\pi_\theta\big],
+```
+
+
+where $`\hat R_t`$ is the critic's target and $`H`$ the entropy of the policy. The entropy bonus $`c_H`$ keeps the agent exploring: 0.02, and at least 0.10 in the first phase of training.
+
+**What is specific here.** The agent's action is clipped before it is sent to the vehicle, but the *raw* sample is stored with its own log-probability. Storing the clipped one made $`r_t\neq1`$ before the first update for every action at the limit, which is exactly the action the corrected steering needs ([changelog](CHANGELOG.md), P17).
 
 <a name="property_test"></a>
 
@@ -405,27 +453,35 @@ Because the formula includes the vehicle's heading, the vehicle steers back as i
 parallel to it, instead of crossing it. This is the controller that replaced the one that overshot every target.
 
 **In detail**
-**Geometry.** Let $e$ be the sideways distance from the vehicle to the target line, $\psi$ the vehicle's heading relative to the line, and $L_d$ the look-ahead distance. In the vehicle's own frame (forward, sideways), the point of the line that is $L_d$ ahead lies at a sideways offset
+**Geometry.** Let $`e`$ be the sideways distance from the vehicle to the target line, $`\psi`$ the vehicle's heading relative to the line, and $`L_d`$ the look-ahead distance. In the vehicle's own frame (forward, sideways), the point of the line that is $`L_d`$ ahead lies at a sideways offset
 
-$$y_r=e\cos\psi-L_d\sin\psi .$$
 
-A circular arc that starts along the vehicle's heading and passes through that point has curvature $\kappa=2y_r/L_d^{2}$ (using that the point is at distance $\approx L_d$). The [bicycle model](#bicycle) follows an arc of curvature $\kappa=\tan\delta/L$, so the steering angle is
+```math
+y_r=e\cos\psi-L_d\sin\psi .
+```
 
-$$\delta=\arctan\!\left(\frac{2\,L\,y_r}{L_d^{2}}\right),\qquad |\delta|\le\delta_{\max},$$
+
+A circular arc that starts along the vehicle's heading and passes through that point has curvature $`\kappa=2y_r/L_d^{2}`$ (using that the point is at distance $`\approx L_d`$). The [bicycle model](#bicycle) follows an arc of curvature $`\kappa=\tan\delta/L`$, so the steering angle is
+
+
+```math
+\delta=\arctan\!\left(\frac{2\,L\,y_r}{L_d^{2}}\right),\qquad |\delta|\le\delta_{\max},
+```
+
 
 and the wheel then turns toward it at its bounded rate.
 
-**The heading term is the point.** The second term of $y_r$, $-L_d\sin\psi$, makes the vehicle steer back when its heading already points toward the line. Without it (the first merge controller used $\delta=\arctan\big(e/\max(v,5)\big)$) the loop has no damping: the heading is the integral of the steering and the position the integral of the heading, so the vehicle reaches the line still turned toward it, carries on past it, and only then corrects. That is the overshoot at the heart of the [case study](CASE_STUDY.md).
+**The heading term is the point.** The second term of $`y_r`$, $`-L_d\sin\psi`$, makes the vehicle steer back when its heading already points toward the line. Without it (the first merge controller used $`\delta=\arctan\big(e/\max(v,5)\big)`$) the loop has no damping: the heading is the integral of the steering and the position the integral of the heading, so the vehicle reaches the line still turned toward it, carries on past it, and only then corrects. That is the overshoot at the heart of the [case study](CASE_STUDY.md).
 
-**How we implemented it.** `vehicle.pure_pursuit_steer`, one function, steers the bus in every state; only $L_d$ and the target line change:
+**How we implemented it.** `vehicle.pure_pursuit_steer`, one function, steers the bus in every state; only $`L_d`$ and the target line change:
 
-| State | Look-ahead $L_d$ | Target line |
+| State | Look-ahead $`L_d`$ | Target line |
 |---|---|---|
 | Driving in the lane | 18 m | the lane centre, plus the small [OU](#ou) perturbation |
 | Pulling into the bay | 6 m | the drawn kerb under the bus's front (`geometry.bay_pull_in_target`) |
-| Merging | 12 m | the sideways target the agent chose: `steer` mapped from $[-1,1]$ to $[-3.5\,\mathrm m,\,0]$ |
+| Merging | 12 m | the sideways target the agent chose: `steer` mapped from $`[-1,1]`$ to $`[-3.5\,\mathrm m,\,0]`$ |
 
-A shorter look-ahead while merging swings the rear corner into the bay wall (because the model rotates about the body centre). Cars use a simpler aim, $\delta=\arctan\big(e/\max(v,5)\big)$ limited to $\delta_{\max}$, since they only make small sideways moves (up to 0.5 m). **This law has no heading term and overshoots every target** (limitation O21): a 0.5 m move overshoots by 100%, a 3.5 m move by 99-100% with a peak heading of 34-39°, and neither settles. The small moves hide it today; it would show in a lane change.
+A shorter look-ahead while merging swings the rear corner into the bay wall (because the model rotates about the body centre). Cars use a simpler aim, $`\delta=\arctan\big(e/\max(v,5)\big)`$ limited to $`\delta_{\max}`$, since they only make small sideways moves (up to 0.5 m). **This law has no heading term and overshoots every target** (limitation O21): a 0.5 m move overshoots by 100%, a 3.5 m move by 99-100% with a peak heading of 34-39°, and neither settles. The small moves hide it today; it would show in a lane change.
 
 <a name="rollback"></a>
 
@@ -446,23 +502,35 @@ Speed and position then follow from the acceleration; nothing is assigned. It re
 default of the SUMO simulator).
 
 **In detail**
-**The idea.** A follower must always be able to stop behind its leader, even if the leader then brakes comfortably. Let $s$ be the free gap (the leader's rear bumper minus the follower's front bumper, minus the follower's minimum gap $s_0$), $v$ and $v_\ell$ the speeds, and $b$ the follower's comfortable braking. If both brake at $b$, the follower stops after $v^{2}/2b$ and the leader after $v_\ell^{2}/2b$, so they do not touch if $v^{2}/2b\le s+v_\ell^{2}/2b$, that is
+**The idea.** A follower must always be able to stop behind its leader, even if the leader then brakes comfortably. Let $`s`$ be the free gap (the leader's rear bumper minus the follower's front bumper, minus the follower's minimum gap $`s_0`$), $`v`$ and $`v_\ell`$ the speeds, and $`b`$ the follower's comfortable braking. If both brake at $`b`$, the follower stops after $`v^{2}/2b`$ and the leader after $`v_\ell^{2}/2b`$, so they do not touch if $`v^{2}/2b\le s+v_\ell^{2}/2b`$, that is
 
-$$v\;\le\;v_{\rm safe}=\sqrt{v_\ell^{2}+2\,b\,s}.$$
 
-**The step limit.** Within one simulation step $\Delta t$ the follower must not close more than the gap: $v\,\Delta t\le s+v_\ell\,\Delta t$, i.e.
+```math
+v\;\le\;v_{\rm safe}=\sqrt{v_\ell^{2}+2\,b\,s}.
+```
 
-$$v\;\le\;v_{\rm frame}=v_\ell+\frac{s}{\Delta t}.$$
 
-**From a speed limit to an acceleration limit.** The driver (the [IDM](#idm), or the bus's plan) asks for $a_{\rm drv}$. The law lets the vehicle reach at most the lower of the two limits in one step, and never brakes harder than the tyres allow:
+**The step limit.** Within one simulation step $`\Delta t`$ the follower must not close more than the gap: $`v\,\Delta t\le s+v_\ell\,\Delta t`$, i.e.
 
-$$a=\max\!\left(\min\!\Big(a_{\rm drv},\ \frac{\min(v_{\rm safe},\,v_{\rm frame})-v}{\Delta t}\Big),\ -9\ \mathrm{m/s^{2}}\right).$$
 
-Then $v\leftarrow v+a\,\Delta t$ and $x\leftarrow x+v\,\Delta t$. If even $-9$ m/s² cannot avoid contact, the vehicles touch and the [contact judge](#contact_judge) records it: a failure is shown, not hidden.
+```math
+v\;\le\;v_{\rm frame}=v_\ell+\frac{s}{\Delta t}.
+```
 
-**How we implemented it.** One module, `busmerge/safe_speed.py`, serves every follower: the cars; the bus back in the lane; and the merging bus, against the nearest car *fully ahead* of it (a car alongside does not count: that conflict is sideways, and avoiding it is the agent's job). The same function decides at what speed a new car may enter the road, so it is never born in a state that needs impossible braking. $b$ is the follower's own comfortable braking, and $\Delta t=0.1$ s. Gipps and Krauss add a driver reaction time to the formula; here the reaction time is already modelled in the IDM.
 
-**A known limitation (O19).** Vehicles are updated leader first, but $v_{\rm frame}$ assumes the leader moves during the follower's step. A follower can therefore get up to 0.55 m into its own 2 m minimum gap in rare cases (never into contact). A property-based test found the smallest case.
+**From a speed limit to an acceleration limit.** The driver (the [IDM](#idm), or the bus's plan) asks for $`a_{\rm drv}`$. The law lets the vehicle reach at most the lower of the two limits in one step, and never brakes harder than the tyres allow:
+
+
+```math
+a=\max\!\left(\min\!\Big(a_{\rm drv},\ \frac{\min(v_{\rm safe},\,v_{\rm frame})-v}{\Delta t}\Big),\ -9\ \mathrm{m/s^{2}}\right).
+```
+
+
+Then $`v\leftarrow v+a\,\Delta t`$ and $`x\leftarrow x+v\,\Delta t`$. If even $`-9`$ m/s² cannot avoid contact, the vehicles touch and the [contact judge](#contact_judge) records it: a failure is shown, not hidden.
+
+**How we implemented it.** One module, `busmerge/safe_speed.py`, serves every follower: the cars; the bus back in the lane; and the merging bus, against the nearest car *fully ahead* of it (a car alongside does not count: that conflict is sideways, and avoiding it is the agent's job). The same function decides at what speed a new car may enter the road, so it is never born in a state that needs impossible braking. $`b`$ is the follower's own comfortable braking, and $`\Delta t=0.1`$ s. Gipps and Krauss add a driver reaction time to the formula; here the reaction time is already modelled in the IDM.
+
+**A known limitation (O19).** Vehicles are updated leader first, but $`v_{\rm frame}`$ assumes the leader moves during the follower's step. A follower can therefore get up to 0.55 m into its own 2 m minimum gap in rare cases (never into contact). A property-based test found the smallest case.
 
 <a name="shield"></a>
 
@@ -473,14 +541,14 @@ It looks at the nearest car's gap and closing speed. Its interventions are recor
 training reward every intervention is penalised, so the agent does not learn to lean on it.
 
 **In detail**
-**Where it sits.** After the agent's command and the [governor](#governor), before the vehicle moves. It is skipped on a clear road (no car in the scan window, or a gap of at least 50 m). With $g$ the gap, $\dot g$ the relative speed, $p$ the merge progress and $w$ the nearest car's width:
+**Where it sits.** After the agent's command and the [governor](#governor), before the vehicle moves. It is skipped on a clear road (no car in the scan window, or a gap of at least 50 m). With $`g`$ the gap, $`\dot g`$ the relative speed, $`p`$ the merge progress and $`w`$ the nearest car's width:
 
-- **Emergency stop:** if the agent steers into the lane and the gap would close within one step ($g\ge0$ and $g+\dot g\,\Delta t\le0$ while closing), stop the steering and the gas.
-- **Very close** ($0\le g<0.5$ m): if the merge is under way ($p\ge0.3$), go forward and finish; otherwise an emergency stop (a slow creep if the car is nearly still, which avoids a deadlock).
-- **Late overlap:** at $p>0.65$ with a gap under 1.2 m and a relative speed (bus minus car) above 0.2 m/s, or $p>0.75$ with a gap under 2.5 m and a relative speed above 1.5 m/s, push forward out of the way.
-- **Adaptive gap:** with $g_{\min}=4+2.2\,\max(0,\,w-1.8)$ m, when $g<g_{\min}$ and the relative speed is above 1.2 m/s, scale the steering by $1-0.85\,\rho$, where $\rho=(g_{\min}-g)/g_{\min}$ (unless the gap is opening safely).
-- **High pressure:** steering above 0.65 with a relative speed above 2.5 m/s within $g_{\min}+6$ m: scale the steering by 0.35.
-- **Push through:** if the bus is alongside a car ($g<0$) and more than 60% merged, keep going (steer and gas at least 0.5).
+- **Emergency stop:** if the agent steers into the lane and the gap would close within one step ($`g\ge0`$ and $`g+\dot g\,\Delta t\le0`$ while closing), stop the steering and the gas.
+- **Very close** ($`0\le g<0.5`$ m): if the merge is under way ($`p\ge0.3`$), go forward and finish; otherwise an emergency stop (a slow creep if the car is nearly still, which avoids a deadlock).
+- **Late overlap:** at $`p>0.65`$ with a gap under 1.2 m and a relative speed (bus minus car) above 0.2 m/s, or $`p>0.75`$ with a gap under 2.5 m and a relative speed above 1.5 m/s, push forward out of the way.
+- **Adaptive gap:** with $`g_{\min}=4+2.2\,\max(0,\,w-1.8)`$ m, when $`g<g_{\min}`$ and the relative speed is above 1.2 m/s, scale the steering by $`1-0.85\,\rho`$, where $`\rho=(g_{\min}-g)/g_{\min}`$ (unless the gap is opening safely).
+- **High pressure:** steering above 0.65 with a relative speed above 2.5 m/s within $`g_{\min}+6`$ m: scale the steering by 0.35.
+- **Push through:** if the bus is alongside a car ($`g<0`$) and more than 60% merged, keep going (steer and gas at least 0.5).
 
 <a name="ssot"></a>
 
@@ -514,13 +582,17 @@ With fewer passengers the bay is better, with more the lane. A cell where the la
 point ("lane always").
 
 **In detail**
-Setting $\Delta PT=0$ ([person-time](#person_time)) gives
+Setting $`\Delta PT=0`$ ([person-time](#person_time)) gives
 
-$$p_{\text{bus}}^{*} = -\,p_{\text{car}}\,\frac{b}{a} .$$
 
-In every cell the bay costs the bus time ($a>0$), so a tipping point exists only where the bay saves the cars time
-($b<0$). It is proportional to $p_{\text{car}}$: 1.2 or 1.5 people per car instead of 1.35 moves every tipping point down
-or up by about 11%. The explorer interpolates $a$ and $b$ linearly between the stop times and traffic levels that were
+```math
+p_{\text{bus}}^{*} = -\,p_{\text{car}}\,\frac{b}{a} .
+```
+
+
+In every cell the bay costs the bus time ($`a>0`$), so a tipping point exists only where the bay saves the cars time
+($`b<0`$). It is proportional to $`p_{\text{car}}`$: 1.2 or 1.5 people per car instead of 1.35 moves every tipping point down
+or up by about 11%. The explorer interpolates $`a`$ and $`b`$ linearly between the stop times and traffic levels that were
 run.
 
 <a name="wilson"></a>
@@ -532,11 +604,15 @@ For 100 runs, a result near 97% has a 95% interval of about ±6 points in the wo
 few points are not necessarily different.
 
 **In detail**
-For $n$ runs of which a fraction $\hat p$ succeeded, the 95% Wilson interval is
+For $`n`$ runs of which a fraction $`\hat p`$ succeeded, the 95% Wilson interval is
 
-$$\frac{\hat p+\dfrac{z^{2}}{2n}\;\pm\;z\sqrt{\dfrac{\hat p(1-\hat p)}{n}+\dfrac{z^{2}}{4n^{2}}}}{1+\dfrac{z^{2}}{n}},\qquad z=1.96 .$$
 
-Unlike the plain "$\hat p\pm z\sqrt{\hat p(1-\hat p)/n}$", it stays inside $[0,1]$ and behaves well near 0% and 100%, which is where most of our results are. `scripts/verify_brain.py` reports it for every outcome; with $n=1000$ and $\hat p=0.978$ the interval is about 96.7% - 98.6%.
+```math
+\frac{\hat p+\dfrac{z^{2}}{2n}\;\pm\;z\sqrt{\dfrac{\hat p(1-\hat p)}{n}+\dfrac{z^{2}}{4n^{2}}}}{1+\dfrac{z^{2}}{n}},\qquad z=1.96 .
+```
+
+
+Unlike the plain "$`\hat p\pm z\sqrt{\hat p(1-\hat p)/n}`$", it stays inside $`[0,1]`$ and behaves well near 0% and 100%, which is where most of our results are. `scripts/verify_brain.py` reports it for every outcome; with $`n=1000`$ and $`\hat p=0.978`$ the interval is about 96.7% - 98.6%.
 
 ---
 

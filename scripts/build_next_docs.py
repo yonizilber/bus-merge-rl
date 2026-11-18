@@ -642,6 +642,24 @@ def frozen_test_counts(root: Path, refresh: bool = False) -> dict:
 
 
 GITHUB_LANG_SWITCH = {"en": ("he", "עברית"), "he": ("en", "English")}
+# Macros GitHub's math renderer refuses ("The following macros are not allowed"), with what to write instead.
+GITHUB_MATH_MACROS = {r"\operatorname": r"\mathrm"}
+
+
+def github_math(text: str) -> str:
+    r"""Math in the form GitHub renders without Markdown touching it first: ``$$..$$`` becomes a fenced ```math
+    block and ``$..$`` becomes ``$`..`$``. Plain ``$..$`` lets Markdown eat ``\,``, ``\;``, ``\!``, ``*`` and ``_``
+    before the math renderer sees them, and the whole formula then fails."""
+    def repl(m: re.Match) -> str:
+        display, tex = m.group(1) is not None, (m.group(1) or m.group(2)).strip()
+        for bad, good in GITHUB_MATH_MACROS.items():
+            tex = tex.replace(bad, good)
+        return f"\n```math\n{tex}\n```\n" if display else f"$`{tex}`$"
+    parts = re.split(r"(```.*?```|`[^`\n]*`)", text, flags=re.S)
+    text = "".join(part if part.startswith("`") else _MATH.sub(repl, part) for part in parts)
+    # In a table row a "|" inside a formula would end the cell: write it as \vert there.
+    return re.sub(r"(?m)^\|.*$", lambda row: re.sub(r"\$`([^`]*)`\$", lambda m: "$`" + m.group(1).replace("|", r"\vert ") + "`$",
+                                                   row.group(0)), text)
 
 
 def github_nav(lang: str, site: dict, page: str, link=lambda name: name) -> str:
@@ -664,6 +682,27 @@ def _github_page(text: str, lang: str, nav: str) -> str:
     left-to-right otherwise). The blank lines around the div let GitHub read the Markdown inside it."""
     body = f"{nav}\n\n{text.rstrip()}\n\n---\n\n{nav}\n"
     return f'<div dir="rtl">\n\n{body}\n</div>\n' if lang == "he" else body
+
+
+def github_explorer(lang: str, root: Path) -> str:
+    """What stands in for the embedded explorer on GitHub, which shows an HTML file as source: a picture of the tool at
+    its starting values (scripts/screenshot_explorer.py), linked to the file, and how to open it."""
+    here = root / "github" / lang
+    tool = os.path.relpath(REPO / COPIED["explorer_app.html"].format(lang=lang), here).replace(os.sep, "/")
+    pic = os.path.relpath(MEDIA / f"explorer_preview.{lang}.png", here).replace(os.sep, "/")
+    if lang == "he":
+        return (f"[![הכלי האינטראקטיבי בערכי ההתחלה שלו: התנאים למעלה, והתשובה, מה עדיף, למטה]({pic})]({tool})\n\n"
+                "*כך נראה הכלי בערכי ההתחלה שלו: למעלה בוחרים את התנאים (תנועה, אנשים במכונית ובאוטובוס, זמני העצירה), "
+                "ולמטה הוא עונה מה עדיף, בכמה, ועם איזה רווח סמך.*\n\n"
+                "> **איך פותחים אותו:** GitHub מציג קובץ HTML כקוד ולא מריץ אותו. פתחו את "
+                f"[`stop_design_explorer.he.html`]({tool}), לחצו על כפתור ההורדה (Download raw file), ופתחו את הקובץ "
+                "שהורד בדפדפן. הוא עובד בלי אינטרנט ובלי התקנה.")
+    return (f"[![The interactive explorer at its starting values: the conditions above, the answer, which is better, below]({pic})]({tool})\n\n"
+            "*The explorer at its starting values: above, you choose the conditions (traffic, people per car and on the "
+            "bus, the stop times); below, it answers which design is better, by how much, and with what interval.*\n\n"
+            "> **How to open it:** GitHub shows an HTML file as source and does not run it. Open "
+            f"[`stop_design_explorer.en.html`]({tool}), click the download button (Download raw file), and open the "
+            "downloaded file in a browser. It works offline, with nothing to install.")
 
 
 ROOT_README = {"en": "README.md", "he": "README.he.md"}
@@ -711,13 +750,8 @@ def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> 
             rel = os.path.relpath(REPO / src.format(lang=lang), root / "github" / lang).replace(os.sep, "/")
             text = text.replace(f"]({name}", f"]({rel}")
         if EMBED in text:
-            text = text.replace(EMBED, "> " + ("**The interactive explorer** is an HTML page: download "
-                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['explorer_app.html'].format(lang=lang), root / 'github' / lang)}) "
-                                               "and open it in a browser, or browse the HTML site." if lang == "en" else
-                                               "**הכלי האינטראקטיבי** הוא עמוד HTML: הורידו את "
-                                               f"[`stop_design_explorer.{lang}.html`]({os.path.relpath(REPO / COPIED['explorer_app.html'].format(lang=lang), root / 'github' / lang)}) "
-                                               "ופתחו אותו בדפדפן, או עיינו באתר ה-HTML."))
-        text = _github_page(text, lang, github_nav(lang, site, src_name))
+            text = text.replace(EMBED, github_explorer(lang, root))
+        text = _github_page(github_math(text), lang, github_nav(lang, site, src_name))
         target = out_dir / src_name
         target.write_text(text, encoding="utf-8")
         written.append(target)

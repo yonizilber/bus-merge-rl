@@ -55,7 +55,9 @@ model files keep their original names (`models/ppo_bus_brain_v13.pth`). Release 
   machine only in the last bit of a float (the steps, rewards and final positions were identical). Regenerated from the
   same code; no behaviour changed.
 - The GitHub version of every page starts and ends with the tabs, and the repository's front page is the current
-  overview.
+  overview. Its math is written as GitHub renders it (```math blocks and $`..`$), the explorer appears there as a
+  picture with how to open it, and the overview shows the Streamlit app (scripts/screenshot_explorer.py,
+  scripts/screenshot_app.py).
 
 ## [1.0.1] - 2026-10-25
 

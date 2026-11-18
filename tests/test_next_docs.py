@@ -261,3 +261,31 @@ def test_github_shows_every_tab_and_the_front_page_is_the_current_overview():
             if not re.match(r"^(?:[a-z]+:|#)", target):
                 assert (REPO_ROOT / target.split("#")[0]).exists(), (lang, target)
         assert "docs/current/github/" + lang + "/EXPLORER.md" in text
+
+
+def test_github_math_is_in_the_form_github_renders():
+    r"""'$$..$$' and '$..$' let GitHub's Markdown eat \, \; * and _ before the math renderer (the glossary showed
+    'The following macros are not allowed'); the export writes ```math blocks and $`..`$, with no refused macro and
+    no '|' inside a formula in a table row."""
+    src = REPO_ROOT / "docs/current"
+    for lang in ("en", "he"):
+        text = (src / "github" / lang / "GLOSSARY.md").read_text(encoding="utf-8")
+        body = re.sub(r"```.*?```", "", text, flags=re.S)
+        assert "$$" not in body and not re.search(r"(?<!`)\$(?!`)[^$\n]+\$", body.replace("$`", "").replace("`$", ""))
+        assert "```math" in text and "$`" in text
+        assert not any(bad in text for bad in build_next_docs.GITHUB_MATH_MACROS)
+        for row in re.findall(r"(?m)^\|.*$", text):
+            assert all("|" not in m for m in re.findall(r"\$`([^`]*)`\$", row)), row
+    assert build_next_docs.github_math("a $x_1*y_2$ b\n$$\\operatorname{clip}(x)$$\n") == \
+        "a $`x_1*y_2`$ b\n\n```math\n\\mathrm{clip}(x)\n```\n\n"
+
+
+def test_github_shows_a_picture_of_the_explorer_and_the_overview_shows_the_app():
+    src = REPO_ROOT / "docs/current"
+    for lang in ("en", "he"):
+        page = (src / "github" / lang / "EXPLORER.md").read_text(encoding="utf-8")
+        assert f"media/explorer_preview.{lang}.png" in page and f"tools/stop_design_explorer.{lang}.html" in page
+        assert (REPO_ROOT / "docs" / "media" / f"explorer_preview.{lang}.png").exists()
+        overview = (src / lang / "README.md").read_text(encoding="utf-8")
+        for name in ("app_run.png", "app_trajectories.png"):
+            assert f"media/{name}" in overview and (REPO_ROOT / "docs" / "media" / name).exists()

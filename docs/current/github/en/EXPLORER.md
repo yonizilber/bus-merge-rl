@@ -7,7 +7,11 @@
 > from 19,500 stored simulated runs, with the 95% interval. Its starting values are only a place to begin; the
 > assumptions behind them, with their sources, are at the bottom of the tool and on the [Field data](FIELD_DATA.md) tab.
 
-> **The interactive explorer** is an HTML page: download [`stop_design_explorer.en.html`](../../../tools/stop_design_explorer.en.html) and open it in a browser, or browse the HTML site.
+[![The interactive explorer at its starting values: the conditions above, the answer, which is better, below](../../../media/explorer_preview.en.png)](../../../tools/stop_design_explorer.en.html)
+
+*The explorer at its starting values: above, you choose the conditions (traffic, people per car and on the bus, the stop times); below, it answers which design is better, by how much, and with what interval.*
+
+> **How to open it:** GitHub shows an HTML file as source and does not run it. Open [`stop_design_explorer.en.html`](../../../tools/stop_design_explorer.en.html), click the download button (Download raw file), and open the downloaded file in a browser. It works offline, with nothing to install.
 
 Below the tool: what the runs showed across the whole range, chapter by chapter. Our conclusion from them is on the
 [Conclusions](RESULTS.md) tab.

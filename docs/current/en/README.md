@@ -20,6 +20,21 @@ streamlit run streamlit_app.py
 
 Click **Run Simulation**. Tick **Fixed random seed** to replay any seed quoted in these pages.
 
+The app (Streamlit) runs on your own computer, not on the site or on GitHub. This is how it looks after one run with the
+default settings (bay, 0.40 cars/s, a 15 s stop, seed 0):
+
+![The app after a run: the settings on the side, and at the top how long the bus took to merge and where the time went](media/app_run.png)
+
+*On the side you choose the scenario (A: stop in the lane, B: bay), the traffic, the stop time and the occupancies. At
+the top the app reports how long the bus took to merge after boarding ended, breaks that time into phases, and flags
+hard braking and physically impossible moments (none here).*
+
+![The app's trajectory chart: every vehicle's position along the road over time](media/app_trajectories.png)
+
+*Each line is one vehicle: its position along the road (metres, vertical axis) over time (seconds). A steep line is fast
+driving; a line that flattens is a vehicle standing still. The bus stops in the bay at about 300 m; the other lines are
+the cars. Below the chart is a top-down view of the merge zone.*
+
 ## The story of the project
 
 Every bus stop on a busy street hides a small dilemma. Pull the bus into a bay, and the cars keep flowing past while
