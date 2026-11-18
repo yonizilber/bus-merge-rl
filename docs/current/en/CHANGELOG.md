@@ -49,6 +49,11 @@ model files keep their original names (`models/ppo_bus_brain_v13.pth`). Release 
   it is for illustration only; the results come from the experiment. The occupancies affect only the KPIs the app
   shows.
 - No page assumes a fixed bus load; a test checks six pages for it.
+- The golden tests compare a sample of each run within 0.001 instead of an exact hash, which differed on GitHub's
+  machine only in the last bit of a float (the steps, rewards and final positions were identical). Regenerated from the
+  same code; no behaviour changed.
+- The GitHub version of every page starts and ends with the tabs, and the repository's front page is the current
+  overview.
 
 ## [1.0.1] - 2026-10-25
 

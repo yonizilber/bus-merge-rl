@@ -128,7 +128,7 @@ Implemented in this round:
 
 | Area | What is asserted | Tests |
 |---|---|---|
-| Regression fingerprints | Five fixed-seed engine runs (scenario B ×3, A ×2) with v13, and four fixed-seed training-env episodes, reproduce stored hashes of every frame. **Any** behaviour change fails until the fingerprints are regenerated on purpose. | `test_golden_run`, `test_env_golden` |
+| Regression fingerprints | Five fixed-seed engine runs (scenario B ×3, A ×2) with v13, and four fixed-seed training-env episodes, reproduce their stored trajectories (every vehicle every 5 s, the env's observations every 10 steps) to within 0.001; until 2026-11-18 they were exact hashes, which differed between machines on the last bit of a float. **Any** behaviour change fails until the golden files are regenerated on purpose. | `test_golden_run`, `test_env_golden` |
 | The physics checker itself | It detects braking beyond 9.5 m/s², backward motion, position jumps, polygon overlap, a bus below the kerb or bay wall (including a kerb corner inside the body), a bus over the centre line, and heading beyond 60°. A clean log passes. | `test_invariants` (unit part) |
 | Physics end to end, few seeds | A real engine run has no overlap, negative speed or position jump. Cars enter the road without impossible braking. The bus stops in the bay without braking beyond the limit. | `test_invariants` (engine part) |
 | Bus pull-in, 5 seeds | On the road (exact check), at the stop target, at bay depth, parallel, with a continuous heading, and frozen while stopped. | `test_bus_physics` |

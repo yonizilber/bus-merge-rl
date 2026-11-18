@@ -1,7 +1,7 @@
 """Regression guard for the training environment: a fixed policy on fixed seeds must reproduce
-the stored (observation, reward, done) fingerprints. Regenerate with
-``python -m tests.test_env_golden --update`` only when a behaviour change is intended."""
-import hashlib
+the stored observations and rewards (every 10 steps, compared within ``tests.golden_compare.ATOL``; steps, done and
+success exactly). Regenerate with ``python -m tests.test_env_golden --update`` only when a behaviour change is
+intended."""
 import json
 import random
 import sys
@@ -15,10 +15,12 @@ from busmerge.rl.env import BusMergeEnv
 from tests.brains import GOLDEN_BRAIN
 from busmerge.rl.feature_encoding import infer_state_dim_from_checkpoint
 from busmerge.rl.ppo_agent import PPOAgent
+from tests.golden_compare import mismatches
 
 GOLDEN_FILE = Path(__file__).parent / "golden" / "env_golden.json"
 SEEDS = [0, 1, 2, 3]
 MAX_STEPS = 600
+SAMPLE_EVERY = 10
 
 
 def run_env_case(seed: int, env_factory=BusMergeEnv) -> dict:
@@ -34,24 +36,25 @@ def run_env_case(seed: int, env_factory=BusMergeEnv) -> dict:
     np.random.seed(seed)
     torch.manual_seed(seed)
     state = env.reset()
-    h = hashlib.sha256()
+    samples = []
     total, steps, done = 0.0, 0, False
     while not done and steps < MAX_STEPS:
         with torch.no_grad():
             mean, _, _ = agent.policy(torch.FloatTensor(state).unsqueeze(0))
         state, reward, done, _ = env.step(mean.squeeze(0).numpy())
-        h.update(np.round(np.asarray(state, dtype=np.float64), 5).tobytes())
-        h.update(np.float64(round(reward, 4)).tobytes())
         total += float(reward)
         steps += 1
+        if steps % SAMPLE_EVERY == 0 or done:
+            samples.append([steps, round(total, 4)] + [round(float(x), 6) for x in np.asarray(state, dtype=np.float64)])
     return {"steps": steps, "done": bool(done), "success": bool(env.last_success),
-            "total_reward": round(total, 3), "fingerprint": h.hexdigest()[:16]}
+            "total_reward": round(total, 3), "samples": samples}
 
 
 @pytest.mark.parametrize("seed", SEEDS)
 def test_env_matches_golden(seed):
     expected = json.loads(GOLDEN_FILE.read_text())[str(seed)]
-    assert run_env_case(seed) == expected
+    diff = mismatches(run_env_case(seed), expected)
+    assert not diff, diff[:10]
 
 
 if __name__ == "__main__" and "--update" in sys.argv:

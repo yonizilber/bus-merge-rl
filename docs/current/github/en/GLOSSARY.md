@@ -111,11 +111,12 @@ $$A=\tfrac12\Big|\sum_{i}\big(x_i\,y_{i+1}-x_{i+1}\,y_i\big)\Big| .$$
 <a name="golden"></a>
 
 ## Golden test
-> A test that stores a fingerprint of a run with a fixed seed and fails if a later change alters it.
+> A test that stores a run with a fixed seed and fails if a later change alters it.
 
-The fingerprints are in `tests/golden/`. They protect a refactoring: if the engine or the training environment behaves
-differently by even a tiny amount, the test shows it. A golden file may be regenerated only when the change is intended
-and explained.
+The stored runs are in `tests/golden/`: every vehicle's position, speed, sideways offset and state every 5 s (and the
+training environment's observations every 10 steps). They are compared to within 0.001, so a change of even a
+millimetre shows, while the last bit of a number, which can differ from one computer to another, does not. They protect
+a refactoring. A golden file may be regenerated only when the change is intended and explained.
 
 <a name="governor"></a>
 

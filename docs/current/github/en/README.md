@@ -103,7 +103,7 @@ How to read it:
   and two training bugs. The [case study](CASE_STUDY.md) tells the story.
 - **Measured on unseen data.** Training, selection, publication and the scheduled gates use separate sets of random
   seeds.
-- **492 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
+- **493 automated test cases.** All but the five slow statistical gates run on every push, and the rule for the
   main branch is that a change is merged only when they pass. Known limitations are kept as strict xfail[^strict_xfail] tests, so they
   stay visible and turn red the day the behaviour changes. See [Testing](TESTING.md).
 
