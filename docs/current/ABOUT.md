@@ -12,9 +12,11 @@ unchanged. `docs/README.md` maps all of it.
 | `site.json` | The pages and the navigation of this version |
 | `github/en/`, `github/he/` | The same pages as GitHub-flavoured Markdown, ready to be read on GitHub: terms become footnotes, math stays as `$…$`. Generated, committed, and checked by a test |
 | `site/en/`, `site/he/` | The HTML sites (generated, not committed) |
+| `test_counts.json`, `test_report.{en,he}.html` | The last full test run, as the pages show it; the website is built from them (GitHub Pages builds without running the tests) |
 
 ```bash
 python scripts/build_next_docs.py --root docs/current --github     # both HTML sites and the GitHub Markdown
+python scripts/build_next_docs.py --root docs/current --website _site   # the website, as GitHub Pages builds it
 ```
 
 ## What changed from version 2

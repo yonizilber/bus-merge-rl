@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · **חקר מקרה** · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CASE_STUDY.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · **חקר מקרה** · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CASE_STUDY.md)
+
+> **לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [https://yonizilber.github.io/bus-merge-rl/he/CASE_STUDY.html](https://yonizilber.github.io/bus-merge-rl/he/CASE_STUDY.html)
 
 # חקר מקרה: סוכן שניצל באג בהיגוי, ואיך זה תוקן
 
@@ -255,6 +257,6 @@ y_rel = lateral_error·cos(ψ) − L_d·sin(ψ)
 
 ---
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · **חקר מקרה** · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CASE_STUDY.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · **חקר מקרה** · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CASE_STUDY.md)
 
 </div>

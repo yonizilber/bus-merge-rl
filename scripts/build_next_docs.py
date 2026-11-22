@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import latex2mathml.converter
@@ -513,11 +514,12 @@ def embed_html(lang: str) -> str:
             '{ f.style.height = (e.data.h + 8) + "px"; } }); });</script>')
 
 
-def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dict], site: dict | None = None) -> str:
+def render_page(lang: str, out_name: str, src_name: str, glossary: dict[str, dict], site: dict | None = None,
+                counts: dict | None = None) -> str:
     site = site or site_config(NEXT)
     cfg = site["langs"][lang]
     source = site["root"] / lang / src_name
-    text = _fill_placeholders(source.read_text(encoding="utf-8"), lang, site).replace(EMBED, embed_html(lang))
+    text = _fill_placeholders(source.read_text(encoding="utf-8"), lang, site, counts).replace(EMBED, embed_html(lang))
     used: dict[str, int] = {}
     if src_name == "GLOSSARY.md":
         text = _plain_links(text, "").replace(DETAILS_MARK, f"**{cfg['details']}**")
@@ -566,14 +568,17 @@ def _fill_placeholders(text: str, lang: str, site: dict, counts: dict | None = N
     return text
 
 
-def build_language(lang: str, out_dir: Path, root: Path = NEXT) -> list[Path]:
+def build_language(lang: str, out_dir: Path, root: Path = NEXT, frozen: bool = False) -> list[Path]:
+    """``frozen``: build from what is committed only (the website on GitHub Pages, built where no test run is
+    recorded): the test counts of ``root/test_counts.json`` and the test report of ``root/test_report.<lang>.html``."""
     site = site_config(root)
+    counts = frozen_test_counts(root) if frozen else None
     out_dir.mkdir(parents=True, exist_ok=True)
     glossary = parse_glossary(root / lang / "GLOSSARY.md")
     written = []
     for out_name, src_name in site["pages"].items():
         target = out_dir / out_name
-        target.write_text(render_page(lang, out_name, src_name, glossary, site), encoding="utf-8")
+        target.write_text(render_page(lang, out_name, src_name, glossary, site, counts), encoding="utf-8")
         written.append(target)
     media_out = out_dir / "media"
     media_out.mkdir(exist_ok=True)
@@ -586,7 +591,14 @@ def build_language(lang: str, out_dir: Path, root: Path = NEXT) -> list[Path]:
         if name in sources or EMBED in sources:
             shutil.copy2(REPO / src.format(lang=lang), out_dir / name)
     cfg = site["langs"][lang]
-    written.append(build_test_report.write(out_dir, lang, nav=cfg["nav"], toc_label=cfg["toc"]))
+    if frozen:
+        snapshot = root / f"test_report.{lang}.html"
+        if not snapshot.exists():
+            raise FileNotFoundError(f"{snapshot} is missing: run python scripts/build_next_docs.py --root "
+                                    f"{root.relative_to(REPO)} --github after a full test run")
+        written.append(Path(shutil.copy2(snapshot, out_dir / "TEST_REPORT.html")))
+    else:
+        written.append(build_test_report.write(out_dir, lang, nav=cfg["nav"], toc_label=cfg["toc"]))
     return written
 
 
@@ -638,10 +650,26 @@ def frozen_test_counts(root: Path, refresh: bool = False) -> dict:
     path = root / "test_counts.json"
     if refresh and build_test_report.JUNIT.exists():
         path.write_text(json.dumps(test_counts(), indent=1) + "\n", encoding="utf-8")
+        cfg = site_config(root)["langs"]
+        with tempfile.TemporaryDirectory() as tmp:         # the website's test report, from the same run
+            for lang in ("en", "he"):
+                page = build_test_report.write(Path(tmp), lang, nav=cfg[lang]["nav"], toc_label=cfg[lang]["toc"])
+                shutil.copy2(page, root / f"test_report.{lang}.html")
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else test_counts()
 
 
 GITHUB_LANG_SWITCH = {"en": ("he", "עברית"), "he": ("en", "English")}
+# The HTML site as a website (GitHub Pages, .github/workflows/pages.yml): <PAGES_URL><lang>/<page>.html.
+PAGES_URL = "https://yonizilber.github.io/bus-merge-rl/"
+SITE_LINK = {"en": "**Read this on the website**, where the tabs switch in place and the interactive explorer works: "
+                   "[{url}]({url})",
+             "he": "**לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [{url}]({url})"}
+
+
+def site_url(lang: str, site: dict, page: str) -> str:
+    """The address of a source page on the website."""
+    out = next(o for o, s in site["pages"].items() if s == page)
+    return f"{PAGES_URL}{lang}/{'' if out == 'index.html' else out}"
 # Macros GitHub's math renderer refuses ("The following macros are not allowed"), with what to write instead.
 GITHUB_MATH_MACROS = {r"\operatorname": r"\mathrm"}
 
@@ -677,32 +705,36 @@ def github_nav(lang: str, site: dict, page: str, link=lambda name: name) -> str:
     return " · ".join(items)
 
 
-def _github_page(text: str, lang: str, nav: str) -> str:
-    """A GitHub page: the tabs on top and at the bottom; Hebrew wrapped right-to-left (GitHub lays Markdown out
-    left-to-right otherwise). The blank lines around the div let GitHub read the Markdown inside it."""
-    body = f"{nav}\n\n{text.rstrip()}\n\n---\n\n{nav}\n"
+def _github_page(text: str, lang: str, nav: str, url: str = "") -> str:
+    """A GitHub page: the tabs on top and at the bottom, and under the top ones a link to the same page on the
+    website; Hebrew wrapped right-to-left (GitHub lays Markdown out left-to-right otherwise). The blank lines around
+    the div let GitHub read the Markdown inside it."""
+    top = f"{nav}\n\n> {SITE_LINK[lang].format(url=url)}" if url else nav
+    body = f"{top}\n\n{text.rstrip()}\n\n---\n\n{nav}\n"
     return f'<div dir="rtl">\n\n{body}\n</div>\n' if lang == "he" else body
 
 
 def github_explorer(lang: str, root: Path) -> str:
     """What stands in for the embedded explorer on GitHub, which shows an HTML file as source: a picture of the tool at
-    its starting values (scripts/screenshot_explorer.py), linked to the file, and how to open it."""
+    its starting values (scripts/screenshot_explorer.py), linked to the working tool on the website, and the file
+    for using it offline."""
     here = root / "github" / lang
     tool = os.path.relpath(REPO / COPIED["explorer_app.html"].format(lang=lang), here).replace(os.sep, "/")
     pic = os.path.relpath(MEDIA / f"explorer_preview.{lang}.png", here).replace(os.sep, "/")
+    live = f"{PAGES_URL}{lang}/explorer_app.html"
     if lang == "he":
-        return (f"[![הכלי האינטראקטיבי בערכי ההתחלה שלו: התנאים למעלה, והתשובה, מה עדיף, למטה]({pic})]({tool})\n\n"
+        return (f"[![הכלי האינטראקטיבי בערכי ההתחלה שלו: התנאים למעלה, והתשובה, מה עדיף, למטה]({pic})]({live})\n\n"
                 "*כך נראה הכלי בערכי ההתחלה שלו: למעלה בוחרים את התנאים (תנועה, אנשים במכונית ובאוטובוס, זמני העצירה), "
                 "ולמטה הוא עונה מה עדיף, בכמה, ועם איזה רווח סמך.*\n\n"
-                "> **איך פותחים אותו:** GitHub מציג קובץ HTML כקוד ולא מריץ אותו. פתחו את "
-                f"[`stop_design_explorer.he.html`]({tool}), לחצו על כפתור ההורדה (Download raw file), ופתחו את הקובץ "
-                "שהורד בדפדפן. הוא עובד בלי אינטרנט ובלי התקנה.")
-    return (f"[![The interactive explorer at its starting values: the conditions above, the answer, which is better, below]({pic})]({tool})\n\n"
+                f"> **הכלי עצמו נמצא [באתר]({live})**: לחיצה על התמונה פותחת אותו. GitHub מציג קובץ HTML כקוד ולא "
+                f"מריץ אותו. כדי להשתמש בכלי בלי אינטרנט: פתחו את [`stop_design_explorer.he.html`]({tool}), לחצו על "
+                "כפתור ההורדה (Download raw file), ופתחו את הקובץ שהורד בדפדפן.")
+    return (f"[![The interactive explorer at its starting values: the conditions above, the answer, which is better, below]({pic})]({live})\n\n"
             "*The explorer at its starting values: above, you choose the conditions (traffic, people per car and on the "
             "bus, the stop times); below, it answers which design is better, by how much, and with what interval.*\n\n"
-            "> **How to open it:** GitHub shows an HTML file as source and does not run it. Open "
-            f"[`stop_design_explorer.en.html`]({tool}), click the download button (Download raw file), and open the "
-            "downloaded file in a browser. It works offline, with nothing to install.")
+            f"> **The tool itself is [on the website]({live})**: click the picture to open it. GitHub shows an HTML "
+            f"file as source and does not run it. To use the tool offline: open [`stop_design_explorer.en.html`]({tool}), "
+            "click the download button (Download raw file), and open the downloaded file in a browser.")
 
 
 ROOT_README = {"en": "README.md", "he": "README.he.md"}
@@ -751,15 +783,61 @@ def export_github(lang: str, root: Path = NEXT, out_dir: Path | None = None) -> 
             text = text.replace(f"]({name}", f"]({rel}")
         if EMBED in text:
             text = text.replace(EMBED, github_explorer(lang, root))
-        text = _github_page(github_math(text), lang, github_nav(lang, site, src_name))
+        text = _github_page(github_math(text), lang, github_nav(lang, site, src_name), site_url(lang, site, src_name))
         target = out_dir / src_name
         target.write_text(text, encoding="utf-8")
         written.append(target)
     return written
 
 
-def build(out_root: Path, langs=("en", "he"), root: Path = NEXT) -> dict[str, list[Path]]:
-    return {lang: build_language(lang, Path(out_root) / lang, root) for lang in langs}
+def build(out_root: Path, langs=("en", "he"), root: Path = NEXT, frozen: bool = False) -> dict[str, list[Path]]:
+    return {lang: build_language(lang, Path(out_root) / lang, root, frozen) for lang in langs}
+
+
+WEBSITE_INDEX = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bus-merge-rl</title>
+<style>
+:root { color-scheme: light dark; --bg: #f7f8fa; --fg: #1c2330; --muted: #5b6473; --card: #fff; --border: #d9dee6;
+        --accent: #1f5fbf; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12161d; --fg: #e6e9ef; --muted: #9aa3b2; --card: #1b212b;
+        --border: #2d3644; --accent: #7fb0ff; } }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+       font-family: system-ui, sans-serif; padding: 16px; box-sizing: border-box; }
+main { max-width: 560px; text-align: center; }
+h1 { font-size: 1.6rem; margin: 0 0 8px; }
+p { color: var(--muted); margin: 0 0 8px; line-height: 1.5; }
+.langs { margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+a { display: block; min-width: 180px; padding: 16px 20px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); color: var(--accent); font-weight: 600; text-decoration: none; }
+a:hover, a:focus-visible { border-color: var(--accent); }
+a span { display: block; font-weight: 400; color: var(--muted); font-size: .9rem; margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+<h1>bus-merge-rl</h1>
+<p>Should a city bus stop in a bay, or in the lane?</p>
+<p dir="rtl" lang="he">מפרץ או נתיב?</p>
+<div class="langs">
+<a href="en/">English<span>Read in English</span></a>
+<a href="he/" lang="he" dir="rtl">עברית<span>לקריאה בעברית</span></a>
+</div>
+</main>
+</body>
+</html>
+"""
+
+
+def build_website(out: Path, root: Path) -> dict[str, list[Path]]:
+    """The website (GitHub Pages): both sites built from what is committed, and a front page to choose a language."""
+    built = build(out, root=root, frozen=True)
+    (out / "index.html").write_text(WEBSITE_INDEX, encoding="utf-8")
+    (out / ".nojekyll").write_text("", encoding="utf-8")    # serve the files as they are
+    return built
 
 
 if __name__ == "__main__":
@@ -768,8 +846,14 @@ if __name__ == "__main__":
     ap.add_argument("--lang", choices=sorted(LANGS), help="one language only")
     ap.add_argument("--out", type=Path, help="where the HTML site goes (default: <root>/site)")
     ap.add_argument("--github", action="store_true", help="also write GitHub-flavoured Markdown to <root>/github")
+    ap.add_argument("--website", type=Path, metavar="DIR",
+                    help="build only the website (GitHub Pages) into DIR, from what is committed")
     args = ap.parse_args()
     root = args.root if args.root.is_absolute() else REPO / args.root
+    if args.website:
+        for lang, paths in build_website(args.website, root).items():
+            print(lang, args.website / lang / "index.html", f"({len(paths)} pages)")
+        sys.exit(0)
     out = args.out or root / "site"
     langs = (args.lang,) if args.lang else ("en", "he")
     for lang, paths in build(out, langs, root).items():

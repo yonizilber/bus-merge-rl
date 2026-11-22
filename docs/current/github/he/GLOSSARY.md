@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · **מילון מונחים** · [English](../en/GLOSSARY.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · **מילון מונחים** · [English](../en/GLOSSARY.md)
+
+> **לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [https://yonizilber.github.io/bus-merge-rl/he/GLOSSARY.html](https://yonizilber.github.io/bus-merge-rl/he/GLOSSARY.html)
 
 # מילון מונחים
 
@@ -633,6 +635,6 @@ j=\frac{\mathrm{d}a}{\mathrm{d}t}\;\approx\;\frac{a_{k+1}-a_k}{\Delta t}.
 
 ---
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · **מילון מונחים** · [English](../en/GLOSSARY.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · **מילון מונחים** · [English](../en/GLOSSARY.md)
 
 </div>

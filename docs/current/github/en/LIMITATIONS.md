@@ -1,4 +1,6 @@
-[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · **Limitations** · [Glossary](GLOSSARY.md) · [עברית](../he/LIMITATIONS.md)
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [The app](APP.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · **Limitations** · [Glossary](GLOSSARY.md) · [עברית](../he/LIMITATIONS.md)
+
+> **Read this on the website**, where the tabs switch in place and the interactive explorer works: [https://yonizilber.github.io/bus-merge-rl/en/LIMITATIONS.html](https://yonizilber.github.io/bus-merge-rl/en/LIMITATIONS.html)
 
 # Limitations
 
@@ -100,4 +102,4 @@ The simulation is, of course, very partial. Streets come in many shapes, and thi
 
 ---
 
-[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · **Limitations** · [Glossary](GLOSSARY.md) · [עברית](../he/LIMITATIONS.md)
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [The app](APP.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · **Limitations** · [Glossary](GLOSSARY.md) · [עברית](../he/LIMITATIONS.md)

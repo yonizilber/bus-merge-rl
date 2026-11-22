@@ -1,4 +1,6 @@
-[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · **Changelog** · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CHANGELOG.md)
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [The app](APP.md) · **Changelog** · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CHANGELOG.md)
+
+> **Read this on the website**, where the tabs switch in place and the interactive explorer works: [https://yonizilber.github.io/bus-merge-rl/en/CHANGELOG.html](https://yonizilber.github.io/bus-merge-rl/en/CHANGELOG.html)
 
 # Changelog
 
@@ -56,8 +58,11 @@ model files keep their original names (`models/ppo_bus_brain_v13.pth`). Release 
   same code; no behaviour changed.
 - The GitHub version of every page starts and ends with the tabs, and the repository's front page is the current
   overview. Its math is written as GitHub renders it (```math blocks and $`..`$), the explorer appears there as a
-  picture with how to open it, and the overview shows the Streamlit app (scripts/screenshot_explorer.py,
-  scripts/screenshot_app.py).
+  picture that opens the working tool on the website (scripts/screenshot_explorer.py), and every page links to the
+  same page on the website.
+- **The site as a website** on GitHub Pages (https://yonizilber.github.io/bus-merge-rl/), built from what is committed
+  by `.github/workflows/pages.yml`: the tabs and the interactive explorer work there as they do locally.
+- **The app** has its own tab, with two pictures of the Streamlit app after a run (scripts/screenshot_app.py).
 
 ## [1.0.1] - 2026-10-25
 
@@ -187,4 +192,4 @@ number generated and tested.
 
 ---
 
-[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · **Changelog** · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CHANGELOG.md)
+[Overview](README.md) · [Research question](RESEARCH.md) · [Measurements and research](EXPLORER.md) · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [The app](APP.md) · **Changelog** · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/CHANGELOG.md)

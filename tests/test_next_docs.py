@@ -280,12 +280,53 @@ def test_github_math_is_in_the_form_github_renders():
         "a $`x_1*y_2`$ b\n\n```math\n\\mathrm{clip}(x)\n```\n\n"
 
 
-def test_github_shows_a_picture_of_the_explorer_and_the_overview_shows_the_app():
+def test_github_shows_a_picture_of_the_explorer_and_the_app_has_its_own_tab():
+    """GitHub shows HTML as source: the explorer page shows a picture of the tool that opens the working tool on the
+    website. The Streamlit app's pictures are on their own tab, not in the overview."""
     src = REPO_ROOT / "docs/current"
+    site = build_next_docs.site_config(src)
     for lang in ("en", "he"):
         page = (src / "github" / lang / "EXPLORER.md").read_text(encoding="utf-8")
         assert f"media/explorer_preview.{lang}.png" in page and f"tools/stop_design_explorer.{lang}.html" in page
+        assert f"]({build_next_docs.PAGES_URL}{lang}/explorer_app.html)" in page
         assert (REPO_ROOT / "docs" / "media" / f"explorer_preview.{lang}.png").exists()
+        assert "APP.html" in dict(site["langs"][lang]["nav"]) and site["pages"]["APP.html"] == "APP.md"
+        app = (src / lang / "APP.md").read_text(encoding="utf-8")
         overview = (src / lang / "README.md").read_text(encoding="utf-8")
         for name in ("app_run.png", "app_trajectories.png"):
-            assert f"media/{name}" in overview and (REPO_ROOT / "docs" / "media" / name).exists()
+            assert f"media/{name}" in app and (REPO_ROOT / "docs" / "media" / name).exists()
+            assert name not in overview, f"the app's pictures are on their own tab ({lang})"
+        assert "(APP.md)" in overview                       # the overview's table of pages lists the tab
+
+
+def test_every_github_page_links_to_the_same_page_on_the_website():
+    src = REPO_ROOT / "docs/current"
+    site = build_next_docs.site_config(src)
+    for lang in ("en", "he"):
+        for out_name, src_name in site["pages"].items():
+            text = (src / "github" / lang / src_name).read_text(encoding="utf-8")
+            url = f"{build_next_docs.PAGES_URL}{lang}/{'' if out_name == 'index.html' else out_name}"
+            assert f"]({url})" in text.split("\n\n---\n\n")[0], (lang, src_name)
+    workflow = (REPO_ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
+    assert "--website" in workflow and "deploy-pages" in workflow
+
+
+def test_the_website_builds_from_what_is_committed(tmp_path, monkeypatch):
+    """GitHub Pages builds the site where no test run is recorded: the test counts and the test report come from
+    docs/current (test_counts.json, test_report.<lang>.html), never zeros or a 'no run recorded' page, and the front
+    page lets the reader choose a language."""
+    src = REPO_ROOT / "docs/current"
+    monkeypatch.setattr(build_next_docs.build_test_report, "JUNIT", tmp_path / "no_run.xml")
+    out = tmp_path / "website"
+    built = build_next_docs.build_website(out, src)
+    counts = build_next_docs.frozen_test_counts(src)
+    front = (out / "index.html").read_text(encoding="utf-8")
+    assert 'href="en/"' in front and 'href="he/"' in front and (out / ".nojekyll").exists()
+    for lang in ("en", "he"):
+        assert {p.name for p in built[lang]} >= {"index.html", "APP.html", "EXPLORER.html", "TEST_REPORT.html"}
+        report = (out / lang / "TEST_REPORT.html").read_text(encoding="utf-8")
+        assert report == (src / f"test_report.{lang}.html").read_text(encoding="utf-8")
+        assert "build_test_report.py.</p>" not in report                 # a recorded run, not the placeholder page
+        testing = (out / lang / "TESTING.html").read_text(encoding="utf-8")
+        assert f"<td>{counts['passed']:,}</td>" in testing and "{{" not in testing
+        assert (out / lang / "explorer_app.html").exists()

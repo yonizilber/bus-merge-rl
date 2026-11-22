@@ -8,6 +8,7 @@
     "WORLD.html": "WORLD.md",
     "AGENT.html": "AGENT.md",
     "CASE_STUDY.html": "CASE_STUDY.md",
+    "APP.html": "APP.md",
     "CHANGELOG.html": "CHANGELOG.md",
     "TESTING.html": "TESTING.md",
     "LIMITATIONS.html": "LIMITATIONS.md",
@@ -46,6 +47,10 @@
       [
         "CASE_STUDY.html",
         "Case study"
+      ],
+      [
+        "APP.html",
+        "The app"
       ],
       [
         "CHANGELOG.html",
@@ -100,6 +105,10 @@
       [
         "CASE_STUDY.html",
         "חקר מקרה"
+      ],
+      [
+        "APP.html",
+        "האפליקציה"
       ],
       [
         "CHANGELOG.html",

@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · **הסוכן** · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/AGENT.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · **הסוכן** · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/AGENT.md)
+
+> **לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [https://yonizilber.github.io/bus-merge-rl/he/AGENT.html](https://yonizilber.github.io/bus-merge-rl/he/AGENT.html)
 
 # הסוכן
 
@@ -147,6 +149,6 @@ world state ──► observation (11 numbers) ──► policy network ──�
 
 ---
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · **הסוכן** · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/AGENT.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · **הסוכן** · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/AGENT.md)
 
 </div>

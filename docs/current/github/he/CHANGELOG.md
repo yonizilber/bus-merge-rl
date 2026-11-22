@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · **יומן שינויים** · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CHANGELOG.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · **יומן שינויים** · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CHANGELOG.md)
+
+> **לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [https://yonizilber.github.io/bus-merge-rl/he/CHANGELOG.html](https://yonizilber.github.io/bus-merge-rl/he/CHANGELOG.html)
 
 # יומן שינויים
 
@@ -51,8 +53,11 @@
 - בדיקות הזהב משוות דגימה של כל הרצה בדיוק של 0.001 במקום גיבוב מדויק, שבמחשב של GitHub היה שונה רק בספרה האחרונה של
   מספר (הצעדים, התגמולים ומיקומי הסיום היו זהים). נוצרו מחדש מאותו קוד; שום התנהגות לא השתנתה.
 - בגרסת GitHub כל עמוד מתחיל ומסתיים בשורת הלשוניות, ועמוד הבית של המאגר הוא הסקירה הנוכחית. הנוסחאות כתובות בצורה ש-GitHub
-  מציג (בלוקים של ```math ו-$`..`$), הכלי מופיע שם כתמונה עם הסבר איך לפתוח אותו, והסקירה מראה את אפליקציית Streamlit
-  (scripts/screenshot_explorer.py, scripts/screenshot_app.py).
+  מציג (בלוקים של ```math ו-$`..`$), הכלי מופיע שם כתמונה שפותחת את הכלי העובד באתר (scripts/screenshot_explorer.py), וכל
+  עמוד מקשר לאותו עמוד באתר.
+- **האתר כאתר אינטרנט** ב-GitHub Pages (https://yonizilber.github.io/bus-merge-rl/), שנבנה ממה שנשמר במאגר על ידי
+  `.github/workflows/pages.yml`: הלשוניות והכלי האינטראקטיבי עובדים שם כמו במחשב.
+- **לאפליקציה** יש לשונית משלה, עם שתי תמונות של אפליקציית Streamlit אחרי הרצה (scripts/screenshot_app.py).
 
 ## [1.0.1] - 2026-10-25
 
@@ -169,6 +174,6 @@
 
 ---
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · **יומן שינויים** · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CHANGELOG.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · **יומן שינויים** · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/CHANGELOG.md)
 
 </div>

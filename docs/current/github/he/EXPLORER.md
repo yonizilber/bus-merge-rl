@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · **מדידות ומחקר** · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/EXPLORER.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · **מדידות ומחקר** · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/EXPLORER.md)
+
+> **לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [https://yonizilber.github.io/bus-merge-rl/he/EXPLORER.html](https://yonizilber.github.io/bus-merge-rl/he/EXPLORER.html)
 
 # מדידות ומחקר
 
@@ -9,11 +11,11 @@
 > של 95%. ערכי ההתחלה הם רק נקודת פתיחה; ההנחות שמאחוריהם, עם המקורות, נמצאות בתחתית הכלי ובלשונית
 > [נתוני שטח](FIELD_DATA.md).
 
-[![הכלי האינטראקטיבי בערכי ההתחלה שלו: התנאים למעלה, והתשובה, מה עדיף, למטה](../../../media/explorer_preview.he.png)](../../../tools/stop_design_explorer.he.html)
+[![הכלי האינטראקטיבי בערכי ההתחלה שלו: התנאים למעלה, והתשובה, מה עדיף, למטה](../../../media/explorer_preview.he.png)](https://yonizilber.github.io/bus-merge-rl/he/explorer_app.html)
 
 *כך נראה הכלי בערכי ההתחלה שלו: למעלה בוחרים את התנאים (תנועה, אנשים במכונית ובאוטובוס, זמני העצירה), ולמטה הוא עונה מה עדיף, בכמה, ועם איזה רווח סמך.*
 
-> **איך פותחים אותו:** GitHub מציג קובץ HTML כקוד ולא מריץ אותו. פתחו את [`stop_design_explorer.he.html`](../../../tools/stop_design_explorer.he.html), לחצו על כפתור ההורדה (Download raw file), ופתחו את הקובץ שהורד בדפדפן. הוא עובד בלי אינטרנט ובלי התקנה.
+> **הכלי עצמו נמצא [באתר](https://yonizilber.github.io/bus-merge-rl/he/explorer_app.html)**: לחיצה על התמונה פותחת אותו. GitHub מציג קובץ HTML כקוד ולא מריץ אותו. כדי להשתמש בכלי בלי אינטרנט: פתחו את [`stop_design_explorer.he.html`](../../../tools/stop_design_explorer.he.html), לחצו על כפתור ההורדה (Download raw file), ופתחו את הקובץ שהורד בדפדפן.
 
 מתחת לכלי: מה ההרצות הראו על כל הטווח, פרק אחר פרק. את המסקנה שלנו מהן מביאה הלשונית [מסקנות](RESULTS.md).
 
@@ -188,6 +190,6 @@ seeds שונים לכל צירוף.
 
 ---
 
-[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · **מדידות ומחקר** · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/EXPLORER.md)
+[סקירה](README.md) · [שאלת המחקר](RESEARCH.md) · **מדידות ומחקר** · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/EXPLORER.md)
 
 </div>

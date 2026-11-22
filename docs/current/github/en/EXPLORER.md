@@ -1,4 +1,6 @@
-[Overview](README.md) · [Research question](RESEARCH.md) · **Measurements and research** · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/EXPLORER.md)
+[Overview](README.md) · [Research question](RESEARCH.md) · **Measurements and research** · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [The app](APP.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/EXPLORER.md)
+
+> **Read this on the website**, where the tabs switch in place and the interactive explorer works: [https://yonizilber.github.io/bus-merge-rl/en/EXPLORER.html](https://yonizilber.github.io/bus-merge-rl/en/EXPLORER.html)
 
 # Measurements and research
 
@@ -7,11 +9,11 @@
 > from 19,500 stored simulated runs, with the 95% interval. Its starting values are only a place to begin; the
 > assumptions behind them, with their sources, are at the bottom of the tool and on the [Field data](FIELD_DATA.md) tab.
 
-[![The interactive explorer at its starting values: the conditions above, the answer, which is better, below](../../../media/explorer_preview.en.png)](../../../tools/stop_design_explorer.en.html)
+[![The interactive explorer at its starting values: the conditions above, the answer, which is better, below](../../../media/explorer_preview.en.png)](https://yonizilber.github.io/bus-merge-rl/en/explorer_app.html)
 
 *The explorer at its starting values: above, you choose the conditions (traffic, people per car and on the bus, the stop times); below, it answers which design is better, by how much, and with what interval.*
 
-> **How to open it:** GitHub shows an HTML file as source and does not run it. Open [`stop_design_explorer.en.html`](../../../tools/stop_design_explorer.en.html), click the download button (Download raw file), and open the downloaded file in a browser. It works offline, with nothing to install.
+> **The tool itself is [on the website](https://yonizilber.github.io/bus-merge-rl/en/explorer_app.html)**: click the picture to open it. GitHub shows an HTML file as source and does not run it. To use the tool offline: open [`stop_design_explorer.en.html`](../../../tools/stop_design_explorer.en.html), click the download button (Download raw file), and open the downloaded file in a browser.
 
 Below the tool: what the runs showed across the whole range, chapter by chapter. Our conclusion from them is on the
 [Conclusions](RESULTS.md) tab.
@@ -200,4 +202,4 @@ described in [the research question](RESEARCH.md#how-it-was-run) and `docs/refer
 
 ---
 
-[Overview](README.md) · [Research question](RESEARCH.md) · **Measurements and research** · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/EXPLORER.md)
+[Overview](README.md) · [Research question](RESEARCH.md) · **Measurements and research** · [Conclusions](RESULTS.md) · [Field data](FIELD_DATA.md) · [World model](WORLD.md) · [Agent](AGENT.md) · [Case study](CASE_STUDY.md) · [The app](APP.md) · [Changelog](CHANGELOG.md) · [Testing](TESTING.md) · [Limitations](LIMITATIONS.md) · [Glossary](GLOSSARY.md) · [עברית](../he/EXPLORER.md)

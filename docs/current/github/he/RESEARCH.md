@@ -1,6 +1,8 @@
 <div dir="rtl">
 
-[סקירה](README.md) · **שאלת המחקר** · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/RESEARCH.md)
+[סקירה](README.md) · **שאלת המחקר** · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/RESEARCH.md)
+
+> **לקריאה באתר**, שבו הטאבים מתחלפים באותו מקום והכלי האינטראקטיבי עובד: [https://yonizilber.github.io/bus-merge-rl/he/RESEARCH.html](https://yonizilber.github.io/bus-merge-rl/he/RESEARCH.html)
 
 # שאלת המחקר
 
@@ -99,6 +101,6 @@
 
 ---
 
-[סקירה](README.md) · **שאלת המחקר** · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/RESEARCH.md)
+[סקירה](README.md) · **שאלת המחקר** · [מדידות ומחקר](EXPLORER.md) · [מסקנות](RESULTS.md) · [נתוני שטח](FIELD_DATA.md) · [מודל העולם](WORLD.md) · [הסוכן](AGENT.md) · [חקר מקרה](CASE_STUDY.md) · [האפליקציה](APP.md) · [יומן שינויים](CHANGELOG.md) · [בדיקות](TESTING.md) · [מגבלות](LIMITATIONS.md) · [מילון מונחים](GLOSSARY.md) · [English](../en/RESEARCH.md)
 
 </div>
